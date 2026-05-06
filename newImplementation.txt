@@ -1,0 +1,72 @@
+
+Yes, this is the right move. If your goal is resume + Medium + open-source credibility, full ADK A2A conversion is worth doing now.
+
+Recommended execution plan (evening/night friendly)
+
+Phase 0: Freeze baseline (tonight, 45-60 min)
+
+Tag current working state and keep it runnable as fallback.
+
+Add a migration branch and write a clear scope doc.
+
+Define done criteria: all four agents, router, discovery, peer collaboration, tests passing.
+
+Phase 1: Introduce ADK runtime seam (tonight, 2-3 hours)
+
+Add ADK dependency and version pin.
+
+Add config switch in config.yaml: protocol_mode with values custom or adk.
+
+Keep current path in a2a_router.py as fallback.
+
+Create ADK transport module (new) and wire orchestrator to choose transport by config.
+
+Phase 2: Migrate one agent end-to-end first (tomorrow evening, 2-3 hours)
+
+Migrate metrics agent to ADK-native task handling.
+
+Preserve existing agent card endpoint and schema contract.
+
+Validate analysis plus peer response round-trip.
+
+Confirm output artifacts still populate.
+
+Phase 3: Migrate remaining agents (next evening, 3-4 hours)
+
+Move log, routing, config agents to ADK-native handlers.
+
+Standardize message parsing and lifecycle states.
+
+Keep response schema identical to avoid orchestrator breakage.
+
+Phase 4: Registry and collaboration hardening (next evening, 2-3 hours)
+
+Make startup discovery validate ADK-required capabilities.
+
+Add failure-path behavior for timeout, cancelled, failed states.
+
+Ensure collaboration loop semantics remain deterministic.
+
+Phase 5: Tests + publish artifacts (final evening, 2-3 hours)
+
+Add protocol-level integration tests for ADK path.
+
+Keep fallback path smoke test.
+
+Update docs with architecture diagram and migration rationale.
+
+Prepare resume bullet and Medium screenshots from real run logs.
+
+What to keep unchanged during migration
+
+Keep report schema and output files stable so your demos do not break.
+Keep orchestrator decision logic unchanged while transport changes.
+Keep scenario simulations intact so comparisons are fair.
+Definition of done for your showcase
+
+Running scenario 1 through ADK path succeeds.
+Running scenario 10 short-circuit behavior succeeds.
+A2A peer logs show real collaboration in output artifacts.
+README clearly states ADK SDK-native A2A implementation.
+One command to run demo works end-to-end.
+If you want, I can start Phase 1 immediately in this session: add config-driven dual transport and scaffold ADK transport wiring so tonight you can begin agent-by-agent migration with minimal risk.

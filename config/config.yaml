@@ -1,0 +1,50 @@
+llm:
+  provider: google
+  model: gemini-2.5-flash
+  api_key_env: GEMINI_API_KEY
+  require_success: false
+
+providers:
+  metrics: simulation
+  logs: simulation
+  routing: simulation
+  config: simulation
+
+mcp_endpoints:
+  metrics: ""
+  logs: ""
+  routing: ""
+  config: ""
+
+a2a:
+  max_iterations: 2
+  analysis_timeout_seconds: 20
+  message_timeout_seconds: 10
+  round_timeout_seconds: 25
+  collaboration_timeout_seconds: 60
+
+simulation:
+  region: us-east
+  window_minutes: 30
+
+agents:
+  metrics:
+    endpoint: http://localhost:8001/a2a
+    card_url: http://localhost:8001/.well-known/agent.json
+    use_external_adapter: false
+  log:
+    endpoint: http://localhost:8002/a2a
+    card_url: http://localhost:8002/.well-known/agent.json
+    use_external_adapter: false
+  routing:
+    endpoint: http://localhost:8003/a2a
+    card_url: http://localhost:8003/.well-known/agent.json
+    use_external_adapter: false
+  config:
+    endpoint: http://localhost:8004/a2a
+    card_url: http://localhost:8004/.well-known/agent.json
+    use_external_adapter: false
+
+ingestion:
+  host: 0.0.0.0
+  port: 8000
