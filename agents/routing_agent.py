@@ -100,7 +100,7 @@ def build_routing_app() -> FastAPI:
                     first = events[0]
                     summary = (
                         f"Routing changes found: {len(events)} event(s); "
-                        f"first_path={first.path_id}, from={first.before_hops} to={first.after_hops} hops"
+                        f"first_path={first.path_id}, change={first.change_type}, details={first.details}"
                     )
                 logger.info(
                     "Analyzed routing region=%s window=%s scenario=%s events=%s anomaly=%s",
@@ -123,6 +123,7 @@ def build_routing_app() -> FastAPI:
             finally:
                 async with state_lock:
                     active_sessions.discard(context_id)
+                    # TODO: drain pending_peer_messages[context_id] queued during analysis
             logger.info("Completed analyze-routing anomaly=%s confidence=%.2f", finding.anomaly_detected, finding.confidence)
             return _task_result(
                 payload=payload,

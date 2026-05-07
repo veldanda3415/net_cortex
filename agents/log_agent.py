@@ -127,6 +127,7 @@ def build_log_app() -> FastAPI:
             finally:
                 async with state_lock:
                     active_sessions.discard(context_id)
+                    # TODO: drain pending_peer_messages[context_id] queued during analysis
             logger.info("Completed analyze-logs anomaly=%s confidence=%.2f", finding.anomaly_detected, finding.confidence)
             return _task_result(
                 payload=payload,
