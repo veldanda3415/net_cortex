@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from communication.a2a_router import A2ARouter
+from communication.router_base import RouterBase
 from models.schemas import IncidentRequest
 
 
 class ExternalAgentAdapterNode:
-    def __init__(self, agent_id: str, endpoint: str, domain_skill: str, router: A2ARouter):
+    def __init__(self, agent_id: str, endpoint: str, domain_skill: str, router: RouterBase):
         self.agent_id = agent_id
         self.endpoint = endpoint
         self.domain_skill = domain_skill

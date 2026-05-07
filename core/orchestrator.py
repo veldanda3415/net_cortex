@@ -8,7 +8,7 @@ from langgraph.graph import END, StateGraph
 
 from agents.rca_synthesizer import synthesize_report
 from agents.supervisor import classify_degradation, select_active_agents
-from communication.a2a_router import A2ARouter
+from communication.router_base import RouterBase
 from models.schemas import A2AMessage, AgentFinding, IncidentRequest, RCAReport
 
 
@@ -57,7 +57,7 @@ def validate_config(cfg: dict[str, Any]) -> None:
 
 
 class NetCortexEngine:
-    def __init__(self, cfg: dict[str, Any], router: A2ARouter):
+    def __init__(self, cfg: dict[str, Any], router: RouterBase):
         self.cfg = cfg
         self.router = router
         self.last_result_state: dict[str, Any] | None = None
@@ -73,13 +73,16 @@ class NetCortexEngine:
 
         async def supervisor_node(state: NetCortexState):
             incident = state["incident"]
-            dtype = classify_degradation(incident)
+            llm_model = self.cfg.get("llm", {}).get("model", "gemini-2.5-flash")
+            llm_required = bool(self.cfg.get("llm", {}).get("require_success", False))
+            dtype = classify_degradation(incident, llm_model=llm_model, require_llm=llm_required)
             active = select_active_agents(dtype)
             logger.info(
-                "Supervisor classified incident=%s degradation_type=%s active_agents=%s",
+                "Supervisor classified incident=%s degradation_type=%s active_agents=%s llm_required=%s",
                 incident.incident_id,
                 dtype,
                 ",".join(active),
+                llm_required,
             )
             return {"degradation_type": dtype, "active_agents": active}
 
@@ -126,11 +129,14 @@ class NetCortexEngine:
                     finding = result
                     findings.append(finding)
                     logger.info(
-                        "Analysis result incident=%s agent=%s anomaly=%s confidence=%.2f",
+                        "Analysis result incident=%s agent=%s domain=%s anomaly=%s confidence=%.2f summary=%s key_events=%s",
                         incident.incident_id,
                         agent,
+                        finding.domain,
                         finding.anomaly_detected,
                         finding.confidence,
+                        finding.summary,
+                        len(finding.key_events),
                     )
                 except asyncio.TimeoutError:
                     timed_out.append(agent)
@@ -180,7 +186,11 @@ class NetCortexEngine:
                         await self.router.broadcast(
                             sender=finding.agent_id,
                             message_type="finding_publish",
-                            payload={"summary": finding.summary, "anomaly": finding.anomaly_detected},
+                            payload={
+                                "incident_id": state["incident"].incident_id,
+                                "summary": finding.summary,
+                                "anomaly": finding.anomaly_detected,
+                            },
                             round_number=round_number,
                             session_id=state["incident"].incident_id,
                         )

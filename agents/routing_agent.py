@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from uuid import uuid4
+
 from fastapi import FastAPI
 
 from models.schemas import AgentFinding
@@ -9,6 +11,39 @@ from providers.simulation.routing_sim import SimulationRoutingProvider
 
 
 logger = logging.getLogger("net_cortex.agent.routing")
+
+
+def _extract_request_context(payload: dict) -> tuple[str, str, dict]:
+    params = payload.get("params", {})
+    message = params.get("message", {})
+    parts = message.get("parts", [])
+    data = {}
+    for part in parts:
+        kind = part.get("kind") or part.get("type")
+        if kind == "data" and isinstance(part.get("data"), dict):
+            data = part["data"]
+            break
+    task_id = params.get("id") or params.get("taskId") or f"task-{uuid4()}"
+    context_id = params.get("sessionId") or message.get("contextId") or params.get("contextId") or ""
+    return str(task_id), str(context_id), data
+
+
+def _task_result(payload: dict, task_id: str, context_id: str, state: str, artifact_name: str | None = None, data: dict | None = None) -> dict:
+    result: dict = {
+        "kind": "task",
+        "id": task_id,
+        "contextId": context_id,
+        "status": {"state": state, "timestamp": datetime.now(timezone.utc).isoformat()},
+    }
+    if artifact_name is not None and data is not None:
+        result["artifacts"] = [
+            {
+                "artifactId": f"artifact-{uuid4()}",
+                "name": artifact_name,
+                "parts": [{"kind": "data", "data": data}],
+            }
+        ]
+    return {"jsonrpc": "2.0", "id": payload.get("id"), "result": result}
 
 
 def build_routing_app() -> FastAPI:
@@ -21,17 +56,35 @@ def build_routing_app() -> FastAPI:
         return {
             "name": "netcortex-routing-agent",
             "version": "1.0.0",
+            "description": "Analyzes routing events and topology changes around incidents.",
+            "url": "http://localhost:8003/a2a",
             "endpoint": "http://localhost:8003/a2a",
             "capabilities": {"streaming": False, "pushNotifications": False},
-            "skills": [{"id": "analyze-routing"}, {"id": "respond-to-peer"}],
+            "defaultInputModes": ["text/plain", "application/json"],
+            "defaultOutputModes": ["application/json"],
+            "skills": [
+                {
+                    "id": "analyze-routing",
+                    "name": "Analyze Routing",
+                    "description": "Analyze routing events in a time window and produce an AgentFinding.",
+                    "tags": ["routing", "topology", "rca"],
+                },
+                {
+                    "id": "respond-to-peer",
+                    "name": "Respond To Peer",
+                    "description": "Respond to peer clarification and validation requests.",
+                    "tags": ["a2a", "collaboration"],
+                },
+            ],
             "schemaContract": {"outputSchema": "AgentFinding", "version": "1.0.0"},
         }
 
     @app.post("/a2a")
     async def tasks_send(payload: dict):
-        data = payload["params"]["message"]["parts"][1]["data"]
+        task_id, context_id, data = _extract_request_context(payload)
         skill = data["skill"]
-        logger.info("Received request skill=%s incident=%s", skill, data.get("incident_id", ""))
+        incident_for_log = data.get("incident_id") or data.get("payload", {}).get("incident_id", "")
+        logger.info("Received request skill=%s incident=%s", skill, incident_for_log)
         if skill == "analyze-routing":
             state["analysis_in_progress"] = True
             events = provider.get_routing_events(data["region"], int(data["window_minutes"]), data.get("scenario_id"))
@@ -63,32 +116,28 @@ def build_routing_app() -> FastAPI:
             )
             state["analysis_in_progress"] = False
             logger.info("Completed analyze-routing anomaly=%s confidence=%.2f", finding.anomaly_detected, finding.confidence)
-            return {
-                "jsonrpc": "2.0",
-                "id": payload["id"],
-                "result": {
-                    "id": payload["params"]["id"],
-                    "sessionId": payload["params"]["sessionId"],
-                    "status": {"state": "completed", "timestamp": datetime.now(timezone.utc).isoformat()},
-                    "artifacts": [{"name": "agent_finding", "parts": [{"type": "data", "data": finding.model_dump(mode='json')}]}],
-                },
-            }
+            return _task_result(
+                payload=payload,
+                task_id=task_id,
+                context_id=context_id,
+                state="completed",
+                artifact_name="agent_finding",
+                data=finding.model_dump(mode="json"),
+            )
 
         if state["analysis_in_progress"]:
             state["pending_peer_messages"].append(data)
             logger.info("Queued peer message while busy queue_size=%s", len(state["pending_peer_messages"]))
-            return {"jsonrpc": "2.0", "id": payload["id"], "result": {"status": {"state": "queued"}}}
+            return _task_result(payload=payload, task_id=task_id, context_id=context_id, state="submitted")
 
         logger.info("Responded to peer message")
-        return {
-            "jsonrpc": "2.0",
-            "id": payload["id"],
-            "result": {
-                "id": payload["params"]["id"],
-                "sessionId": payload["params"]["sessionId"],
-                "status": {"state": "completed", "timestamp": datetime.now(timezone.utc).isoformat()},
-                "artifacts": [{"name": "peer_response", "parts": [{"type": "data", "data": {"ack": True}}]}],
-            },
-        }
+        return _task_result(
+            payload=payload,
+            task_id=task_id,
+            context_id=context_id,
+            state="completed",
+            artifact_name="peer_response",
+            data={"ack": True},
+        )
 
     return app

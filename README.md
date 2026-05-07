@@ -7,8 +7,8 @@ and synthesizes both machine-structured and human-readable RCA output.
 ## Highlights
 
 - Multi-agent RCA workflow built on LangGraph.
-- FastAPI-based domain agents with agent cards and JSON-RPC style messaging.
-- Deterministic confidence scoring plus optional Gemini LLM narrative synthesis.
+- FastAPI-based domain agents exposing ADK-compatible A2A agent cards and task messaging.
+- Deterministic confidence scoring plus Gemini LLM-based incident classification and narrative synthesis.
 - Simulation scenarios for reproducible local development and demos.
 - Console progress logging so users can track execution stages in real time.
 
@@ -41,6 +41,30 @@ Recommended reading order for contributors:
 
 ## Quickstart
 
+## 5-Minute Quick Run
+
+If you just want to prove the project works end-to-end:
+
+1. Install dependencies.
+2. Run one incident.
+3. Confirm output artifacts were created.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python app/main.py run --scenario 1
+```
+
+If you do not have LLM auth configured yet, run in deterministic fallback mode:
+
+```powershell
+python app/main.py run --scenario 1 --no-require-llm
+```
+
+## Detailed Setup
+
 ### 1) Create and activate virtual environment
 
 ```powershell
@@ -63,7 +87,13 @@ Supported LLM auth modes:
   - optional `GOOGLE_CLOUD_LOCATION=us-central1`
   - authenticate with `gcloud auth application-default login`
 
-If no LLM auth is available, NetCortex falls back to deterministic synthesis.
+If no LLM auth is available and strict LLM mode is disabled, NetCortex falls back to deterministic synthesis.
+
+Important:
+
+- LLM strict mode is enabled by default.
+- Without valid LLM auth, one-shot runs fail fast.
+- To run in deterministic fallback mode for local experimentation, use the CLI switch `--no-require-llm`.
 
 ### 3) Run a one-shot incident
 
@@ -101,10 +131,16 @@ Run with debug logs:
 python app/main.py run --scenario 1 --verbose
 ```
 
-Require LLM synthesis (fail fast if LLM is unavailable/unauthorized):
+LLM strict mode is enabled by default. The following command is equivalent and explicit:
 
 ```powershell
 python app/main.py run --scenario 1 --require-llm
+```
+
+Run in deterministic fallback mode (disable strict LLM requirement):
+
+```powershell
+python app/main.py run --scenario 1 --no-require-llm
 ```
 
 Print full JSON report to console (optional):
@@ -115,7 +151,27 @@ python app/main.py run --scenario 1 --print-json
 
 By default, NetCortex prints a readable RCA summary and file location, not the full JSON blob.
 
-Detailed log files are written to `output/log/`:
+## Expected Output
+
+On a successful run (`python app/main.py run --scenario 1`), you should see:
+
+- Agent registration lines with skills, for example:
+  `Registered agent=metrics endpoint=http://localhost:8001/a2a skills=analyze-metrics,respond-to-peer`
+- Supervisor classification line, for example:
+  `Supervisor classified incident=<id> degradation_type=network active_agents=metrics,log,routing,config`
+- Analysis result lines from each active agent.
+- Final console report block titled `NetCortex RCA Report`.
+
+A run creates artifacts under `output/<incident_id>/`:
+
+- `rca_report.json`
+- `agent_trace.jsonl`
+- `a2a_messages.jsonl`
+- `supervisor_state.json`
+
+Detailed logs are written to `output/log/`.
+
+Detailed log files:
 
 - `runtime.log`
 - `orchestrator.log`
@@ -199,9 +255,13 @@ Runtime behavior is controlled from `config/config.yaml`.
 Important settings:
 
 - `llm.model`: Gemini model name.
+- `a2a.protocol_mode`: `adk` (SDK-native A2A client) or `custom` (fallback transport).
 - `a2a.analysis_timeout_seconds`: per-agent analysis timeout.
 - `a2a.max_iterations`: collaboration rounds cap.
 - `simulation.region` and `simulation.window_minutes`.
+
+Schema note:
+The current A2A message schema (see `models/schemas.py`, `A2AMessage`) is a baseline contract used by this implementation. It is intentionally extensible and can be expanded with additional message types and payload fields as collaboration needs evolve.
 
 Validation checks enforce compatible timeout relationships at startup.
 
@@ -235,7 +295,7 @@ To move toward production-like integrations, implement adapter methods and updat
 
 - If LLM output is missing, verify API key or ADC project settings.
 - If you see GCP quota project warnings, align ADC quota project with intended billing project.
-- If Typer help errors appear, ensure `click==8.1.7` is installed.
+- If Typer help errors appear, ensure dependencies are installed from requirements.txt (currently click==8.3.1 and typer==0.16.1).
 
 ## Verification Checklist
 

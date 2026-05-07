@@ -21,6 +21,7 @@ from agents.log_agent import build_log_app
 from agents.metrics_agent import build_metrics_app
 from agents.routing_agent import build_routing_app
 from communication.a2a_router import A2ARouter
+from communication.adk_a2a_router import ADKA2ARouter
 from communication.agent_registry import AgentRegistry
 from ingestion.webhook_server import WebhookServer
 from models.schemas import IncidentRequest
@@ -106,11 +107,24 @@ async def start_runtime(cfg: dict[str, Any]):
     registry = AgentRegistry()
     for agent_id, entry in cfg["agents"].items():
         await registry.register_from_card(agent_id, entry["card_url"], entry["endpoint"])
-        logger.info("Registered agent=%s endpoint=%s", agent_id, entry["endpoint"])
+        card = registry.agents[agent_id].card
+        skills = [s.get("id", "") for s in card.get("skills", [])]
+        logger.info(
+            "Registered agent=%s endpoint=%s skills=%s",
+            agent_id,
+            entry["endpoint"],
+            ",".join(skills),
+        )
 
-    router = A2ARouter(registry, int(cfg["a2a"]["message_timeout_seconds"]))
+    protocol_mode = str(cfg.get("a2a", {}).get("protocol_mode", "custom")).lower()
+    if protocol_mode == "adk":
+        router = ADKA2ARouter(registry, int(cfg["a2a"]["message_timeout_seconds"]))
+    elif protocol_mode == "custom":
+        router = A2ARouter(registry, int(cfg["a2a"]["message_timeout_seconds"]))
+    else:
+        raise ValueError("ConfigValidationError: a2a.protocol_mode must be either 'custom' or 'adk'")
     engine = NetCortexEngine(cfg, router)
-    logger.info("Runtime initialized")
+    logger.info("Runtime initialized protocol_mode=%s", protocol_mode)
     return tasks, engine
 
 
@@ -184,16 +198,15 @@ def run(
     config: str = typer.Option("config/config.yaml"),
     print_json: bool = typer.Option(False, help="Print full JSON report to console"),
     verbose: bool = typer.Option(False, help="Enable debug logging"),
-    require_llm: bool = typer.Option(False, help="Fail the run if LLM synthesis is unavailable"),
+    require_llm: bool = typer.Option(True, help="Fail the run if LLM-based classification/synthesis is unavailable"),
 ):
     async def _run():
         configure_runtime_logging(verbose)
 
         logger.info("Loading config from %s", config)
         cfg = load_config(config)
-        if require_llm:
-            cfg.setdefault("llm", {})["require_success"] = True
-            logger.info("LLM strict mode enabled for this run")
+        cfg.setdefault("llm", {})["require_success"] = bool(require_llm)
+        logger.info("LLM strict mode=%s for this run", bool(require_llm))
         tasks, engine = await start_runtime(cfg)
 
         incident = IncidentRequest(
@@ -204,7 +217,13 @@ def run(
             source_system="cli",
             external_incident_id=f"CLI-{scenario}",
         )
-        logger.info("Processing incident_id=%s scenario=%s", incident.incident_id, scenario)
+        logger.info(
+            "Processing incident_id=%s scenario=%s region=%s description=%s",
+            incident.incident_id,
+            scenario,
+            incident.region,
+            incident.description,
+        )
         report = await engine.run_incident(incident)
         report_data = report.model_dump(mode="json")
         write_outputs(report_data, incident.incident_id, engine.last_result_state)

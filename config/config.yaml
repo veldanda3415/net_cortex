@@ -2,7 +2,7 @@ llm:
   provider: google
   model: gemini-2.5-flash
   api_key_env: GEMINI_API_KEY
-  require_success: false
+  require_success: true
 
 providers:
   metrics: simulation
@@ -17,6 +17,7 @@ mcp_endpoints:
   config: ""
 
 a2a:
+  protocol_mode: adk
   max_iterations: 2
   analysis_timeout_seconds: 20
   message_timeout_seconds: 10

@@ -68,10 +68,21 @@ class A2ARouter:
             },
         )
         try:
-            await self._post_task(endpoint, req.model_dump())
-            status = "completed"
+            resp = await self._post_task(endpoint, req.model_dump())
+            state = (
+                resp.get("result", {})
+                .get("status", {})
+                .get("state", "completed")
+            )
+            normalized = str(state).lower()
+            if normalized in {"completed", "queued", "working", "submitted"}:
+                status = normalized
+            elif normalized in {"canceled", "cancelled"}:
+                status = "cancelled"
+            else:
+                status = "failed"
         except Exception:
-            status = "cancelled"
+            status = "failed"
 
         return A2AMessage(
             sender_agent=sender,
