@@ -2,7 +2,7 @@ llm:
   provider: google
   model: gemini-2.5-flash
   api_key_env: GEMINI_API_KEY
-  require_success: true
+  require_success: false
 
 providers:
   metrics: simulation

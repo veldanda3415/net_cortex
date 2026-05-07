@@ -20,7 +20,7 @@ def test_short_circuit_true_when_all_no_anomaly():
         ),
         AgentFinding(
             agent_id="log",
-            domain="logs",
+            domain="log",
             anomaly_detected=False,
             summary="noise",
             key_events=[],

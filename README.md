@@ -131,13 +131,13 @@ Run with debug logs:
 python app/main.py run --scenario 1 --verbose
 ```
 
-LLM strict mode is enabled by default. The following command is equivalent and explicit:
+LLM strict mode is optional. Enable it explicitly when you want fail-fast behavior if LLM is unavailable:
 
 ```powershell
 python app/main.py run --scenario 1 --require-llm
 ```
 
-Run in deterministic fallback mode (disable strict LLM requirement):
+Default mode is deterministic fallback (no strict LLM requirement). The following is equivalent and explicit:
 
 ```powershell
 python app/main.py run --scenario 1 --no-require-llm

@@ -8,7 +8,7 @@ from uuid import uuid4
 import httpx
 
 from communication.agent_registry import AgentRegistry
-from communication.message_types import TaskRequest
+from communication.message_types import JsonRpcMessage, JsonRpcPart, TaskParams, TaskRequest
 from models.schemas import A2AMessage, AgentFinding
 
 
@@ -28,16 +28,16 @@ class A2ARouter:
         endpoint = self.registry.agents[agent_id].endpoint
         req = TaskRequest(
             id=f"req-{uuid4()}",
-            params={
-                "id": f"task-{agent_id}-{incident_id}",
-                "sessionId": incident_id,
-                "message": {
-                    "parts": [
-                        {"type": "text", "text": f"Run {skill}"},
-                        {"type": "data", "data": {"skill": skill, **payload_data}},
+            params=TaskParams(
+                id=f"task-{agent_id}-{incident_id}",
+                sessionId=incident_id,
+                message=JsonRpcMessage(
+                    parts=[
+                        JsonRpcPart(type="text", text=f"Run {skill}"),
+                        JsonRpcPart(type="data", data={"skill": skill, **payload_data}),
                     ]
-                },
-            },
+                ),
+            ),
         )
         resp = await self._post_task(endpoint, req.model_dump())
         artifact_data = resp["result"]["artifacts"][0]["parts"][0]["data"]
@@ -47,25 +47,25 @@ class A2ARouter:
         endpoint = self.registry.agents[target].endpoint
         req = TaskRequest(
             id=f"req-{uuid4()}",
-            params={
-                "id": f"task-a2a-{sender}-to-{target}-r{round_number}",
-                "sessionId": session_id,
-                "message": {
-                    "parts": [
-                        {"type": "text", "text": message_type},
-                        {
-                            "type": "data",
-                            "data": {
+            params=TaskParams(
+                id=f"task-a2a-{sender}-to-{target}-r{round_number}",
+                sessionId=session_id,
+                message=JsonRpcMessage(
+                    parts=[
+                        JsonRpcPart(type="text", text=message_type),
+                        JsonRpcPart(
+                            type="data",
+                            data={
                                 "skill": "respond-to-peer",
                                 "message_type": message_type,
                                 "sender_agent": sender,
                                 "round_number": round_number,
                                 "payload": payload,
                             },
-                        },
+                        ),
                     ]
-                },
-            },
+                ),
+            ),
         )
         try:
             resp = await self._post_task(endpoint, req.model_dump())

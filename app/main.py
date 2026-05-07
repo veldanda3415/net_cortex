@@ -198,7 +198,7 @@ def run(
     config: str = typer.Option("config/config.yaml"),
     print_json: bool = typer.Option(False, help="Print full JSON report to console"),
     verbose: bool = typer.Option(False, help="Enable debug logging"),
-    require_llm: bool = typer.Option(True, help="Fail the run if LLM-based classification/synthesis is unavailable"),
+    require_llm: bool = typer.Option(False, help="Fail the run if LLM-based classification/synthesis is unavailable"),
 ):
     async def _run():
         configure_runtime_logging(verbose)

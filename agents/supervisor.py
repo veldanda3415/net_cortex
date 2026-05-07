@@ -52,20 +52,12 @@ def _classify_with_llm(description: str, llm_model: str) -> str | None:
     except Exception:
         return None
 
-#just to add other agents for testing.
 def classify_degradation(incident: IncidentRequest, llm_model: str, require_llm: bool) -> str:
     fallback = _heuristic_classify(incident)
     llm_value = _classify_with_llm(incident.description, llm_model)
     allowed = {"network", "config", "overload", "unknown"}
     if llm_value in allowed:
-        # Keep routing/config coverage when incident symptoms look network-wide.
-        if fallback == "network":
-            return "network"
-        # Let LLM refine only when heuristics are ambiguous.
-        if fallback == "unknown":
-            return llm_value
-        # For explicit heuristic labels, do not widen/narrow based on LLM disagreements.
-        return fallback
+        return llm_value
     if require_llm:
         raise RuntimeError("LLM incident classification is required but unavailable.")
     return fallback

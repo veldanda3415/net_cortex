@@ -53,7 +53,7 @@ class ConfigChange(BaseModel):
 
 class AgentFinding(BaseModel):
     agent_id: str
-    domain: Literal["metrics", "logs", "routing", "config"]
+    domain: Literal["metrics", "log", "routing", "config"]
     anomaly_detected: bool
     summary: str
     key_events: list[dict]

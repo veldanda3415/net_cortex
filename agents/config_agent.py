@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -49,7 +51,9 @@ def _task_result(payload: dict, task_id: str, context_id: str, state: str, artif
 def build_config_app() -> FastAPI:
     app = FastAPI(title="netcortex-config-agent")
     provider = SimulationConfigProvider()
-    state = {"analysis_in_progress": False, "pending_peer_messages": []}
+    active_sessions: set[str] = set()
+    pending_peer_messages: dict[str, list[dict]] = defaultdict(list)
+    state_lock = asyncio.Lock()
 
     @app.get("/.well-known/agent.json")
     async def agent_card():
@@ -86,35 +90,39 @@ def build_config_app() -> FastAPI:
         incident_for_log = data.get("incident_id") or data.get("payload", {}).get("incident_id", "")
         logger.info("Received request skill=%s incident=%s", skill, incident_for_log)
         if skill == "analyze-config":
-            state["analysis_in_progress"] = True
-            changes = provider.get_config_changes(data["region"], int(data["window_minutes"]), data.get("scenario_id"))
-            anomaly = len(changes) > 0
-            summary = "No config changes"
-            if anomaly:
-                first = changes[0]
-                summary = (
-                    f"Config changes found: {len(changes)} change(s); "
-                    f"first={first.change_type} on {first.component}"
+            async with state_lock:
+                active_sessions.add(context_id)
+            try:
+                changes = provider.get_config_changes(data["region"], int(data["window_minutes"]), data.get("scenario_id"))
+                anomaly = len(changes) > 0
+                summary = "No config changes"
+                if anomaly:
+                    first = changes[0]
+                    summary = (
+                        f"Config changes found: {len(changes)} change(s); "
+                        f"first={first.change_type} on {first.component}"
+                    )
+                logger.info(
+                    "Analyzed config region=%s window=%s scenario=%s changes=%s anomaly=%s",
+                    data["region"],
+                    data["window_minutes"],
+                    data.get("scenario_id"),
+                    len(changes),
+                    anomaly,
                 )
-            logger.info(
-                "Analyzed config region=%s window=%s scenario=%s changes=%s anomaly=%s",
-                data["region"],
-                data["window_minutes"],
-                data.get("scenario_id"),
-                len(changes),
-                anomaly,
-            )
-            finding = AgentFinding(
-                agent_id="config",
-                domain="config",
-                anomaly_detected=anomaly,
-                summary=summary,
-                key_events=[c.model_dump() for c in changes[:5]],
-                start_time=min((c.timestamp for c in changes), default=datetime.now(timezone.utc)),
-                end_time=max((c.timestamp for c in changes), default=datetime.now(timezone.utc)),
-                confidence=0.83 if anomaly else 0.2,
-            )
-            state["analysis_in_progress"] = False
+                finding = AgentFinding(
+                    agent_id="config",
+                    domain="config",
+                    anomaly_detected=anomaly,
+                    summary=summary,
+                    key_events=[c.model_dump() for c in changes[:5]],
+                    start_time=min((c.timestamp for c in changes), default=datetime.now(timezone.utc)),
+                    end_time=max((c.timestamp for c in changes), default=datetime.now(timezone.utc)),
+                    confidence=0.83 if anomaly else 0.2,
+                )
+            finally:
+                async with state_lock:
+                    active_sessions.discard(context_id)
             logger.info("Completed analyze-config anomaly=%s confidence=%.2f", finding.anomaly_detected, finding.confidence)
             return _task_result(
                 payload=payload,
@@ -125,9 +133,15 @@ def build_config_app() -> FastAPI:
                 data=finding.model_dump(mode="json"),
             )
 
-        if state["analysis_in_progress"]:
-            state["pending_peer_messages"].append(data)
-            logger.info("Queued peer message while busy queue_size=%s", len(state["pending_peer_messages"]))
+        async with state_lock:
+            busy = context_id in active_sessions
+            if busy:
+                pending_peer_messages[context_id].append(data)
+                queue_size = len(pending_peer_messages[context_id])
+            else:
+                queue_size = 0
+        if busy:
+            logger.info("Queued peer message while busy incident=%s queue_size=%s", incident_for_log, queue_size)
             return _task_result(payload=payload, task_id=task_id, context_id=context_id, state="submitted")
 
         logger.info("Responded to peer message")
