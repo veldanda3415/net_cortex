@@ -322,6 +322,7 @@ def eval(
             raise typer.BadParameter("No scenarios available for evaluation")
 
         results: list[dict[str, Any]] = []
+        eval_error: Exception | None = None
         try:
             for sid in scenario_ids:
                 bundle = SCENARIOS.get(sid)
@@ -356,10 +357,16 @@ def eval(
                         "missing_keywords": missing,
                     }
                 )
+        except Exception as exc:
+            eval_error = exc
+            logger.exception("Evaluation aborted after %s completed scenario(s)", len(results))
         finally:
             for t in tasks:
                 t.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
+
+        if not results and eval_error is not None:
+            raise eval_error
 
         total_expected = sum(item["expected"] for item in results)
         total_matched = sum(item["matched"] for item in results)
@@ -389,6 +396,8 @@ def eval(
         has_missing = any(bool(item["missing_keywords"]) for item in results)
         if fail_on_miss and has_missing:
             raise typer.Exit(code=1)
+        if eval_error is not None:
+            raise eval_error
 
     asyncio.run(_run_eval())
     raise SystemExit(0)

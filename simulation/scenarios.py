@@ -234,7 +234,7 @@ def build_scenario_14() -> ScenarioDataBundle:
     ]
     logs = [
         LogEvent(timestamp=_t(9), level="ERROR", service="api-gw", message="Rate limiter triggered: upstream bandwidth exceeded 90% on DC1 and DC2"),
-        LogEvent(timestamp=_t(9), level="ERROR", service="health-check", message="api-gw /healthz returning 503 — connection queue full"),
+        LogEvent(timestamp=_t(9), level="ERROR", service="health-check", message="api-gw /healthz returning 503 - connection queue full"),
     ]
     routing = [
         RoutingEvent(timestamp=_t(9), region="us-east", path_id="api-gw-uplink", change_type="congestion", details="Uplink saturated due to canary traffic burst; load balancer rerouting 40% to secondary AZ"),
@@ -255,7 +255,7 @@ def build_scenario_14() -> ScenarioDataBundle:
         logs,
         routing,
         config,
-        "Throughput collapse and packet loss on api-gw across DC1 and DC2 after canary deployment",
+        "Packet loss and throughput drop on api-gw network path across DC1 and DC2; routing congestion following canary rollout",
         ["api-gw", "canary", "deployment", "congestion", "rate limiter"],
     )
 

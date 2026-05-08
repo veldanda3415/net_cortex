@@ -15,6 +15,13 @@ from providers.simulation.metrics_sim import SimulationMetricsProvider
 logger = logging.getLogger("net_cortex.agent.metrics")
 
 
+def _throughput_below(event: dict, threshold: float = 0.7) -> bool:
+    try:
+        return float(event.get("throughput_gbps", 999)) < threshold
+    except (TypeError, ValueError):
+        return False
+
+
 def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding]) -> AgentFinding:
     """Adjust metrics confidence/summary using peer domain evidence."""
     revised = finding.model_copy(deep=True)
@@ -22,7 +29,7 @@ def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding])
         return revised
 
     throughput_drop = any(
-        isinstance(event, dict) and float(event.get("throughput_gbps", 999)) < 0.7
+        isinstance(event, dict) and _throughput_below(event)
         for event in revised.key_events
     )
     routing_reroute = any(

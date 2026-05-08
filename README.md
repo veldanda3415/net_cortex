@@ -261,9 +261,11 @@ Key fields:
 - `corroborating_domain_count`: number of anomaly-supporting domains.
 - `conflict_detected`: whether signals conflict.
 
-Conflict demo scenario:
+Conflict-focused demo scenarios:
 
-- Scenario `10` intentionally generates conflicting evidence (`metrics` anomaly on Switch-C while `config` reports no changes) to exercise conflict handling in synthesis and policy logic.
+- Scenario `10` demonstrates a `metrics` anomaly on Switch-C with no corroborating config change (`config` reports no changes).
+- Scenario `11` demonstrates mixed evidence (optic/log anomalies with limited cross-domain corroboration).
+- Scenario `12` demonstrates explicit cross-domain conflict (`log` + `routing` anomalies with mostly clean `metrics`) to exercise `conflict_detected` behavior.
 
 ## Configuration Notes
 

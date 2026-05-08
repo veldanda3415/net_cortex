@@ -212,6 +212,10 @@ class NetCortexEngine:
                         )
                     )
 
+                # NOTE: reconsideration is applied locally by the orchestrator after
+                # broadcast, not by agents processing live A2A messages. This is a
+                # Phase 0 simplification; a full A2A implementation would have each
+                # agent apply reconsideration on peer finding_publish receipt.
                 revised = []
                 for finding in findings:
                     peer_findings = [f for f in findings if f.agent_id != finding.agent_id]
