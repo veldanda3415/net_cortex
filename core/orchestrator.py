@@ -6,6 +6,7 @@ from typing import Annotated, Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
+from agents import config_agent, log_agent, metrics_agent, routing_agent
 from agents.rca_synthesizer import synthesize_report
 from agents.supervisor import classify_degradation, select_active_agents
 from communication.router_base import RouterBase
@@ -13,6 +14,21 @@ from models.schemas import A2AMessage, AgentFinding, IncidentRequest, RCAReport
 
 
 logger = logging.getLogger("net_cortex.orchestrator")
+
+
+_RECONSIDER_FN_BY_AGENT: dict[str, Any] = {
+    "metrics": getattr(metrics_agent, "reconsider_finding", None),
+    "log": getattr(log_agent, "reconsider_finding", None),
+    "routing": getattr(routing_agent, "reconsider_finding", None),
+    "config": getattr(config_agent, "reconsider_finding", None),
+}
+
+
+def apply_local_reconsideration(finding: AgentFinding, peer_findings: list[AgentFinding]) -> AgentFinding:
+    fn = _RECONSIDER_FN_BY_AGENT.get(finding.agent_id)
+    if callable(fn):
+        return fn(finding, peer_findings)
+    return finding.model_copy(deep=True)
 
 
 def merge_findings(existing: list[AgentFinding], new: list[AgentFinding]) -> list[AgentFinding]:
@@ -196,15 +212,10 @@ class NetCortexEngine:
                         )
                     )
 
-                # Minimal revision logic: if any peer corroborates anomaly, increase confidence.
-                anomaly_count = sum(1 for f in findings if f.anomaly_detected)
                 revised = []
                 for finding in findings:
-                    new_finding = finding.model_copy(deep=True)
-                    if finding.anomaly_detected and anomaly_count > 1:
-                        new_finding.revised = True
-                        new_finding.revision_count += 1
-                        new_finding.confidence = min(0.99, finding.confidence + 0.05)
+                    peer_findings = [f for f in findings if f.agent_id != finding.agent_id]
+                    new_finding = apply_local_reconsideration(finding, peer_findings)
                     revised.append(new_finding)
                 findings = revised
                 all_messages.extend(round_messages)

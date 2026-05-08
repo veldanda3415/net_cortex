@@ -26,6 +26,7 @@ from communication.agent_registry import AgentRegistry
 from ingestion.webhook_server import WebhookServer
 from models.schemas import IncidentRequest
 from core.orchestrator import NetCortexEngine
+from simulation.scenarios import SCENARIOS
 
 app = typer.Typer(help="NetCortex runtime")
 logger = logging.getLogger("net_cortex")
@@ -191,6 +192,24 @@ def write_outputs(report: dict[str, Any], incident_id: str, supervisor_state: di
     (out_dir / "supervisor_state.json").write_text(json.dumps(state_summary, indent=2), encoding="utf-8")
 
 
+def _keyword_coverage(report: dict[str, Any], expected_keywords: list[str]) -> tuple[list[str], list[str], float]:
+    conflict_text = "conflict detected" if report.get("conflict_detected") else "no conflict"
+    corpus_parts: list[str] = [
+        str(report.get("root_cause", "")),
+        str(report.get("human_readable_summary", "")),
+        conflict_text,
+    ]
+    corpus_parts.extend(str(item) for item in report.get("contributing_factors", []))
+    corpus_parts.extend(str(item) for item in report.get("causal_chain", []))
+    corpus_parts.extend(str(item.get("summary", "")) for item in report.get("agent_findings", []))
+    corpus = "\n".join(corpus_parts).lower()
+
+    matched = [kw for kw in expected_keywords if kw.lower() in corpus]
+    missing = [kw for kw in expected_keywords if kw.lower() not in corpus]
+    coverage = 1.0 if not expected_keywords else len(matched) / len(expected_keywords)
+    return matched, missing, coverage
+
+
 @app.command()
 def run(
     scenario: int = typer.Option(1),
@@ -278,6 +297,101 @@ def serve(config: str = typer.Option("config/config.yaml")):
             pass
 
     asyncio.run(_serve())
+
+
+@app.command()
+def eval(
+    all_scenarios: bool = typer.Option(False, "--all-scenarios", help="Run evaluation across all bundled scenarios"),
+    scenario: int = typer.Option(1, help="Single scenario id to evaluate when --all-scenarios is not set"),
+    config: str = typer.Option("config/config.yaml"),
+    verbose: bool = typer.Option(False, help="Enable debug logging"),
+    require_llm: bool = typer.Option(False, help="Fail the run if LLM-based classification/synthesis is unavailable"),
+    fail_on_miss: bool = typer.Option(False, help="Return exit code 1 when any expected keyword is missing"),
+):
+    async def _run_eval():
+        configure_runtime_logging(verbose)
+        logger.info("Loading config from %s", config)
+        cfg = load_config(config)
+        cfg.setdefault("llm", {})["require_success"] = bool(require_llm)
+        logger.info("LLM strict mode=%s for this eval", bool(require_llm))
+
+        tasks, engine = await start_runtime(cfg)
+        scenario_ids = sorted(SCENARIOS.keys()) if all_scenarios else [scenario]
+
+        if not scenario_ids:
+            raise typer.BadParameter("No scenarios available for evaluation")
+
+        results: list[dict[str, Any]] = []
+        try:
+            for sid in scenario_ids:
+                bundle = SCENARIOS.get(sid)
+                if bundle is None:
+                    raise typer.BadParameter(f"Unknown scenario id: {sid}")
+
+                incident = IncidentRequest(
+                    scenario_id=sid,
+                    description=bundle.incident_request.description,
+                    region=bundle.incident_request.region or cfg["simulation"]["region"],
+                    severity=bundle.incident_request.severity,
+                    source_system="eval",
+                    external_incident_id=f"EVAL-{sid}",
+                )
+
+                logger.info("Evaluating scenario=%s name=%s incident_id=%s", sid, bundle.scenario_name, incident.incident_id)
+                report = await engine.run_incident(incident)
+                report_data = report.model_dump(mode="json")
+                write_outputs(report_data, incident.incident_id, engine.last_result_state)
+
+                matched, missing, coverage = _keyword_coverage(report_data, bundle.expected_rca_keywords)
+                results.append(
+                    {
+                        "scenario_id": sid,
+                        "scenario_name": bundle.scenario_name,
+                        "incident_id": incident.incident_id,
+                        "confidence": report.confidence_score,
+                        "conflict_detected": report.conflict_detected,
+                        "expected": len(bundle.expected_rca_keywords),
+                        "matched": len(matched),
+                        "coverage": coverage,
+                        "missing_keywords": missing,
+                    }
+                )
+        finally:
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+        total_expected = sum(item["expected"] for item in results)
+        total_matched = sum(item["matched"] for item in results)
+        overall_coverage = 1.0 if total_expected == 0 else total_matched / total_expected
+
+        print("\n" + "=" * 90)
+        print("NetCortex Replay/Eval Report")
+        print("=" * 90)
+        for item in results:
+            print(
+                f"Scenario {item['scenario_id']:>2} | {item['scenario_name'][:42]:<42} "
+                f"| keyword_coverage={item['matched']}/{item['expected']} ({item['coverage']:.0%}) "
+                f"| confidence={item['confidence']:.0%} "
+                f"| conflict={item['conflict_detected']}"
+            )
+            if item["missing_keywords"]:
+                print(f"  missing: {', '.join(item['missing_keywords'])}")
+            print(f"  output: output/{item['incident_id']}/rca_report.json")
+
+        print("-" * 90)
+        print(
+            f"Overall keyword coverage: {total_matched}/{total_expected} ({overall_coverage:.0%}) "
+            f"across {len(results)} scenario(s)"
+        )
+        print("=" * 90 + "\n")
+
+        has_missing = any(bool(item["missing_keywords"]) for item in results)
+        if fail_on_miss and has_missing:
+            raise typer.Exit(code=1)
+
+    asyncio.run(_run_eval())
+    raise SystemExit(0)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,62 @@ from providers.simulation.routing_sim import SimulationRoutingProvider
 logger = logging.getLogger("net_cortex.agent.routing")
 
 
+def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding]) -> AgentFinding:
+    """Adjust routing confidence/summary using peer domain evidence."""
+    revised = finding.model_copy(deep=True)
+    peer_anomalies = [peer for peer in peer_findings if peer.anomaly_detected]
+
+    if revised.anomaly_detected:
+        is_reroute = "reroute" in revised.summary.lower() or any(
+            isinstance(event, dict) and str(event.get("change_type", "")).lower() == "reroute"
+            for event in revised.key_events
+        )
+        metrics_throughput_drop = any(
+            peer.agent_id == "metrics"
+            and any(
+                isinstance(event, dict) and float(event.get("throughput_gbps", 999)) < 0.7
+                for event in peer.key_events
+            )
+            for peer in peer_findings
+        )
+        if is_reroute and metrics_throughput_drop:
+            revised.revised = True
+            revised.revision_count += 1
+            revised.confidence = max(revised.confidence, 0.91)
+            if "Peer corroboration:" not in revised.summary:
+                revised.summary = (
+                    f"{revised.summary}. "
+                    "Peer corroboration: metrics reported throughput drop during routing reroute"
+                )
+            return revised
+
+        corroborating_domains = sorted({p.domain for p in peer_anomalies})
+        if corroborating_domains:
+            revised.revised = True
+            revised.revision_count += 1
+            revised.confidence = min(0.94, revised.confidence + 0.04)
+            if "Peer corroboration:" not in revised.summary:
+                revised.summary = (
+                    f"{revised.summary}. "
+                    f"Peer corroboration: aligned anomalies from [{', '.join(corroborating_domains)}]"
+                )
+        return revised
+
+    # Routing stability can be meaningful when other domains are noisy.
+    if peer_anomalies:
+        revised.revised = True
+        revised.revision_count += 1
+        revised.confidence = max(revised.confidence, 0.78)
+        if "Peer contradiction:" not in revised.summary:
+            contradictory_domains = sorted({p.domain for p in peer_anomalies})
+            revised.summary = (
+                f"{revised.summary}. "
+                f"Peer contradiction: no routing path change while [{', '.join(contradictory_domains)}] reported anomalies"
+            )
+
+    return revised
+
+
 def _extract_request_context(payload: dict) -> tuple[str, str, dict]:
     params = payload.get("params", {})
     message = params.get("message", {})

@@ -15,6 +15,39 @@ from providers.simulation.log_sim import SimulationLogProvider
 logger = logging.getLogger("net_cortex.agent.log")
 
 
+def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding]) -> AgentFinding:
+    """Adjust log confidence/summary using peer domain evidence."""
+    revised = finding.model_copy(deep=True)
+    peer_anomalies = [peer for peer in peer_findings if peer.anomaly_detected]
+
+    if revised.anomaly_detected:
+        corroborating_domains = sorted({p.domain for p in peer_anomalies})
+        if corroborating_domains:
+            revised.revised = True
+            revised.revision_count += 1
+            revised.confidence = min(0.93, revised.confidence + 0.05)
+            if "Peer corroboration:" not in revised.summary:
+                revised.summary = (
+                    f"{revised.summary}. "
+                    f"Peer corroboration: aligned anomalies from [{', '.join(corroborating_domains)}]"
+                )
+        return revised
+
+    # No log anomaly while peers detect issues is useful contradiction evidence.
+    if peer_anomalies:
+        revised.revised = True
+        revised.revision_count += 1
+        revised.confidence = max(revised.confidence, 0.74)
+        if "Peer contradiction:" not in revised.summary:
+            contradictory_domains = sorted({p.domain for p in peer_anomalies})
+            revised.summary = (
+                f"{revised.summary}. "
+                f"Peer contradiction: no direct log error pattern while [{', '.join(contradictory_domains)}] reported anomalies"
+            )
+
+    return revised
+
+
 def _extract_request_context(payload: dict) -> tuple[str, str, dict]:
     params = payload.get("params", {})
     message = params.get("message", {})

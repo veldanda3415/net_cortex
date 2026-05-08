@@ -15,6 +15,43 @@ from providers.simulation.metrics_sim import SimulationMetricsProvider
 logger = logging.getLogger("net_cortex.agent.metrics")
 
 
+def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding]) -> AgentFinding:
+    """Adjust metrics confidence/summary using peer domain evidence."""
+    revised = finding.model_copy(deep=True)
+    if not revised.anomaly_detected:
+        return revised
+
+    throughput_drop = any(
+        isinstance(event, dict) and float(event.get("throughput_gbps", 999)) < 0.7
+        for event in revised.key_events
+    )
+    routing_reroute = any(
+        peer.agent_id == "routing"
+        and peer.anomaly_detected
+        and (
+            "reroute" in peer.summary.lower()
+            or any(
+                isinstance(event, dict) and str(event.get("change_type", "")).lower() == "reroute"
+                for event in peer.key_events
+            )
+        )
+        for peer in peer_findings
+    )
+
+    if throughput_drop and routing_reroute:
+        revised.revised = True
+        revised.revision_count += 1
+        revised.confidence = max(revised.confidence, 0.92)
+        if "Peer corroboration:" not in revised.summary:
+            revised.summary = (
+                f"{revised.summary}. "
+                "Peer corroboration: routing agent reported reroute during throughput drop; "
+                "metrics confidence elevated to 0.92"
+            )
+
+    return revised
+
+
 def _extract_request_context(payload: dict) -> tuple[str, str, dict]:
     params = payload.get("params", {})
     message = params.get("message", {})

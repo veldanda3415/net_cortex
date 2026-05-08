@@ -10,6 +10,7 @@ and synthesizes both machine-structured and human-readable RCA output.
 - FastAPI-based domain agents exposing ADK-compatible A2A agent cards and task messaging.
 - Deterministic confidence scoring plus Gemini LLM-based incident classification and narrative synthesis.
 - Simulation scenarios for reproducible local development and demos.
+- Replay/eval mode to run bundled scenarios and score expected RCA keyword coverage.
 - Console progress logging so users can track execution stages in real time.
 
 ## Documentation
@@ -131,6 +132,18 @@ Run with debug logs:
 python app/main.py run --scenario 1 --verbose
 ```
 
+Replay/eval all bundled scenarios (useful for reproducibility demos and CI):
+
+```powershell
+python app/main.py eval --all-scenarios --fail-on-miss
+```
+
+Evaluate a single scenario:
+
+```powershell
+python app/main.py eval --scenario 10
+```
+
 LLM strict mode is optional. Enable it explicitly when you want fail-fast behavior if LLM is unavailable:
 
 ```powershell
@@ -247,6 +260,10 @@ Key fields:
 - `confidence_score`: synthesized confidence score.
 - `corroborating_domain_count`: number of anomaly-supporting domains.
 - `conflict_detected`: whether signals conflict.
+
+Conflict demo scenario:
+
+- Scenario `10` intentionally generates conflicting evidence (`metrics` anomaly on Switch-C while `config` reports no changes) to exercise conflict handling in synthesis and policy logic.
 
 ## Configuration Notes
 

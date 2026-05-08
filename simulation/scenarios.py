@@ -131,8 +131,133 @@ def build_scenario_9() -> ScenarioDataBundle:
 
 
 def build_scenario_10() -> ScenarioDataBundle:
-    metrics = [MetricSnapshot(timestamp=_t(1), region="us-east", error_rate=0.6, packet_loss=0.21, throughput_gbps=1.0, latency_ms=51, tags={"noise": "true"})]
-    return _bundle(10, "Noisy Baseline", metrics, [], [], [], "Minor fluctuation alert", ["no anomaly", "baseline noise"])
+    metrics = [
+        MetricSnapshot(timestamp=_t(2), region="us-east", error_rate=4.2, packet_loss=5.1, throughput_gbps=0.45, latency_ms=120, tags={"switch": "Switch-C"}),
+        MetricSnapshot(timestamp=_t(2), region="us-east", error_rate=0.4, packet_loss=0.2, throughput_gbps=1.1, latency_ms=49, tags={"switch": "Switch-A"}),
+    ]
+    return _bundle(
+        10,
+        "Conflict: Metrics Spike Without Config Change",
+        metrics,
+        [],
+        [],
+        [],
+        "High error rate on Switch-C with throughput drop; verify if any config changes occurred",
+        ["switch-c", "error_rate", "throughput", "no config changes", "conflict"],
+    )
+
+
+def build_scenario_11() -> ScenarioDataBundle:
+    metrics = [
+        MetricSnapshot(timestamp=_t(3), region="us-east", error_rate=3.4, packet_loss=6.8, throughput_gbps=0.42, latency_ms=140, tags={"uplink": "xe-0/0/7", "switch": "EDGE-22"}),
+        MetricSnapshot(timestamp=_t(3), region="us-east", error_rate=0.5, packet_loss=0.2, throughput_gbps=1.0, latency_ms=50, tags={"uplink": "xe-0/0/8", "switch": "EDGE-23"}),
+    ]
+    logs = [
+        LogEvent(timestamp=_t(4), level="ERROR", service="optic-monitor", message="CRC burst detected on EDGE-22 xe-0/0/7"),
+        LogEvent(timestamp=_t(4), level="WARN", service="optic-monitor", message="Laser bias current drifting above baseline on EDGE-22"),
+    ]
+    return _bundle(
+        11,
+        "Optical CRC Burst",
+        metrics,
+        logs,
+        [],
+        [],
+        "Intermittent packet loss and throughput collapse on EDGE-22 uplink xe-0/0/7",
+        ["crc", "xe-0/0/7", "edge-22", "packet loss", "throughput"],
+    )
+
+
+def build_scenario_12() -> ScenarioDataBundle:
+    metrics = [
+        MetricSnapshot(timestamp=_t(2), region="us-east", error_rate=0.4, packet_loss=0.15, throughput_gbps=1.05, latency_ms=52, tags={"core": "R1"}),
+        MetricSnapshot(timestamp=_t(2), region="us-east", error_rate=0.5, packet_loss=0.12, throughput_gbps=1.02, latency_ms=50, tags={"core": "R2"}),
+    ]
+    logs = [
+        LogEvent(timestamp=_t(3), level="ERROR", service="control-plane", message="BGP update queue saturation on RR-1"),
+        LogEvent(timestamp=_t(3), level="ERROR", service="control-plane", message="Route reflector CPU soft lockup detected"),
+    ]
+    routing = [
+        RoutingEvent(timestamp=_t(3), region="us-east", path_id="RR-1", change_type="flap", details="Control-plane churn caused repeated path flap without data-plane loss"),
+    ]
+    return _bundle(
+        12,
+        "Control-Plane Churn",
+        metrics,
+        logs,
+        routing,
+        [],
+        "Route reflector instability with path flaps but no major data-plane metric impact",
+        ["control-plane", "rr-1", "flap", "bgp", "conflict"],
+    )
+
+
+def build_scenario_13() -> ScenarioDataBundle:
+    """Full 4-domain corroboration: fiber-cut triggers reroute + emergency failover config."""
+    metrics = [
+        MetricSnapshot(timestamp=_t(5), region="us-east", error_rate=11.2, packet_loss=18.5, throughput_gbps=0.18, latency_ms=310, tags={"interface": "GigE0/0/1", "switch": "CORE-01"}),
+        MetricSnapshot(timestamp=_t(5), region="us-east", error_rate=0.4, packet_loss=0.2, throughput_gbps=1.1, latency_ms=51, tags={"interface": "GigE0/0/2", "switch": "CORE-01"}),
+    ]
+    logs = [
+        LogEvent(timestamp=_t(6), level="ERROR", service="ifmon", message="Interface GigE0/0/1 on CORE-01 transitioned to DOWN (physical loss of signal)"),
+        LogEvent(timestamp=_t(6), level="FATAL", service="bfd", message="BFD session CORE-01 <-> CORE-02 via GigE0/0/1 declared DOWN after 3 missed hellos"),
+    ]
+    routing = [
+        RoutingEvent(timestamp=_t(6), region="us-east", path_id="CORE-01-to-CORE-02", change_type="reroute", details="Primary GigE0/0/1 down; failover to backup path via CORE-03, convergence 4s"),
+    ]
+    config = [
+        ConfigChange(
+            timestamp=_t(5),
+            component="CORE-01",
+            change_type="rollback",
+            before={"failover_policy": "manual"},
+            after={"failover_policy": "automatic"},
+        )
+    ]
+    return _bundle(
+        13,
+        "Fiber Cut Full Corroboration",
+        metrics,
+        logs,
+        routing,
+        config,
+        "Packet loss spike and throughput collapse on CORE-01 GigE0/0/1; BFD down and reroute in progress",
+        ["gige0/0/1", "core-01", "bfd", "reroute", "fiber"],
+    )
+
+
+def build_scenario_14() -> ScenarioDataBundle:
+    """Full 4-domain corroboration: bad canary deployment saturates uplink and triggers congestion."""
+    metrics = [
+        MetricSnapshot(timestamp=_t(8), region="us-east", error_rate=5.8, packet_loss=7.4, throughput_gbps=0.55, latency_ms=190, tags={"service": "api-gw", "datacenter": "DC1"}),
+        MetricSnapshot(timestamp=_t(8), region="us-east", error_rate=5.6, packet_loss=7.1, throughput_gbps=0.57, latency_ms=188, tags={"service": "api-gw", "datacenter": "DC2"}),
+    ]
+    logs = [
+        LogEvent(timestamp=_t(9), level="ERROR", service="api-gw", message="Rate limiter triggered: upstream bandwidth exceeded 90% on DC1 and DC2"),
+        LogEvent(timestamp=_t(9), level="ERROR", service="health-check", message="api-gw /healthz returning 503 — connection queue full"),
+    ]
+    routing = [
+        RoutingEvent(timestamp=_t(9), region="us-east", path_id="api-gw-uplink", change_type="congestion", details="Uplink saturated due to canary traffic burst; load balancer rerouting 40% to secondary AZ"),
+    ]
+    config = [
+        ConfigChange(
+            timestamp=_t(15),
+            component="api-gw",
+            change_type="deployment",
+            before={"version": "2.4.1", "max_conn": 5000},
+            after={"version": "2.5.0-canary", "max_conn": 50000},
+        )
+    ]
+    return _bundle(
+        14,
+        "Canary Deployment Saturation",
+        metrics,
+        logs,
+        routing,
+        config,
+        "Throughput collapse and packet loss on api-gw across DC1 and DC2 after canary deployment",
+        ["api-gw", "canary", "deployment", "congestion", "rate limiter"],
+    )
 
 
 SCENARIOS: dict[int, ScenarioDataBundle] = {
@@ -146,4 +271,8 @@ SCENARIOS: dict[int, ScenarioDataBundle] = {
     8: build_scenario_8(),
     9: build_scenario_9(),
     10: build_scenario_10(),
+    11: build_scenario_11(),
+    12: build_scenario_12(),
+    13: build_scenario_13(),
+    14: build_scenario_14(),
 }

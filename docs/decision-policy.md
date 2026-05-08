@@ -83,6 +83,11 @@ When conflicts exist:
 
 Do not hide disagreement for the sake of a cleaner narrative.
 
+Simulation coverage note:
+
+- Scenario `10` in `simulation/scenarios.py` intentionally creates conflicting evidence: metrics detects high error rate/throughput degradation on Switch-C while config reports no proximate changes.
+- Use `python app/main.py eval --all-scenarios` to verify this policy path remains exercised over time.
+
 ## LLM Policy
 
 LLM is used for narrative synthesis only.

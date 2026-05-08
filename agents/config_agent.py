@@ -15,6 +15,33 @@ from providers.simulation.config_sim import SimulationConfigProvider
 logger = logging.getLogger("net_cortex.agent.config")
 
 
+def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding]) -> AgentFinding:
+    """Adjust config confidence/summary using peer domain evidence."""
+    revised = finding.model_copy(deep=True)
+
+    peer_anomalies = [peer for peer in peer_findings if peer.anomaly_detected]
+    if revised.anomaly_detected:
+        if peer_anomalies:
+            revised.revised = True
+            revised.revision_count += 1
+            revised.confidence = min(0.95, revised.confidence + 0.04)
+        return revised
+
+    # No config change found while peers report anomalies is valuable contradictory evidence.
+    if peer_anomalies:
+        revised.revised = True
+        revised.revision_count += 1
+        revised.confidence = max(revised.confidence, 0.86)
+        if "Peer contradiction:" not in revised.summary:
+            domains = ", ".join(sorted({p.domain for p in peer_anomalies}))
+            revised.summary = (
+                f"{revised.summary}. "
+                f"Peer contradiction: anomalies observed in [{domains}] while config remains unchanged"
+            )
+
+    return revised
+
+
 def _extract_request_context(payload: dict) -> tuple[str, str, dict]:
     params = payload.get("params", {})
     message = params.get("message", {})
