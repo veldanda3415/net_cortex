@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from models.schemas import ConfigChange, LogEvent, MetricSnapshot, RoutingEvent
+from models.schemas import ConfigChange, EntityBaseline, LogEvent, MetricSnapshot, RoutingEvent
 
 
 class MetricsProvider(ABC):
@@ -26,4 +26,10 @@ class RoutingProvider(ABC):
 class ConfigProvider(ABC):
     @abstractmethod
     def get_config_changes(self, region: str, window_minutes: int, scenario_id: int | None) -> list[ConfigChange]:
+        raise NotImplementedError
+
+
+class BaselineProvider(ABC):
+    @abstractmethod
+    def get_baseline(self, entity_key: str, metric: str) -> EntityBaseline | None:
         raise NotImplementedError

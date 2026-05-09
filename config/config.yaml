@@ -28,6 +28,12 @@ simulation:
   region: us-east
   window_minutes: 30
 
+baselines:
+  provider: simulation
+  metrics_z_threshold: 3.0
+  config_z_threshold: 2.5
+  legacy_fallback: true
+
 agents:
   metrics:
     endpoint: http://localhost:8001/a2a

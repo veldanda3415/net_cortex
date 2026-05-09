@@ -98,10 +98,10 @@ async def start_server(fastapi_app, host: str, port: int):
 async def start_runtime(cfg: dict[str, Any]):
     logger.info("Starting domain agent services on ports 8001-8004")
     tasks = [
-        asyncio.create_task(start_server(build_metrics_app(), "0.0.0.0", 8001)),
+        asyncio.create_task(start_server(build_metrics_app(cfg), "0.0.0.0", 8001)),
         asyncio.create_task(start_server(build_log_app(), "0.0.0.0", 8002)),
         asyncio.create_task(start_server(build_routing_app(), "0.0.0.0", 8003)),
-        asyncio.create_task(start_server(build_config_app(), "0.0.0.0", 8004)),
+        asyncio.create_task(start_server(build_config_app(cfg), "0.0.0.0", 8004)),
     ]
     await asyncio.sleep(1.0)
 

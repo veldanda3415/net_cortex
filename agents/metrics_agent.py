@@ -9,6 +9,9 @@ from uuid import uuid4
 from fastapi import FastAPI
 
 from models.schemas import AgentFinding
+from providers.adapters.prometheus_baseline_adapter import PrometheusBaselineProvider
+from providers.baseline_utils import compute_z_score, is_anomalous
+from providers.simulation.baseline_sim import SimulationBaselineProvider
 from providers.simulation.metrics_sim import SimulationMetricsProvider
 
 
@@ -20,6 +23,19 @@ def _throughput_below(event: dict, threshold: float = 0.7) -> bool:
         return float(event.get("throughput_gbps", 999)) < threshold
     except (TypeError, ValueError):
         return False
+
+
+def _metric_entity_keys(metric_row: dict) -> list[str]:
+    tags = metric_row.get("tags", {}) if isinstance(metric_row.get("tags", {}), dict) else {}
+    keys: list[str] = []
+    for tag_name in ("switch", "interface", "uplink", "dst_prefix", "core", "lag", "service"):
+        tag_value = tags.get(tag_name)
+        if tag_value:
+            keys.append(f"{tag_name}:{tag_value}")
+    region = metric_row.get("region")
+    if region:
+        keys.append(f"region:{region}")
+    return keys
 
 
 def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding]) -> AgentFinding:
@@ -92,11 +108,22 @@ def _task_result(payload: dict, task_id: str, context_id: str, state: str, artif
     return {"jsonrpc": "2.0", "id": payload.get("id"), "result": result}
 
 
-def build_metrics_app() -> FastAPI:
+def build_metrics_app(cfg: dict | None = None) -> FastAPI:
     app = FastAPI(title="netcortex-metrics-agent")
     provider = SimulationMetricsProvider()
+    baseline_cfg = (cfg or {}).get("baselines", {})
+    baseline_provider_name = str(baseline_cfg.get("provider", "simulation")).lower()
+    if baseline_provider_name == "simulation":
+        baseline_provider = SimulationBaselineProvider()
+    elif baseline_provider_name == "prometheus":
+        baseline_provider = PrometheusBaselineProvider()
+    else:
+        raise ValueError("ConfigValidationError: baselines.provider must be either 'simulation' or 'prometheus'")
+    z_threshold = float(baseline_cfg.get("metrics_z_threshold", 3.0))
+    legacy_fallback = bool(baseline_cfg.get("legacy_fallback", True))
     active_sessions: set[str] = set()
     pending_peer_messages: dict[str, list[dict]] = defaultdict(list)
+    session_findings: dict[str, AgentFinding] = {}
     state_lock = asyncio.Lock()
 
     @app.get("/.well-known/agent.json")
@@ -138,16 +165,47 @@ def build_metrics_app() -> FastAPI:
                 active_sessions.add(context_id)
             try:
                 metrics = provider.get_metrics(data["region"], int(data["window_minutes"]), data.get("scenario_id"))
-                impacted = [m for m in metrics if m.error_rate > 2 or m.packet_loss > 2 or m.throughput_gbps < 0.7]
+                impacted: list[tuple[dict, list[str]]] = []
+                for metric in metrics:
+                    metric_row = metric.model_dump(mode="json")
+                    entity_keys = _metric_entity_keys(metric_row)
+                    reasons: list[str] = []
+                    had_baseline = False
+                    for metric_name, value in (
+                        ("error_rate", metric.error_rate),
+                        ("packet_loss", metric.packet_loss),
+                        ("throughput_gbps", metric.throughput_gbps),
+                    ):
+                        selected = None
+                        for key in entity_keys:
+                            candidate = baseline_provider.get_baseline(key, metric_name)
+                            if candidate is not None:
+                                selected = candidate
+                                break
+                        if selected is None:
+                            continue
+                        had_baseline = True
+                        z_score = compute_z_score(float(value), selected)
+                        if is_anomalous(float(value), selected, z_threshold=z_threshold):
+                            reasons.append(f"{metric_name} z={z_score:.2f}")
+
+                    # Fallback keeps behavior safe when no baseline exists for an entity.
+                    if legacy_fallback and not had_baseline and (metric.error_rate > 2 or metric.packet_loss > 2 or metric.throughput_gbps < 0.7):
+                        reasons.append("legacy-threshold")
+
+                    if reasons:
+                        impacted.append((metric_row, reasons))
                 anomaly = len(impacted) > 0
                 summary = "Metrics within baseline"
                 if anomaly:
-                    worst = max(impacted, key=lambda x: (x.error_rate + x.packet_loss))
-                    node = worst.tags.get("switch", "unknown")
+                    worst, worst_reasons = max(impacted, key=lambda x: (float(x[0].get("error_rate", 0)) + float(x[0].get("packet_loss", 0))))
+                    tags = worst.get("tags", {}) if isinstance(worst.get("tags", {}), dict) else {}
+                    node = tags.get("switch", "unknown")
                     summary = (
                         f"Metric anomalies detected on {len(impacted)}/{len(metrics)} nodes; "
-                        f"worst switch={node}, error_rate={worst.error_rate:.2f}%, "
-                        f"packet_loss={worst.packet_loss:.2f}%, throughput={worst.throughput_gbps:.2f}Gbps"
+                        f"worst switch={node}, error_rate={float(worst.get('error_rate', 0.0)):.2f}%, "
+                        f"packet_loss={float(worst.get('packet_loss', 0.0)):.2f}%, throughput={float(worst.get('throughput_gbps', 0.0)):.2f}Gbps; "
+                        f"evidence={', '.join(worst_reasons)}"
                     )
                 logger.info(
                     "Analyzed metrics region=%s window=%s scenario=%s points=%s anomaly=%s",
@@ -162,15 +220,45 @@ def build_metrics_app() -> FastAPI:
                     domain="metrics",
                     anomaly_detected=anomaly,
                     summary=summary,
-                    key_events=[m.model_dump() for m in metrics[:3]],
+                    key_events=[row for row, _ in impacted[:3]] if anomaly else [m.model_dump(mode="json") for m in metrics[:3]],
                     start_time=min((m.timestamp for m in metrics), default=datetime.now(timezone.utc)),
                     end_time=max((m.timestamp for m in metrics), default=datetime.now(timezone.utc)),
-                    confidence=0.82 if anomaly else 0.25,
+                    confidence=min(0.95, 0.6 + 0.08 * len(impacted)) if anomaly else 0.25,
                 )
             finally:
                 async with state_lock:
                     active_sessions.discard(context_id)
-                    # TODO: drain pending_peer_messages[context_id] queued during analysis
+                    queued = pending_peer_messages.pop(context_id, [])
+
+            # Register finding so respond-to-peer can update it during this session
+            session_findings[context_id] = finding
+
+            # Process queued peer messages (received while analysis was running)
+            for queued_data in queued:
+                message_type = queued_data.get("message_type", queued_data.get("skill", ""))
+                sender = queued_data.get("sender_agent", "unknown")
+                logger.info(
+                    "Processing queued peer message sender=%s type=%s incident=%s",
+                    sender, message_type, context_id,
+                )
+                if message_type == "finding_publish":
+                    raw = queued_data.get("payload", queued_data)
+                    try:
+                        peer_finding = AgentFinding.model_validate(raw)
+                        current = session_findings.get(context_id)
+                        if current:
+                            revised = reconsider_finding(current, [peer_finding])
+                            session_findings[context_id] = revised
+                            logger.info(
+                                "Reconsidered finding after drained peer message sender=%s revised=%s",
+                                sender, revised.revised,
+                            )
+                    except Exception:
+                        logger.warning("Could not parse peer finding from queued message sender=%s", sender)
+
+            # Use finding as possibly revised by drained peer messages
+            finding = session_findings.get(context_id, finding)
+            session_findings.pop(context_id, None)  # clean up after use
             logger.info("Completed analyze-metrics anomaly=%s confidence=%.2f", finding.anomaly_detected, finding.confidence)
             return _task_result(
                 payload=payload,
@@ -191,6 +279,42 @@ def build_metrics_app() -> FastAPI:
         if busy:
             logger.info("Queued peer message while busy incident=%s queue_size=%s", incident_for_log, queue_size)
             return _task_result(payload=payload, task_id=task_id, context_id=context_id, state="submitted")
+
+        message_type = data.get("message_type", "")
+        if skill == "respond-to-peer" and message_type == "finding_publish":
+            sender = data.get("sender_agent", "unknown")
+            raw = data.get("payload", data)
+            try:
+                peer_finding = AgentFinding.model_validate(raw)
+            except Exception:
+                valid_domains = {"metrics", "log", "routing", "config"}
+                safe_domain = sender if sender in valid_domains else "metrics"
+                peer_finding = AgentFinding(
+                    agent_id=sender,
+                    domain=safe_domain,
+                    anomaly_detected=bool(data.get("payload", {}).get("anomaly_detected", False)),
+                    summary=str(data.get("payload", {}).get("summary", "")),
+                    key_events=[],
+                    start_time=datetime.now(timezone.utc),
+                    end_time=datetime.now(timezone.utc),
+                    confidence=0.5,
+                )
+            current_finding = session_findings.get(context_id)
+            if current_finding:
+                revised = reconsider_finding(current_finding, [peer_finding])
+                session_findings[context_id] = revised
+                logger.info(
+                    "Reconsidered finding after peer message sender=%s revised=%s",
+                    sender, revised.revised,
+                )
+            return _task_result(
+                payload=payload,
+                task_id=task_id,
+                context_id=context_id,
+                state="completed",
+                artifact_name="peer_response",
+                data={"ack": True, "reconsidered": current_finding is not None},
+            )
 
         logger.info("Responded to peer message")
         return _task_result(

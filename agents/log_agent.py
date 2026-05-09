@@ -86,6 +86,7 @@ def build_log_app() -> FastAPI:
     provider = SimulationLogProvider()
     active_sessions: set[str] = set()
     pending_peer_messages: dict[str, list[dict]] = defaultdict(list)
+    session_findings: dict[str, AgentFinding] = {}
     state_lock = asyncio.Lock()
 
     @app.get("/.well-known/agent.json")
@@ -160,7 +161,37 @@ def build_log_app() -> FastAPI:
             finally:
                 async with state_lock:
                     active_sessions.discard(context_id)
-                    # TODO: drain pending_peer_messages[context_id] queued during analysis
+                    queued = pending_peer_messages.pop(context_id, [])
+
+            # Register finding so respond-to-peer can update it during this session
+            session_findings[context_id] = finding
+
+            # Process queued peer messages (received while analysis was running)
+            for queued_data in queued:
+                message_type = queued_data.get("message_type", queued_data.get("skill", ""))
+                sender = queued_data.get("sender_agent", "unknown")
+                logger.info(
+                    "Processing queued peer message sender=%s type=%s incident=%s",
+                    sender, message_type, context_id,
+                )
+                if message_type == "finding_publish":
+                    raw = queued_data.get("payload", queued_data)
+                    try:
+                        peer_finding = AgentFinding.model_validate(raw)
+                        current = session_findings.get(context_id)
+                        if current:
+                            revised = reconsider_finding(current, [peer_finding])
+                            session_findings[context_id] = revised
+                            logger.info(
+                                "Reconsidered finding after drained peer message sender=%s revised=%s",
+                                sender, revised.revised,
+                            )
+                    except Exception:
+                        logger.warning("Could not parse peer finding from queued message sender=%s", sender)
+
+            # Use finding as possibly revised by drained peer messages
+            finding = session_findings.get(context_id, finding)
+            session_findings.pop(context_id, None)  # clean up after use
             logger.info("Completed analyze-logs anomaly=%s confidence=%.2f", finding.anomaly_detected, finding.confidence)
             return _task_result(
                 payload=payload,
@@ -181,6 +212,42 @@ def build_log_app() -> FastAPI:
         if busy:
             logger.info("Queued peer message while busy incident=%s queue_size=%s", incident_for_log, queue_size)
             return _task_result(payload=payload, task_id=task_id, context_id=context_id, state="submitted")
+
+        message_type = data.get("message_type", "")
+        if skill == "respond-to-peer" and message_type == "finding_publish":
+            sender = data.get("sender_agent", "unknown")
+            raw = data.get("payload", data)
+            try:
+                peer_finding = AgentFinding.model_validate(raw)
+            except Exception:
+                valid_domains = {"metrics", "log", "routing", "config"}
+                safe_domain = sender if sender in valid_domains else "metrics"
+                peer_finding = AgentFinding(
+                    agent_id=sender,
+                    domain=safe_domain,
+                    anomaly_detected=bool(data.get("payload", {}).get("anomaly_detected", False)),
+                    summary=str(data.get("payload", {}).get("summary", "")),
+                    key_events=[],
+                    start_time=datetime.now(timezone.utc),
+                    end_time=datetime.now(timezone.utc),
+                    confidence=0.5,
+                )
+            current_finding = session_findings.get(context_id)
+            if current_finding:
+                revised = reconsider_finding(current_finding, [peer_finding])
+                session_findings[context_id] = revised
+                logger.info(
+                    "Reconsidered finding after peer message sender=%s revised=%s",
+                    sender, revised.revised,
+                )
+            return _task_result(
+                payload=payload,
+                task_id=task_id,
+                context_id=context_id,
+                state="completed",
+                artifact_name="peer_response",
+                data={"ack": True, "reconsidered": current_finding is not None},
+            )
 
         logger.info("Responded to peer message")
         return _task_result(

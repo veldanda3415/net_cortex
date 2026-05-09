@@ -13,7 +13,13 @@ def test_validate_config_success():
             "message_timeout_seconds": 10,
             "round_timeout_seconds": 25,
             "collaboration_timeout_seconds": 60,
-        }
+        },
+        "baselines": {
+            "provider": "simulation",
+            "metrics_z_threshold": 3.0,
+            "config_z_threshold": 2.5,
+            "legacy_fallback": True,
+        },
     }
     validate_config(cfg)
 
@@ -29,6 +35,66 @@ def test_validate_config_failure():
         }
     }
     with pytest.raises(ValueError):
+        validate_config(cfg)
+
+
+def test_validate_config_failure_invalid_baseline_provider():
+    cfg = {
+        "a2a": {
+            "max_iterations": 2,
+            "analysis_timeout_seconds": 20,
+            "message_timeout_seconds": 10,
+            "round_timeout_seconds": 25,
+            "collaboration_timeout_seconds": 60,
+        },
+        "baselines": {
+            "provider": "redis",
+            "metrics_z_threshold": 3.0,
+            "config_z_threshold": 2.5,
+            "legacy_fallback": True,
+        },
+    }
+    with pytest.raises(ValueError, match="baselines.provider"):
+        validate_config(cfg)
+
+
+def test_validate_config_failure_nonpositive_threshold():
+    cfg = {
+        "a2a": {
+            "max_iterations": 2,
+            "analysis_timeout_seconds": 20,
+            "message_timeout_seconds": 10,
+            "round_timeout_seconds": 25,
+            "collaboration_timeout_seconds": 60,
+        },
+        "baselines": {
+            "provider": "simulation",
+            "metrics_z_threshold": 0,
+            "config_z_threshold": 2.5,
+            "legacy_fallback": True,
+        },
+    }
+    with pytest.raises(ValueError, match="metrics_z_threshold"):
+        validate_config(cfg)
+
+
+def test_validate_config_failure_nonboolean_legacy_fallback():
+    cfg = {
+        "a2a": {
+            "max_iterations": 2,
+            "analysis_timeout_seconds": 20,
+            "message_timeout_seconds": 10,
+            "round_timeout_seconds": 25,
+            "collaboration_timeout_seconds": 60,
+        },
+        "baselines": {
+            "provider": "simulation",
+            "metrics_z_threshold": 3.0,
+            "config_z_threshold": 2.5,
+            "legacy_fallback": "true",
+        },
+    }
+    with pytest.raises(ValueError, match="legacy_fallback"):
         validate_config(cfg)
 
 

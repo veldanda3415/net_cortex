@@ -28,6 +28,16 @@ class MetricSnapshot(BaseModel):
     tags: dict[str, str] = Field(default_factory=dict)
 
 
+class EntityBaseline(BaseModel):
+    entity_key: str
+    metric: str
+    mean: float
+    std_dev: float
+    sample_count: int
+    last_updated: datetime
+    window_hours: int = 24
+
+
 class LogEvent(BaseModel):
     timestamp: datetime
     level: Literal["INFO", "WARN", "ERROR", "FATAL"]

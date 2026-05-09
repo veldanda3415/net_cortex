@@ -9,10 +9,55 @@ from uuid import uuid4
 from fastapi import FastAPI
 
 from models.schemas import AgentFinding
+from providers.adapters.prometheus_baseline_adapter import PrometheusBaselineProvider
+from providers.baseline_utils import compute_z_score, is_anomalous
+from providers.simulation.baseline_sim import SimulationBaselineProvider
 from providers.simulation.config_sim import SimulationConfigProvider
 
 
 logger = logging.getLogger("net_cortex.agent.config")
+
+
+_STOPWORDS = {
+    "the", "and", "for", "with", "from", "that", "this", "was", "were", "have", "has", "had",
+    "into", "onto", "about", "after", "before", "during", "high", "low", "drop", "spike", "region",
+    "incident", "service", "network",
+}
+
+
+def _tokenize(text: str) -> set[str]:
+    return {
+        token
+        for token in "".join(ch if ch.isalnum() else " " for ch in text.lower()).split()
+        if len(token) >= 4 and token not in _STOPWORDS
+    }
+
+
+def _is_change_relevant(change, incident_description: str) -> bool:
+    if not incident_description.strip():
+        return True
+
+    incident_tokens = _tokenize(incident_description)
+    if not incident_tokens:
+        return True
+
+    change_blob = (
+        f"{change.component} {change.change_type} "
+        f"{' '.join(str(k) for k in change.before.keys())} {' '.join(str(v) for v in change.before.values())} "
+        f"{' '.join(str(k) for k in change.after.keys())} {' '.join(str(v) for v in change.after.values())}"
+    )
+    change_tokens = _tokenize(change_blob)
+
+    if incident_tokens & change_tokens:
+        return True
+
+    # Network symptom incidents are often caused by policy/bandwidth config changes
+    # even when the textual overlap is weak.
+    has_network_symptom = any(k in incident_description.lower() for k in ("throughput", "latency", "packet", "error", "loss"))
+    if has_network_symptom and change.change_type in {"policy_update", "bandwidth_limit", "rollback"}:
+        return True
+
+    return False
 
 
 def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding]) -> AgentFinding:
@@ -75,11 +120,22 @@ def _task_result(payload: dict, task_id: str, context_id: str, state: str, artif
     return {"jsonrpc": "2.0", "id": payload.get("id"), "result": result}
 
 
-def build_config_app() -> FastAPI:
+def build_config_app(cfg: dict | None = None) -> FastAPI:
     app = FastAPI(title="netcortex-config-agent")
     provider = SimulationConfigProvider()
+    baseline_cfg = (cfg or {}).get("baselines", {})
+    baseline_provider_name = str(baseline_cfg.get("provider", "simulation")).lower()
+    if baseline_provider_name == "simulation":
+        baseline_provider = SimulationBaselineProvider()
+    elif baseline_provider_name == "prometheus":
+        baseline_provider = PrometheusBaselineProvider()
+    else:
+        raise ValueError("ConfigValidationError: baselines.provider must be either 'simulation' or 'prometheus'")
+    z_threshold = float(baseline_cfg.get("config_z_threshold", 2.5))
+    legacy_fallback = bool(baseline_cfg.get("legacy_fallback", True))
     active_sessions: set[str] = set()
     pending_peer_messages: dict[str, list[dict]] = defaultdict(list)
+    session_findings: dict[str, AgentFinding] = {}
     state_lock = asyncio.Lock()
 
     @app.get("/.well-known/agent.json")
@@ -121,20 +177,60 @@ def build_config_app() -> FastAPI:
                 active_sessions.add(context_id)
             try:
                 changes = provider.get_config_changes(data["region"], int(data["window_minutes"]), data.get("scenario_id"))
-                anomaly = len(changes) > 0
-                summary = "No config changes"
-                if anomaly:
-                    first = changes[0]
+                incident_description = str(data.get("incident_description", ""))
+                relevant_changes = [c for c in changes if _is_change_relevant(c, incident_description)]
+                component_counts: dict[str, int] = defaultdict(int)
+                for change in relevant_changes:
+                    component_counts[change.component] += 1
+
+                anomalous_components: list[tuple[str, float]] = []
+                baseline_hits = 0
+                for component, count in component_counts.items():
+                    baseline = baseline_provider.get_baseline(f"component:{component}", "change_count")
+                    if baseline is None:
+                        baseline = baseline_provider.get_baseline(f"region:{data['region']}", "change_count")
+                    if baseline is None:
+                        continue
+                    baseline_hits += 1
+                    z_score = compute_z_score(float(count), baseline)
+                    if is_anomalous(float(count), baseline, z_threshold=z_threshold):
+                        anomalous_components.append((component, z_score))
+
+                # Primary responsibility: if incident-window relevant changes exist, surface them directly.
+                if len(relevant_changes) > 0:
+                    anomaly = True
+                    latest = max(relevant_changes, key=lambda c: c.timestamp)
                     summary = (
-                        f"Config changes found: {len(changes)} change(s); "
-                        f"first={first.change_type} on {first.component}"
+                        f"Incident-relevant config changes found: {len(relevant_changes)} change(s); "
+                        f"latest={latest.change_type} on {latest.component}"
                     )
+                    if anomalous_components:
+                        top_component, top_z = max(anomalous_components, key=lambda item: item[1])
+                        summary = (
+                            f"{summary}; volume anomaly on {top_component} z={top_z:.2f}"
+                        )
+                else:
+                    if baseline_hits == 0:
+                        anomaly = False if not legacy_fallback else False
+                    else:
+                        anomaly = bool(anomalous_components)
+
+                    summary = "No incident-relevant config changes"
+                    if len(changes) > 0 and len(relevant_changes) == 0:
+                        summary = f"Config changes present ({len(changes)}) but not incident-relevant"
+                    if anomaly and anomalous_components:
+                        top_component, top_z = max(anomalous_components, key=lambda item: item[1])
+                        summary = (
+                            f"Config change volume anomaly detected without direct change records; "
+                            f"top_component={top_component} z={top_z:.2f}"
+                        )
                 logger.info(
-                    "Analyzed config region=%s window=%s scenario=%s changes=%s anomaly=%s",
+                    "Analyzed config region=%s window=%s scenario=%s changes=%s relevant_changes=%s anomaly=%s",
                     data["region"],
                     data["window_minutes"],
                     data.get("scenario_id"),
                     len(changes),
+                    len(relevant_changes),
                     anomaly,
                 )
                 finding = AgentFinding(
@@ -142,15 +238,49 @@ def build_config_app() -> FastAPI:
                     domain="config",
                     anomaly_detected=anomaly,
                     summary=summary,
-                    key_events=[c.model_dump() for c in changes[:5]],
-                    start_time=min((c.timestamp for c in changes), default=datetime.now(timezone.utc)),
-                    end_time=max((c.timestamp for c in changes), default=datetime.now(timezone.utc)),
-                    confidence=0.83 if anomaly else 0.2,
+                    key_events=[c.model_dump() for c in relevant_changes[:5]],
+                    start_time=min((c.timestamp for c in relevant_changes), default=datetime.now(timezone.utc)),
+                    end_time=max((c.timestamp for c in relevant_changes), default=datetime.now(timezone.utc)),
+                    confidence=(
+                        min(0.95, 0.75 + 0.1 * max((z for _, z in anomalous_components), default=0.0))
+                        if len(relevant_changes) > 0
+                        else (min(0.9, 0.6 + 0.1 * max((z for _, z in anomalous_components), default=0.0)) if anomaly else 0.2)
+                    ),
                 )
             finally:
                 async with state_lock:
                     active_sessions.discard(context_id)
-                    # TODO: drain pending_peer_messages[context_id] queued during analysis
+                    queued = pending_peer_messages.pop(context_id, [])
+
+            # Register finding so respond-to-peer can update it during this session
+            session_findings[context_id] = finding
+
+            # Process queued peer messages (received while analysis was running)
+            for queued_data in queued:
+                message_type = queued_data.get("message_type", queued_data.get("skill", ""))
+                sender = queued_data.get("sender_agent", "unknown")
+                logger.info(
+                    "Processing queued peer message sender=%s type=%s incident=%s",
+                    sender, message_type, context_id,
+                )
+                if message_type == "finding_publish":
+                    raw = queued_data.get("payload", queued_data)
+                    try:
+                        peer_finding = AgentFinding.model_validate(raw)
+                        current = session_findings.get(context_id)
+                        if current:
+                            revised = reconsider_finding(current, [peer_finding])
+                            session_findings[context_id] = revised
+                            logger.info(
+                                "Reconsidered finding after drained peer message sender=%s revised=%s",
+                                sender, revised.revised,
+                            )
+                    except Exception:
+                        logger.warning("Could not parse peer finding from queued message sender=%s", sender)
+
+            # Use finding as possibly revised by drained peer messages
+            finding = session_findings.get(context_id, finding)
+            session_findings.pop(context_id, None)  # clean up after use
             logger.info("Completed analyze-config anomaly=%s confidence=%.2f", finding.anomaly_detected, finding.confidence)
             return _task_result(
                 payload=payload,
@@ -171,6 +301,42 @@ def build_config_app() -> FastAPI:
         if busy:
             logger.info("Queued peer message while busy incident=%s queue_size=%s", incident_for_log, queue_size)
             return _task_result(payload=payload, task_id=task_id, context_id=context_id, state="submitted")
+
+        message_type = data.get("message_type", "")
+        if skill == "respond-to-peer" and message_type == "finding_publish":
+            sender = data.get("sender_agent", "unknown")
+            raw = data.get("payload", data)
+            try:
+                peer_finding = AgentFinding.model_validate(raw)
+            except Exception:
+                valid_domains = {"metrics", "log", "routing", "config"}
+                safe_domain = sender if sender in valid_domains else "metrics"
+                peer_finding = AgentFinding(
+                    agent_id=sender,
+                    domain=safe_domain,
+                    anomaly_detected=bool(data.get("payload", {}).get("anomaly_detected", False)),
+                    summary=str(data.get("payload", {}).get("summary", "")),
+                    key_events=[],
+                    start_time=datetime.now(timezone.utc),
+                    end_time=datetime.now(timezone.utc),
+                    confidence=0.5,
+                )
+            current_finding = session_findings.get(context_id)
+            if current_finding:
+                revised = reconsider_finding(current_finding, [peer_finding])
+                session_findings[context_id] = revised
+                logger.info(
+                    "Reconsidered finding after peer message sender=%s revised=%s",
+                    sender, revised.revised,
+                )
+            return _task_result(
+                payload=payload,
+                task_id=task_id,
+                context_id=context_id,
+                state="completed",
+                artifact_name="peer_response",
+                data={"ack": True, "reconsidered": current_finding is not None},
+            )
 
         logger.info("Responded to peer message")
         return _task_result(

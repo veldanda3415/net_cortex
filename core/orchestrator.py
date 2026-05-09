@@ -71,6 +71,23 @@ def validate_config(cfg: dict[str, Any]) -> None:
     if not (at < ct):
         raise ValueError("ConfigValidationError: analysis_timeout_seconds must be < collaboration_timeout_seconds")
 
+    baselines = cfg.get("baselines", {})
+    provider = str(baselines.get("provider", "simulation")).lower()
+    if provider not in {"simulation", "prometheus"}:
+        raise ValueError("ConfigValidationError: baselines.provider must be either 'simulation' or 'prometheus'")
+
+    metrics_z_threshold = float(baselines.get("metrics_z_threshold", 3.0))
+    if metrics_z_threshold <= 0:
+        raise ValueError("ConfigValidationError: baselines.metrics_z_threshold must be > 0")
+
+    config_z_threshold = float(baselines.get("config_z_threshold", 2.5))
+    if config_z_threshold <= 0:
+        raise ValueError("ConfigValidationError: baselines.config_z_threshold must be > 0")
+
+    legacy_fallback = baselines.get("legacy_fallback", True)
+    if not isinstance(legacy_fallback, bool):
+        raise ValueError("ConfigValidationError: baselines.legacy_fallback must be a boolean")
+
 
 class NetCortexEngine:
     def __init__(self, cfg: dict[str, Any], router: RouterBase):
@@ -128,6 +145,7 @@ class NetCortexEngine:
                         "region": incident.region,
                         "window_minutes": int(self.cfg["simulation"]["window_minutes"]),
                         "incident_id": incident.incident_id,
+                        "incident_description": incident.description,
                         "scenario_id": incident.scenario_id,
                     },
                 )
