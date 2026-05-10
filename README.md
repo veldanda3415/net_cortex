@@ -9,9 +9,12 @@ and synthesizes both machine-structured and human-readable RCA output.
 - Multi-agent RCA workflow built on LangGraph.
 - FastAPI-based domain agents exposing ADK-compatible A2A agent cards and task messaging.
 - Deterministic confidence scoring plus Gemini LLM-based incident classification and narrative synthesis.
+- Baseline-aware z-score anomaly detection in metrics and config agents (configurable thresholds, simulation and Prometheus baseline providers).
+- Config agent prioritises incident-relevant config changes over raw change counts, using keyword-overlap and network-symptom heuristics.
 - Simulation scenarios for reproducible local development and demos.
 - Replay/eval mode to run bundled scenarios and score expected RCA keyword coverage.
 - Console progress logging so users can track execution stages in real time.
+- Safe A2A peer-collaboration: session cleanup after each incident, validated fallback domain literals, no dead in-memory caches.
 
 ## Documentation
 
@@ -35,7 +38,10 @@ Recommended reading order for contributors:
 - `communication/`: registry and A2A router.
 - `ingestion/`: webhook API intake and normalization.
 - `providers/simulation/`: scenario-backed provider implementations.
-- `providers/adapters/`: stubs for real-system integrations.
+- `providers/simulation/baseline_sim.py`: per-entity, per-metric baseline tables used by z-score detection.
+- `providers/adapters/`: stubs for real-system integrations (Prometheus, ELK, Splunk, MCP, baseline).
+- `providers/base.py`: abstract provider interfaces including `BaselineProvider`.
+- `providers/baseline_utils.py`: `compute_z_score` and `is_anomalous` utilities.
 - `config/config.yaml`: runtime behavior and timeouts.
 - `scripts/send_incident.py`: helper for webhook injection.
 - `tests/`: unit, integration, and e2e placeholders.
@@ -278,6 +284,17 @@ Important settings:
 - `a2a.analysis_timeout_seconds`: per-agent analysis timeout.
 - `a2a.max_iterations`: collaboration rounds cap.
 - `simulation.region` and `simulation.window_minutes`.
+
+### Baseline settings (`baselines.*`)
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `provider` | `simulation` | Baseline data source. `simulation` or `prometheus`. |
+| `metrics_z_threshold` | `3.0` | Z-score threshold above which a metric is flagged as anomalous. Must be > 0. |
+| `config_z_threshold` | `2.5` | Z-score threshold for config change-count anomaly detection. Must be > 0. |
+| `legacy_fallback` | `true` | When `true`, falls back to hard-coded thresholds for entities with no baseline entry. |
+
+All baseline keys are validated at startup. An invalid `provider`, a non-positive threshold, or a non-boolean `legacy_fallback` cause fail-fast startup.
 
 Schema note:
 The current A2A message schema (see `models/schemas.py`, `A2AMessage`) is a baseline contract used by this implementation. It is intentionally extensible and can be expanded with additional message types and payload fields as collaboration needs evolve.

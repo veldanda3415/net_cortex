@@ -169,6 +169,90 @@ During collaboration rounds:
 5. Peer response path returns valid JSON-RPC result.
 6. Round revision flips `revised=true` and increments `revision_count`.
 
+## Baseline-Aware Anomaly Detection
+
+Metrics and config agents use per-entity, per-metric baselines instead of global hard-coded thresholds.
+
+### How it works
+
+1. Each analysis request resolves an `EntityBaseline` for the entity being evaluated.
+2. `compute_z_score(value, baseline)` produces the deviation in standard-deviation units.
+3. `is_anomalous(value, baseline, z_threshold)` returns `True` when the z-score exceeds the configured threshold.
+4. When no baseline exists for an entity, the agent falls back to hard-coded thresholds if `legacy_fallback: true` in `config.yaml`, or reports no anomaly otherwise.
+
+### Baseline utility location
+
+```
+providers/baseline_utils.py   # compute_z_score, is_anomalous
+providers/base.py             # BaselineProvider abstract class
+providers/simulation/baseline_sim.py  # SimulationBaselineProvider (per-entity tables)
+providers/adapters/prometheus_baseline_adapter.py  # PrometheusBaselineProvider stub
+```
+
+### Z-score thresholds (configurable in `config/config.yaml`)
+
+```yaml
+baselines:
+  provider: simulation          # simulation | prometheus
+  metrics_z_threshold: 3.0     # flag metric as anomalous when |z| > 3.0
+  config_z_threshold: 2.5      # flag config change count as anomalous when |z| > 2.5
+  legacy_fallback: true        # fall back to hard-coded thresholds when no baseline exists
+```
+
+Both thresholds are validated > 0 at startup. Invalid values cause fail-fast startup.
+
+### Confidence scaling
+
+Confidence is now linked to anomaly magnitude rather than fixed:
+
+```
+metrics agent: min(0.95, 0.6 + 0.08 * impacted_count)
+config agent:  min(0.95, 0.75 + 0.1 * max_z) when relevant changes found
+               min(0.90, 0.60 + 0.1 * max_z) when anomaly detected only by count
+```
+
+## Config Agent: Incident-Relevance Priority
+
+The config agent applies two-tier reasoning:
+
+1. **Incident relevance first**: filter config changes whose component, change type, or parameters overlap with the incident description (keyword tokenisation + network-symptom heuristics for policy/bandwidth changes).
+2. **Volume anomaly second**: run z-score detection on per-component change counts from the relevant set.
+
+This prevents unrelated routine maintenance from being surfaced as causal.
+
+The `incident_description` field is passed by the orchestrator in every `analyze-config` payload. Agents must forward it from the original incident object.
+
+## Session Memory Lifecycle
+
+Each agent maintains a `session_findings: dict[str, AgentFinding]` keyed by `context_id`.
+
+**Required cleanup pattern** — call `.pop` immediately after consuming the finding:
+
+```python
+finding = session_findings.get(context_id, finding)
+session_findings.pop(context_id, None)  # prevent unbounded growth in serve mode
+```
+
+Without this, every completed incident leaves an entry in memory permanently, causing a leak in long-running serve mode.
+
+## Peer Collaboration Safety Rules
+
+### Domain literal guard in fallback construction
+
+`AgentFinding.domain` is `Literal["metrics", "log", "routing", "config"]`. If the `respond-to-peer` except branch constructs a fallback `AgentFinding` using the raw `sender` string, Pydantic raises a `ValidationError` when `sender` is `"unknown"` or any unrecognised value.
+
+Always guard with:
+
+```python
+valid_domains = {"metrics", "log", "routing", "config"}
+safe_domain = sender if sender in valid_domains else "metrics"
+peer_finding = AgentFinding(agent_id=sender, domain=safe_domain, ...)
+```
+
+### No peer_finding_cache
+
+The `peer_finding_cache` dict (formerly `dict[str, list[AgentFinding]]`) has been removed from all agents. `session_findings` already carries the live finding through drain-loop updates and respond-to-peer revisions. A secondary cache populated but never read is dead code that misleads contributors.
+
 ## Minimal Adapter/Endpoint Skeleton
 
 Agent endpoint should support:

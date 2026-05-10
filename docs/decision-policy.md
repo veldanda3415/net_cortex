@@ -16,9 +16,11 @@ Produce one conclusion that is:
 1. Supervisor scoping
 - Parse incident description.
 - Select active agents.
+- Pass `incident_description` string in every domain analysis payload so config agent can apply incident-relevance filtering.
 
 2. Parallel domain analysis
 - Each agent emits AgentFinding independently.
+- Metrics and config agents use per-entity z-score baselines from `BaselineProvider` before falling back to hard-coded thresholds.
 
 3. Collaboration rounds
 - Agents share findings and peer feedback.

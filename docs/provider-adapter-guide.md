@@ -18,6 +18,7 @@ Implement these files:
 - `providers/adapters/elk_adapter.py`
 - `providers/adapters/splunk_adapter.py`
 - `providers/adapters/mcp_adapter.py`
+- `providers/adapters/prometheus_baseline_adapter.py` — baseline adapter (stub already present, implement `get_baseline`)
 
 Each adapter should conform to the abstract provider interface for its domain.
 
@@ -136,3 +137,55 @@ Example strategy:
 
 3. Full mode
 - Switch provider in config after stability and quality thresholds are met.
+
+## Baseline Provider
+
+Domain agents that perform z-score anomaly detection require a `BaselineProvider` in addition to a telemetry provider.
+
+### Interface
+
+```python
+# providers/base.py
+class BaselineProvider(ABC):
+    @abstractmethod
+    def get_baseline(self, entity_key: str, metric: str) -> EntityBaseline | None:
+        raise NotImplementedError
+```
+
+`EntityBaseline` fields (see `models/schemas.py`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entity_key` | str | Identifies the entity, e.g. `"switch:C"`, `"region:us-east"`, `"component:api-gw"` |
+| `metric` | str | Metric name, e.g. `"error_rate"`, `"throughput_gbps"`, `"change_count"` |
+| `mean` | float | Historical mean value |
+| `std_dev` | float | Historical standard deviation |
+| `sample_count` | int | Number of samples used to compute the baseline |
+| `last_updated` | datetime | When the baseline was last refreshed |
+| `window_hours` | int | Lookback window used (default 24) |
+
+### Simulation baseline
+
+`providers/simulation/baseline_sim.py` provides `SimulationBaselineProvider` with hardcoded tables covering:
+
+- `region:us-east` — `error_rate`, `packet_loss`, `throughput_gbps`, `change_count`
+- `switch:A/B/C/D` — per-metric baselines
+- `component:Switch-C eth0/1`, `component:api-gw`, `component:CORE-01` — `change_count`
+
+### Prometheus baseline stub
+
+`providers/adapters/prometheus_baseline_adapter.py` contains `PrometheusBaselineProvider` which raises `NotImplementedError`. Implement `get_baseline` using Prometheus recording rules or range queries for mean/std_dev over the desired window.
+
+### Selecting the baseline provider
+
+Set `baselines.provider` in `config/config.yaml`:
+
+```yaml
+baselines:
+  provider: simulation   # or prometheus
+  metrics_z_threshold: 3.0
+  config_z_threshold: 2.5
+  legacy_fallback: true
+```
+
+The value is validated at startup. Only `simulation` and `prometheus` are accepted.
