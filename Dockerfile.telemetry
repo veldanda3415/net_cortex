@@ -1,0 +1,17 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY models/ models/
+COPY simulation/ simulation/
+COPY providers/ providers/
+COPY mcp_telemetry_server/ mcp_telemetry_server/
+
+EXPOSE 9001
+
+CMD ["python", "-m", "mcp_telemetry_server"]

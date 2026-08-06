@@ -1,0 +1,84 @@
+# config_mcp.yaml — Local development config using MCP providers.
+#
+# Use this when testing the MCP adapter pipeline locally:
+#   Terminal 1: python -m mcp_telemetry_server
+#   Terminal 2: python app/main.py mcp-serve --config config/config_mcp.yaml
+#
+# Or for a single run:
+#   Terminal 1: python -m mcp_telemetry_server
+#   Terminal 2: python app/main.py run --scenario 1 --config config/config_mcp.yaml
+
+llm:
+  provider: google
+  model: gemini-2.5-flash
+  api_key_env: GEMINI_API_KEY
+  require_success: false
+
+providers:
+  metrics: mcp
+  logs: mcp
+  routing: mcp
+  config: mcp
+
+mcp_endpoints:
+  metrics:
+    url: "http://localhost:9001/mcp"
+    timeout_seconds: 30
+  logs:
+    url: "http://localhost:9001/mcp"
+    timeout_seconds: 30
+  routing:
+    url: "http://localhost:9001/mcp"
+    timeout_seconds: 30
+  config:
+    url: "http://localhost:9001/mcp"
+    timeout_seconds: 30
+
+mcp_server:
+  host: "0.0.0.0"
+  port: 9000
+  transport: streamable_http
+  server_name: "NetCortex-RCA"
+  server_version: "2.0.0"
+  task_ttl_seconds: 3600
+  max_concurrent_tasks: 10
+
+a2a:
+  protocol_mode: adk
+  max_iterations: 2
+  analysis_timeout_seconds: 20
+  message_timeout_seconds: 10
+  round_timeout_seconds: 25
+  collaboration_timeout_seconds: 60
+
+simulation:
+  region: us-east
+  window_minutes: 30
+
+baselines:
+  provider: simulation
+  metrics_z_threshold: 3.0
+  config_z_threshold: 2.5
+  legacy_fallback: true
+
+agents:
+  metrics:
+    endpoint: http://localhost:8001/a2a
+    card_url: http://localhost:8001/.well-known/agent.json
+    use_external_adapter: false
+  log:
+    endpoint: http://localhost:8002/a2a
+    card_url: http://localhost:8002/.well-known/agent.json
+    use_external_adapter: false
+  routing:
+    endpoint: http://localhost:8003/a2a
+    card_url: http://localhost:8003/.well-known/agent.json
+    use_external_adapter: false
+  config:
+    endpoint: http://localhost:8004/a2a
+    card_url: http://localhost:8004/.well-known/agent.json
+    use_external_adapter: false
+
+ingestion:
+  host: 0.0.0.0
+  port: 8000

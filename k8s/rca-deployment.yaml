@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netcortex-rca
+  namespace: netcortex
+  labels:
+    app: netcortex-rca
+    app.kubernetes.io/part-of: netcortex
+    app.kubernetes.io/component: rca-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netcortex-rca
+  template:
+    metadata:
+      labels:
+        app: netcortex-rca
+    spec:
+      containers:
+      - name: rca-server
+        image: netcortex-rca:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9000
+          name: mcp
+          protocol: TCP
+        volumeMounts:
+        - name: config
+          mountPath: /app/config/config.yaml
+          subPath: config.yaml
+        env:
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: netcortex-secrets
+              key: gemini-api-key
+              optional: true
+        - name: GOOGLE_CLOUD_PROJECT
+          value: "net-cortex-dev"
+        - name: GOOGLE_CLOUD_LOCATION
+          value: "us-central1"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        readinessProbe:
+          tcpSocket:
+            port: 9000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 9000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+      volumes:
+      - name: config
+        configMap:
+          name: netcortex-config

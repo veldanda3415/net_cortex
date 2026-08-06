@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netcortex-telemetry
+  namespace: netcortex
+  labels:
+    app: netcortex-telemetry
+    app.kubernetes.io/part-of: netcortex
+    app.kubernetes.io/component: telemetry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netcortex-telemetry
+  template:
+    metadata:
+      labels:
+        app: netcortex-telemetry
+    spec:
+      containers:
+      - name: telemetry
+        image: netcortex-telemetry:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9001
+          name: mcp
+          protocol: TCP
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        readinessProbe:
+          tcpSocket:
+            port: 9001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 9001
+          initialDelaySeconds: 10
+          periodSeconds: 30

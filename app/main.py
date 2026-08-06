@@ -403,5 +403,36 @@ def eval(
     raise SystemExit(0)
 
 
+@app.command(name="mcp-serve")
+def mcp_serve(
+    host: str = typer.Option("0.0.0.0", help="Host to bind MCP server"),
+    port: int = typer.Option(9000, help="Port for MCP RCA server"),
+    config: str = typer.Option("config/config.yaml"),
+    verbose: bool = typer.Option(False, help="Enable debug logging"),
+    require_llm: bool = typer.Option(False, help="Fail if LLM unavailable"),
+):
+    """Start NetCortex as an MCP server (2026-07-28 spec, Streamable HTTP)."""
+    async def _serve_mcp():
+        configure_runtime_logging(verbose)
+        logger.info("Starting NetCortex MCP RCA Server on %s:%s", host, port)
+
+        cfg = load_config(config)
+        cfg.setdefault("llm", {})["require_success"] = bool(require_llm)
+
+        # Start domain agent services
+        tasks, engine = await start_runtime(cfg)
+
+        # Initialize MCP server with engine
+        from mcp_server.server import initialize_server, rca_server
+        initialize_server(engine, cfg)
+        logger.info("MCP RCA Server initialized with %s tools", len(rca_server._tool_manager._tools))
+
+        # Run MCP server over Streamable HTTP
+        logger.info("MCP RCA Server listening on http://%s:%s/mcp", host, port)
+        rca_server.run(transport="streamable-http", host=host, port=port)
+
+    asyncio.run(_serve_mcp())
+
+
 if __name__ == "__main__":
     app()

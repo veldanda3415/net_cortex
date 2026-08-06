@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY models/ models/
+COPY simulation/ simulation/
+COPY providers/ providers/
+COPY agents/ agents/
+COPY core/ core/
+COPY communication/ communication/
+COPY ingestion/ ingestion/
+COPY actions/ actions/
+COPY app/ app/
+COPY mcp_server/ mcp_server/
+COPY mcp_telemetry_server/ mcp_telemetry_server/
+COPY config/ config/
+
+EXPOSE 9000 8001 8002 8003 8004
+
+CMD ["python", "app/main.py", "mcp-serve"]
