@@ -16,6 +16,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
 import time
@@ -72,6 +73,19 @@ def build_images() -> None:
     print("\n[1/5] Building Docker images...")
     run("docker build -t netcortex-telemetry:latest -f Dockerfile.telemetry .")
     run("docker build -t netcortex-rca:latest -f Dockerfile.rca .")
+
+    # k3s uses containerd image store, which is separate from Docker/Podman.
+    # Import freshly built images so kubelet can use them with imagePullPolicy=IfNotPresent.
+    if shutil.which("k3s"):
+        print("[Info] k3s detected. Importing local images into k3s containerd...")
+        run("docker save netcortex-telemetry:latest | sudo k3s ctr images import -")
+        run("docker save netcortex-rca:latest | sudo k3s ctr images import -")
+        # Podman-backed docker builds are often imported as localhost/*.
+        # Tag to docker.io/library/* so kubelet resolves image refs from manifests.
+        run("sudo k3s ctr images tag localhost/netcortex-telemetry:latest docker.io/library/netcortex-telemetry:latest", check=False)
+        run("sudo k3s ctr images tag localhost/netcortex-rca:latest docker.io/library/netcortex-rca:latest", check=False)
+        print("[OK] Images imported into k3s containerd.")
+
     print("[OK] Images built successfully.")
 
 

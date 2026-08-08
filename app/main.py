@@ -429,7 +429,7 @@ def mcp_serve(
 
         # Run MCP server over Streamable HTTP
         logger.info("MCP RCA Server listening on http://%s:%s/mcp", host, port)
-        rca_server.run(transport="streamable-http", host=host, port=port)
+        await rca_server.run_streamable_http_async(host=host, port=port)
 
     asyncio.run(_serve_mcp())
 
