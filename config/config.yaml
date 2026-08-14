@@ -11,10 +11,18 @@ providers:
   config: simulation
 
 mcp_endpoints:
-  metrics: ""
-  logs: ""
-  routing: ""
-  config: ""
+  metrics:
+    url: "http://localhost:9001/mcp"
+    timeout_seconds: 30
+  logs:
+    url: "http://localhost:9001/mcp"
+    timeout_seconds: 30
+  routing:
+    url: "http://localhost:9001/mcp"
+    timeout_seconds: 30
+  config:
+    url: "http://localhost:9001/mcp"
+    timeout_seconds: 30
 
 a2a:
   protocol_mode: adk

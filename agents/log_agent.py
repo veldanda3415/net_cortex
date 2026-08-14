@@ -9,7 +9,7 @@ from uuid import uuid4
 from fastapi import FastAPI
 
 from models.schemas import AgentFinding
-from providers.simulation.log_sim import SimulationLogProvider
+from providers.factory import create_log_provider
 
 
 logger = logging.getLogger("net_cortex.agent.log")
@@ -81,9 +81,9 @@ def _task_result(payload: dict, task_id: str, context_id: str, state: str, artif
     return {"jsonrpc": "2.0", "id": payload.get("id"), "result": result}
 
 
-def build_log_app() -> FastAPI:
+def build_log_app(cfg: dict | None = None) -> FastAPI:
     app = FastAPI(title="netcortex-log-agent")
-    provider = SimulationLogProvider()
+    provider = create_log_provider(cfg or {})
     active_sessions: set[str] = set()
     pending_peer_messages: dict[str, list[dict]] = defaultdict(list)
     session_findings: dict[str, AgentFinding] = {}

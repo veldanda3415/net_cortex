@@ -12,7 +12,7 @@ from models.schemas import AgentFinding
 from providers.adapters.prometheus_baseline_adapter import PrometheusBaselineProvider
 from providers.baseline_utils import compute_z_score, is_anomalous
 from providers.simulation.baseline_sim import SimulationBaselineProvider
-from providers.simulation.config_sim import SimulationConfigProvider
+from providers.factory import create_config_provider
 
 
 logger = logging.getLogger("net_cortex.agent.config")
@@ -122,7 +122,7 @@ def _task_result(payload: dict, task_id: str, context_id: str, state: str, artif
 
 def build_config_app(cfg: dict | None = None) -> FastAPI:
     app = FastAPI(title="netcortex-config-agent")
-    provider = SimulationConfigProvider()
+    provider = create_config_provider(cfg or {})
     baseline_cfg = (cfg or {}).get("baselines", {})
     baseline_provider_name = str(baseline_cfg.get("provider", "simulation")).lower()
     if baseline_provider_name == "simulation":
