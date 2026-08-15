@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from datetime import datetime, timezone
 
 from models.schemas import A2AMessage, AgentFinding, RCAReport
@@ -45,9 +46,15 @@ def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], m
     )
 
 
+_RETRYABLE_STATUS_CODES = {429, 503}
+_MAX_ATTEMPTS = 3
+_RETRY_BACKOFF_SECONDS = 2.0
+
+
 def _call_gemini(prompt: str, model_name: str) -> dict | None:
     try:
         from google import genai  # type: ignore
+        from google.genai import errors  # type: ignore
         from google.genai import types  # type: ignore
     except ImportError:
         logger.info("LLM disabled: google-genai package not installed")
@@ -55,29 +62,42 @@ def _call_gemini(prompt: str, model_name: str) -> dict | None:
     api_key = os.environ.get("GEMINI_API_KEY", "")
     gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
     gcp_location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-    try:
-        if api_key:
-            # Explicit API key — uses Gemini Developer API directly.
-            logger.info("LLM auth mode=api_key model=%s", model_name)
-            client = genai.Client(api_key=api_key)
-        elif gcp_project:
-            # ADC via Vertex AI — requires GOOGLE_CLOUD_PROJECT env var.
-            logger.info("LLM auth mode=adc project=%s location=%s model=%s", gcp_project, gcp_location, model_name)
-            client = genai.Client(vertexai=True, project=gcp_project, location=gcp_location)
-        else:
-            logger.info("LLM disabled: no GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT configured")
-            return None
-        response = client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
-        )
-        return json.loads(response.text)
-    except Exception as exc:
-        logger.warning("LLM call failed, using deterministic fallback: %s", exc)
+    if api_key:
+        # Explicit API key — uses Gemini Developer API directly.
+        logger.info("LLM auth mode=api_key model=%s", model_name)
+        client = genai.Client(api_key=api_key)
+    elif gcp_project:
+        # ADC via Vertex AI — requires GOOGLE_CLOUD_PROJECT env var.
+        logger.info("LLM auth mode=adc project=%s location=%s model=%s", gcp_project, gcp_location, model_name)
+        client = genai.Client(vertexai=True, project=gcp_project, location=gcp_location)
+    else:
+        logger.info("LLM disabled: no GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT configured")
         return None
+
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                ),
+            )
+            return json.loads(response.text)
+        except errors.APIError as exc:
+            if exc.code in _RETRYABLE_STATUS_CODES and attempt < _MAX_ATTEMPTS:
+                logger.warning(
+                    "LLM call attempt %d/%d failed with transient error, retrying: %s",
+                    attempt, _MAX_ATTEMPTS, exc,
+                )
+                time.sleep(_RETRY_BACKOFF_SECONDS * attempt)
+                continue
+            logger.warning("LLM call failed, using deterministic fallback: %s", exc)
+            return None
+        except Exception as exc:
+            logger.warning("LLM call failed, using deterministic fallback: %s", exc)
+            return None
+    return None
 
 
 def compute_confidence(findings: list[AgentFinding]) -> tuple[float, int, bool]:
