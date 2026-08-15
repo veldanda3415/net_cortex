@@ -20,15 +20,15 @@ and synthesizes both machine-structured and human-readable RCA output.
 
 For contributors and production-oriented extensions, use these guides:
 
-- [docs/agent-authoring-guide.md](docs/agent-authoring-guide.md): how domain agents decide, score confidence, and collaborate.
-- [docs/decision-policy.md](docs/decision-policy.md): how NetCortex turns multi-agent evidence into one RCA conclusion.
-- [docs/provider-adapter-guide.md](docs/provider-adapter-guide.md): how to connect Prometheus, ELK, Splunk, MCP, or custom backends.
+- [project_docs/agent-authoring-guide.md](project_docs/agent-authoring-guide.md): how domain agents decide, score confidence, and collaborate.
+- [project_docs/decision-policy.md](project_docs/decision-policy.md): how NetCortex turns multi-agent evidence into one RCA conclusion.
+- [project_docs/provider-adapter-guide.md](project_docs/provider-adapter-guide.md): how to connect Prometheus, ELK, Splunk, MCP, or custom backends.
 
 Recommended reading order for contributors:
 
-1. `docs/agent-authoring-guide.md`
-2. `docs/decision-policy.md`
-3. `docs/provider-adapter-guide.md`
+1. `project_docs/agent-authoring-guide.md`
+2. `project_docs/decision-policy.md`
+3. `project_docs/provider-adapter-guide.md`
 
 ## Repository Layout
 
