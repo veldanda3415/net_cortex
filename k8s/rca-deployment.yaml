@@ -37,7 +37,7 @@ spec:
               key: gemini-api-key
               optional: true
         - name: GOOGLE_CLOUD_PROJECT
-          value: "net-cortex-dev"
+          value: "net-cortex-dev-new"
         - name: GOOGLE_CLOUD_LOCATION
           value: "us-central1"
         resources:

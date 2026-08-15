@@ -1,6 +1,6 @@
 llm:
   provider: google
-  model: gemini-flash-latest
+  model: gemini-flash-lite-latest
   api_key_env: GEMINI_API_KEY
   require_success: false
 
