@@ -24,6 +24,22 @@ mcp_endpoints:
     url: "http://localhost:9001/mcp"
     timeout_seconds: 30
 
+mcp_server:
+  task_ttl_seconds: 3600
+  max_concurrent_tasks: 10
+  # OAuth 2.1 / OIDC resource-server auth for the `mcp-serve` HTTP surface.
+  # Disabled by default so local dev / `--scenario` demos work with zero setup.
+  # Set enabled: true and fill in issuer/audience/jwks_uri before exposing
+  # this server outside localhost. All three are required when enabled.
+  auth:
+    enabled: false
+    issuer: ""            # e.g. https://your-tenant.auth0.com/  or https://accounts.google.com
+    audience: ""           # e.g. netcortex-mcp-rca (the resource-server identifier you registered)
+    jwks_uri: ""            # e.g. https://your-tenant.auth0.com/.well-known/jwks.json
+    required_scope: ""     # e.g. netcortex:run_rca — leave blank to skip scope enforcement
+    jwks_cache_seconds: 300
+    leeway_seconds: 30
+
 a2a:
   protocol_mode: adk
   max_iterations: 2

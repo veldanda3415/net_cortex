@@ -121,6 +121,20 @@ async def _run_rca_background(task_id: str, incident: IncidentRequest) -> None:
         # Run the full pipeline
         report: RCAReport = await _engine.run_incident(incident)
 
+        # IMPORTANT: capture timed_out_agents into a local variable in this
+        # exact spot, with no `await` between the line above and this one.
+        # `_engine.last_result_state` is a single shared attribute on the
+        # engine instance (not keyed by task/incident), so under concurrent
+        # run_rca calls it is only safe to read immediately after *this*
+        # task's own `run_incident()` resolves and before control could
+        # yield back to the event loop for another task's completion to
+        # overwrite it. Do not move this read below an `await` or into a
+        # helper called later in this function without re-verifying that
+        # invariant — see tests/integration/test_mcp_server_tasks.py::
+        # test_concurrent_runs_preserve_own_timed_out_agents for the
+        # regression test that would catch a reordering that breaks this.
+        timed_out_agents = _capture_timed_out_agents()
+
         # Progress: complete
         _task_store.update_progress(task_id, "complete", 100.0, "RCA analysis finished")
 
@@ -137,7 +151,7 @@ async def _run_rca_background(task_id: str, incident: IncidentRequest) -> None:
             "human_readable_summary": report.human_readable_summary,
             "contributing_factors": report.contributing_factors,
             "causal_chain": report.causal_chain,
-            "timed_out_agents": _get_timed_out_agents(report),
+            "timed_out_agents": timed_out_agents,
             "full_report": report_data,
         }
 
@@ -151,10 +165,11 @@ async def _run_rca_background(task_id: str, incident: IncidentRequest) -> None:
         logger.exception("RCA task failed task_id=%s incident_id=%s", task_id, incident.incident_id)
 
 
-def _get_timed_out_agents(report: RCAReport) -> list[str]:
-    """Extract timed-out agents from the engine state if available."""
+def _capture_timed_out_agents() -> list[str]:
+    """Read timed-out agents from engine state. Caller must call this with no
+    `await` since the triggering `run_incident()` returned — see call site."""
     if _engine and _engine.last_result_state:
-        return _engine.last_result_state.get("timed_out_agents", [])
+        return list(_engine.last_result_state.get("timed_out_agents", []))
     return []
 
 
