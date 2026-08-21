@@ -287,7 +287,7 @@ def serve(config: str = typer.Option("config/config.yaml")):
         cfg = load_config(config)
         tasks, engine = await start_runtime(cfg)
 
-        webhook = WebhookServer()
+        webhook = WebhookServer(cfg)
         webhook.set_handler(engine.run_incident)
         ingest_task = asyncio.create_task(start_server(webhook.app, cfg["ingestion"]["host"], int(cfg["ingestion"]["port"])))
 

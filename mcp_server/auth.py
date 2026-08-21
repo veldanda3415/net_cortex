@@ -37,10 +37,13 @@ working even if the SDK's exact Starlette wiring changes between versions.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import time
 from dataclasses import dataclass
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 logger = logging.getLogger("net_cortex.mcp_server.auth")
 
@@ -75,6 +78,7 @@ class OIDCAuthConfig:
     required_scope: str | None = None
     jwks_cache_seconds: int = 300
     leeway_seconds: int = 30
+    jwks_fetch_timeout_seconds: int = 10
     allowed_unauthenticated_paths: tuple[str, ...] = ("/health", "/healthz")
 
     @classmethod
@@ -89,6 +93,7 @@ class OIDCAuthConfig:
             required_scope=auth_cfg.get("required_scope") or None,
             jwks_cache_seconds=int(auth_cfg.get("jwks_cache_seconds", 300)),
             leeway_seconds=int(auth_cfg.get("leeway_seconds", 30)),
+            jwks_fetch_timeout_seconds=int(auth_cfg.get("jwks_fetch_timeout_seconds", 10)),
         )
         if enabled:
             missing = [k for k in ("issuer", "audience", "jwks_uri") if not getattr(instance, k)]
@@ -101,6 +106,13 @@ class OIDCAuthConfig:
                 raise AuthConfigError(
                     "mcp_server.auth.enabled=true but PyJWT is not installed. "
                     "Run: pip install 'pyjwt[crypto]'"
+                )
+            jwks_parsed = urlparse(instance.jwks_uri)
+            if jwks_parsed.scheme != "https" and jwks_parsed.hostname not in {"localhost", "127.0.0.1"}:
+                raise AuthConfigError(
+                    f"mcp_server.auth.jwks_uri must use https:// (got scheme={jwks_parsed.scheme!r}); "
+                    "a plain http:// JWKS endpoint is a MITM vector for signing keys. "
+                    "http is only permitted for localhost/127.0.0.1 during local development."
                 )
         return instance
 
@@ -122,7 +134,11 @@ class TokenVerifier:
             # PyJWKClient does its own internal caching of the fetched key set;
             # recreating it periodically forces a refresh so rotated signing
             # keys (new `kid`) are picked up without a server restart.
-            self._jwk_client = PyJWKClient(self._config.jwks_uri, cache_keys=True)
+            self._jwk_client = PyJWKClient(
+                self._config.jwks_uri,
+                cache_keys=True,
+                timeout=self._config.jwks_fetch_timeout_seconds,
+            )
             self._jwk_client_created_at = now
         return self._jwk_client
 
@@ -207,7 +223,11 @@ class BearerAuthASGIMiddleware:
         auth_header = headers.get("authorization")
 
         try:
-            claims = self._verifier.verify(auth_header)  # type: ignore[union-attr]
+            # verify() does synchronous, potentially slow network I/O (JWKS
+            # fetch on cache miss / unknown kid / rotation) — run it off the
+            # event loop thread so a cold start or hung JWKS endpoint can't
+            # stall every other request this server is handling.
+            claims = await asyncio.to_thread(self._verifier.verify, auth_header)  # type: ignore[union-attr]
         except AuthError as exc:
             await self._send_error(send, exc.status_code, str(exc))
             logger.info("MCP request rejected path=%s reason=%s", path, exc)
@@ -224,7 +244,7 @@ class BearerAuthASGIMiddleware:
 
     @staticmethod
     async def _send_error(send: Callable, status_code: int, message: str) -> None:
-        body = f'{{"error": "unauthorized", "detail": {message!r}}}'.encode("utf-8")
+        body = json.dumps({"error": "unauthorized", "detail": message}).encode("utf-8")
         await send({
             "type": "http.response.start",
             "status": status_code,

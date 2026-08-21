@@ -54,6 +54,12 @@ def get_logs(region: str, window_minutes: int, scenario_id: int = 1) -> dict:
     if scenario is None:
         return {"logs": [], "error": f"Unknown scenario_id: {scenario_id}"}
 
+    # LogEvent carries no per-row region field, so filtering happens at
+    # bundle granularity (every scenario is single-region today) — mirrors
+    # the fix in providers/simulation/log_sim.py.
+    if scenario.incident_request.region != region:
+        return {"logs": [], "count": 0, "region": region}
+
     logs = [l.model_dump(mode="json") for l in scenario.log_events]
     return {"logs": logs, "count": len(logs), "region": region}
 
@@ -85,6 +91,10 @@ def get_config_changes(region: str, window_minutes: int, scenario_id: int = 1) -
     scenario = SCENARIOS.get(scenario_id, SCENARIOS.get(1))
     if scenario is None:
         return {"config_changes": [], "error": f"Unknown scenario_id: {scenario_id}"}
+
+    # ConfigChange carries no per-row region field — see get_logs above.
+    if scenario.incident_request.region != region:
+        return {"config_changes": [], "count": 0, "region": region}
 
     changes = [c.model_dump(mode="json") for c in scenario.config_changes]
     return {"config_changes": changes, "count": len(changes), "region": region}

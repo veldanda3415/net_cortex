@@ -80,17 +80,20 @@ class TaskStore:
             record.progress = TaskProgress(stage=stage, percent=percent, message=message)
 
     def complete_task(self, task_id: str, result: dict[str, Any]) -> None:
-        """Mark task as completed with result."""
+        """Mark task as completed with result. No-op if the task already
+        reached a terminal state (e.g. cancelled) — a late completion must
+        not overwrite that."""
         record = self._tasks.get(task_id)
-        if record:
+        if record and record.status == TaskStatus.RUNNING:
             record.status = TaskStatus.COMPLETED
             record.result = result
             record.completed_at = datetime.now(timezone.utc)
 
     def fail_task(self, task_id: str, error: str) -> None:
-        """Mark task as failed."""
+        """Mark task as failed. No-op if the task already reached a terminal
+        state — see complete_task."""
         record = self._tasks.get(task_id)
-        if record:
+        if record and record.status == TaskStatus.RUNNING:
             record.status = TaskStatus.FAILED
             record.error = error
             record.completed_at = datetime.now(timezone.utc)

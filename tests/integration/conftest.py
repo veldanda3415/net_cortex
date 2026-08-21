@@ -154,8 +154,8 @@ class ASGITestRouter:
 async def asgi_router(cfg):
     apps = {
         "metrics": build_metrics_app(cfg),
-        "log": build_log_app(),
-        "routing": build_routing_app(),
+        "log": build_log_app(cfg),
+        "routing": build_routing_app(cfg),
         "config": build_config_app(cfg),
     }
     clients: dict[str, httpx.AsyncClient] = {}

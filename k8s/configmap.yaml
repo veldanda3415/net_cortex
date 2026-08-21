@@ -39,6 +39,20 @@ data:
       server_version: "2.0.0"
       task_ttl_seconds: 3600
       max_concurrent_tasks: 10
+      task_cleanup_interval_seconds: 300
+      # OAuth 2.1 / OIDC resource-server auth for the mcp-serve HTTP surface.
+      # Disabled by default (deferred OAuth for this local-cluster demo — see
+      # CLAUDE.md). Set enabled: true and fill in issuer/audience/jwks_uri
+      # with a real IdP before exposing this service outside the cluster
+      # (see rca-service.yaml for why the NodePort was removed until then).
+      auth:
+        enabled: false
+        issuer: ""            # e.g. https://your-tenant.auth0.com/  or https://accounts.google.com
+        audience: ""           # e.g. netcortex-mcp-rca (the resource-server identifier you registered)
+        jwks_uri: ""            # e.g. https://your-tenant.auth0.com/.well-known/jwks.json
+        required_scope: ""     # e.g. netcortex:run_rca — leave blank to skip scope enforcement
+        jwks_cache_seconds: 300
+        leeway_seconds: 30
 
     a2a:
       protocol_mode: adk

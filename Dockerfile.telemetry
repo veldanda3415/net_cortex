@@ -12,6 +12,16 @@ COPY simulation/ simulation/
 COPY providers/ providers/
 COPY mcp_telemetry_server/ mcp_telemetry_server/
 
+# Run as a non-root user; UID/GID match the pod securityContext in
+# k8s/telemetry-deployment.yaml.
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+USER 1000:1000
+
 EXPOSE 9001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:9001/health', timeout=3)" || exit 1
 
 CMD ["python", "-m", "mcp_telemetry_server"]

@@ -55,10 +55,12 @@ class MCPMetricsAdapter(MetricsProvider):
 
     def get_metrics(self, region: str, window_minutes: int, scenario_id: int | None) -> list[MetricSnapshot]:
         """Fetch metrics from MCP Telemetry Server."""
+        self.degraded = False
         try:
             return _run_async(self._fetch(region, window_minutes, scenario_id))
         except Exception as e:
             logger.warning("MCP metrics fetch failed endpoint=%s error=%s", self._endpoint, e)
+            self.degraded = True
             return []
 
     async def _fetch(self, region: str, window_minutes: int, scenario_id: int | None) -> list[MetricSnapshot]:
@@ -98,10 +100,12 @@ class MCPLogAdapter(LogProvider):
 
     def get_logs(self, region: str, window_minutes: int, scenario_id: int | None) -> list[LogEvent]:
         """Fetch logs from MCP Telemetry Server."""
+        self.degraded = False
         try:
             return _run_async(self._fetch(region, window_minutes, scenario_id))
         except Exception as e:
             logger.warning("MCP logs fetch failed endpoint=%s error=%s", self._endpoint, e)
+            self.degraded = True
             return []
 
     async def _fetch(self, region: str, window_minutes: int, scenario_id: int | None) -> list[LogEvent]:
@@ -138,10 +142,12 @@ class MCPRoutingAdapter(RoutingProvider):
 
     def get_routing_events(self, region: str, window_minutes: int, scenario_id: int | None) -> list[RoutingEvent]:
         """Fetch routing events from MCP Telemetry Server."""
+        self.degraded = False
         try:
             return _run_async(self._fetch(region, window_minutes, scenario_id))
         except Exception as e:
             logger.warning("MCP routing fetch failed endpoint=%s error=%s", self._endpoint, e)
+            self.degraded = True
             return []
 
     async def _fetch(self, region: str, window_minutes: int, scenario_id: int | None) -> list[RoutingEvent]:
@@ -179,10 +185,12 @@ class MCPConfigAdapter(ConfigProvider):
 
     def get_config_changes(self, region: str, window_minutes: int, scenario_id: int | None) -> list[ConfigChange]:
         """Fetch config changes from MCP Telemetry Server."""
+        self.degraded = False
         try:
             return _run_async(self._fetch(region, window_minutes, scenario_id))
         except Exception as e:
             logger.warning("MCP config fetch failed endpoint=%s error=%s", self._endpoint, e)
+            self.degraded = True
             return []
 
     async def _fetch(self, region: str, window_minutes: int, scenario_id: int | None) -> list[ConfigChange]:

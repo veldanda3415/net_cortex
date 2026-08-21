@@ -17,10 +17,23 @@ spec:
       labels:
         app: netcortex-rca
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: rca-server
-        image: netcortex-rca:latest
+        image: netcortex-rca:2.0.0
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
         ports:
         - containerPort: 9000
           name: mcp
@@ -29,6 +42,10 @@ spec:
         - name: config
           mountPath: /app/config/config.yaml
           subPath: config.yaml
+        - name: output
+          mountPath: /app/output
+        - name: tmp
+          mountPath: /tmp
         env:
         - name: GEMINI_API_KEY
           valueFrom:
@@ -48,12 +65,14 @@ spec:
             memory: "1Gi"
             cpu: "1000m"
         readinessProbe:
-          tcpSocket:
+          httpGet:
+            path: /health
             port: 9000
           initialDelaySeconds: 15
           periodSeconds: 10
         livenessProbe:
-          tcpSocket:
+          httpGet:
+            path: /health
             port: 9000
           initialDelaySeconds: 30
           periodSeconds: 30
@@ -61,3 +80,7 @@ spec:
       - name: config
         configMap:
           name: netcortex-config
+      - name: output
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}

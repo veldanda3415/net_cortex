@@ -22,6 +22,13 @@ import sys
 import time
 from pathlib import Path
 
+# Keep in sync with the `image:` tags in k8s/rca-deployment.yaml and
+# k8s/telemetry-deployment.yaml. A mutable `:latest` tag combined with
+# imagePullPolicy: IfNotPresent meant a rebuild silently kept running
+# whatever was already cached on the node instead of picking up the new
+# image, so both this script and the manifests now pin an explicit version.
+IMAGE_TAG = "2.0.0"
+
 
 def run(cmd: str, check: bool = True, capture: bool = False) -> subprocess.CompletedProcess:
     """Run a shell command and print it."""
@@ -77,19 +84,19 @@ def detect_cluster() -> str:
 def build_images() -> None:
     """Build Docker images for both services."""
     print("\n[1/5] Building Docker images...")
-    run("docker build -t netcortex-telemetry:latest -f Dockerfile.telemetry .")
-    run("docker build -t netcortex-rca:latest -f Dockerfile.rca .")
+    run(f"docker build -t netcortex-telemetry:{IMAGE_TAG} -f Dockerfile.telemetry .")
+    run(f"docker build -t netcortex-rca:{IMAGE_TAG} -f Dockerfile.rca .")
 
     # k3s uses containerd image store, which is separate from Docker/Podman.
     # Import freshly built images so kubelet can use them with imagePullPolicy=IfNotPresent.
     if shutil.which("k3s"):
         print("[Info] k3s detected. Importing local images into k3s containerd...")
-        run("docker save netcortex-telemetry:latest | sudo k3s ctr images import -")
-        run("docker save netcortex-rca:latest | sudo k3s ctr images import -")
+        run(f"docker save netcortex-telemetry:{IMAGE_TAG} | sudo k3s ctr images import -")
+        run(f"docker save netcortex-rca:{IMAGE_TAG} | sudo k3s ctr images import -")
         # Podman-backed docker builds are often imported as localhost/*.
         # Tag to docker.io/library/* so kubelet resolves image refs from manifests.
-        run("sudo k3s ctr images tag localhost/netcortex-telemetry:latest docker.io/library/netcortex-telemetry:latest", check=False)
-        run("sudo k3s ctr images tag localhost/netcortex-rca:latest docker.io/library/netcortex-rca:latest", check=False)
+        run(f"sudo k3s ctr images tag localhost/netcortex-telemetry:{IMAGE_TAG} docker.io/library/netcortex-telemetry:{IMAGE_TAG}", check=False)
+        run(f"sudo k3s ctr images tag localhost/netcortex-rca:{IMAGE_TAG} docker.io/library/netcortex-rca:{IMAGE_TAG}", check=False)
         print("[OK] Images imported into k3s containerd.")
 
     print("[OK] Images built successfully.")
@@ -206,7 +213,7 @@ def main() -> None:
         return
 
     check_prereqs()
-    external_ip = detect_cluster()
+    detect_cluster()  # side effect: points docker at minikube's daemon when applicable
 
     if not args.no_build:
         build_images()
@@ -217,13 +224,17 @@ def main() -> None:
     wait_for_pods()
     show_status()
 
-    rca_url = f"http://{external_ip}:30900/mcp"
     print()
     print("=" * 50)
     print(" Deployment Complete!")
     print("=" * 50)
     print()
-    print(f"  MCP RCA Server: {rca_url}")
+    print("  netcortex-rca is ClusterIP-only by default (no NodePort) — see")
+    print("  k8s/rca-service.yaml for why. Reach it from your machine with:")
+    print()
+    print("    kubectl -n netcortex port-forward svc/netcortex-rca 9000:9000")
+    print()
+    print("  Then MCP RCA Server: http://localhost:9000/mcp")
     print()
     print("  Test with MCP Inspector:")
     print("    npx @modelcontextprotocol/inspector")

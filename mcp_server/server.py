@@ -37,12 +37,22 @@ _task_store: TaskStore | None = None
 _engine: Any = None  # NetCortexEngine instance, set at startup
 _engine_cfg: dict[str, Any] | None = None
 
+# Strong refs to in-flight background tasks: asyncio only holds a *weak*
+# reference to a task once its Task object goes out of scope, so without
+# this the task created in run_rca() below can be garbage-collected
+# mid-run. Entries are removed by the task's own done-callback.
+_background_tasks: set[asyncio.Task] = set()
+# task_id -> the asyncio.Task actually running the pipeline, so cancel_task
+# can cancel real work rather than only flip a status flag.
+_task_id_to_asyncio_task: dict[str, asyncio.Task] = {}
+_cleanup_task: asyncio.Task | None = None
+
 rca_server = MCPServer("NetCortex-RCA")
 
 
 def initialize_server(engine: Any, cfg: dict[str, Any]) -> None:
     """Initialize the MCP server with engine and config. Called at startup."""
-    global _task_store, _engine, _engine_cfg
+    global _task_store, _engine, _engine_cfg, _cleanup_task
     mcp_cfg = cfg.get("mcp_server", {})
     _task_store = TaskStore(
         ttl_seconds=int(mcp_cfg.get("task_ttl_seconds", 3600)),
@@ -53,6 +63,26 @@ def initialize_server(engine: Any, cfg: dict[str, Any]) -> None:
     logger.info("MCP RCA Server initialized task_ttl=%s max_concurrent=%s",
                 mcp_cfg.get("task_ttl_seconds", 3600),
                 mcp_cfg.get("max_concurrent_tasks", 10))
+
+    if _cleanup_task is None or _cleanup_task.done():
+        interval = int(mcp_cfg.get("task_cleanup_interval_seconds", 300))
+        _cleanup_task = asyncio.create_task(_cleanup_loop(interval))
+
+
+async def _cleanup_loop(interval_seconds: int) -> None:
+    """Periodically evict expired completed/failed/cancelled tasks.
+
+    TaskStore.cleanup_expired() exists but was never called anywhere, so
+    completed TaskRecords (each holding a full RCAReport) accumulated
+    forever. This is the only caller.
+    """
+    while True:
+        await asyncio.sleep(interval_seconds)
+        if _task_store is None:
+            continue
+        removed = _task_store.cleanup_expired()
+        if removed:
+            logger.info("Task store cleanup removed %s expired task(s)", removed)
 
 
 @rca_server.tool()
@@ -101,8 +131,18 @@ async def run_rca(
     logger.info("RCA task created task_id=%s incident_id=%s scenario=%s",
                 task_id, incident.incident_id, scenario_id)
 
-    # Launch the RCA pipeline in the background
-    asyncio.create_task(_run_rca_background(task_id, incident))
+    # Launch the RCA pipeline in the background. Keep a strong reference
+    # (see _background_tasks above) and track it by task_id so cancel_task
+    # can actually stop it, not just flip a status flag.
+    bg_task = asyncio.create_task(_run_rca_background(task_id, incident))
+    _background_tasks.add(bg_task)
+    _task_id_to_asyncio_task[task_id] = bg_task
+
+    def _on_bg_task_done(task: asyncio.Task, _task_id: str = task_id) -> None:
+        _background_tasks.discard(task)
+        _task_id_to_asyncio_task.pop(_task_id, None)
+
+    bg_task.add_done_callback(_on_bg_task_done)
 
     return {
         "task_id": task_id,
@@ -113,27 +153,32 @@ async def run_rca(
 
 
 async def _run_rca_background(task_id: str, incident: IncidentRequest) -> None:
-    """Background coroutine that runs the full RCA pipeline and updates task state."""
+    """Background coroutine that runs the full RCA pipeline and updates task state.
+
+    `_task_store`/`_engine` are read defensively (None-checked) at each use:
+    holding a strong reference to this task (see _background_tasks above)
+    means it can now outlive a server re-initialize/shutdown that resets
+    those globals, where it previously might have been silently
+    garbage-collected before reaching this far.
+    """
     try:
         # Progress: starting
-        _task_store.update_progress(task_id, "supervisor", 10.0, "Classifying incident")
+        if _task_store is not None:
+            _task_store.update_progress(task_id, "supervisor", 10.0, "Classifying incident")
 
-        # Run the full pipeline
+        if _engine is None:
+            logger.warning("RCA task aborted task_id=%s: engine no longer initialized", task_id)
+            return
+
+        # Run the full pipeline. timed_out_agents/errored_agents/data_degraded
+        # are read straight off the returned RCAReport (not off a shared
+        # engine attribute), so this is safe under concurrent run_rca calls
+        # with no ordering invariant to maintain.
         report: RCAReport = await _engine.run_incident(incident)
 
-        # IMPORTANT: capture timed_out_agents into a local variable in this
-        # exact spot, with no `await` between the line above and this one.
-        # `_engine.last_result_state` is a single shared attribute on the
-        # engine instance (not keyed by task/incident), so under concurrent
-        # run_rca calls it is only safe to read immediately after *this*
-        # task's own `run_incident()` resolves and before control could
-        # yield back to the event loop for another task's completion to
-        # overwrite it. Do not move this read below an `await` or into a
-        # helper called later in this function without re-verifying that
-        # invariant — see tests/integration/test_mcp_server_tasks.py::
-        # test_concurrent_runs_preserve_own_timed_out_agents for the
-        # regression test that would catch a reordering that breaks this.
-        timed_out_agents = _capture_timed_out_agents()
+        if _task_store is None:
+            logger.warning("RCA task finished task_id=%s but task store is gone; result dropped", task_id)
+            return
 
         # Progress: complete
         _task_store.update_progress(task_id, "complete", 100.0, "RCA analysis finished")
@@ -151,7 +196,9 @@ async def _run_rca_background(task_id: str, incident: IncidentRequest) -> None:
             "human_readable_summary": report.human_readable_summary,
             "contributing_factors": report.contributing_factors,
             "causal_chain": report.causal_chain,
-            "timed_out_agents": timed_out_agents,
+            "timed_out_agents": report.timed_out_agents,
+            "errored_agents": report.errored_agents,
+            "data_degraded": report.data_degraded,
             "full_report": report_data,
         }
 
@@ -159,18 +206,51 @@ async def _run_rca_background(task_id: str, incident: IncidentRequest) -> None:
         logger.info("RCA task completed task_id=%s incident_id=%s confidence=%.2f conflict=%s",
                     task_id, incident.incident_id, report.confidence_score, report.conflict_detected)
 
+    except asyncio.CancelledError:
+        logger.info("RCA task cancelled mid-run task_id=%s incident_id=%s", task_id, incident.incident_id)
+        raise
     except Exception as e:
         error_msg = f"RCA pipeline failed: {type(e).__name__}: {e}"
-        _task_store.fail_task(task_id, error_msg)
+        if _task_store is not None:
+            _task_store.fail_task(task_id, error_msg)
         logger.exception("RCA task failed task_id=%s incident_id=%s", task_id, incident.incident_id)
 
 
-def _capture_timed_out_agents() -> list[str]:
-    """Read timed-out agents from engine state. Caller must call this with no
-    `await` since the triggering `run_incident()` returned — see call site."""
-    if _engine and _engine.last_result_state:
-        return list(_engine.last_result_state.get("timed_out_agents", []))
-    return []
+@rca_server.tool()
+async def cancel_task(task_id: str) -> dict:
+    """Cancel a running RCA task.
+
+    Args:
+        task_id: The task_id returned by run_rca.
+    """
+    if _task_store is None:
+        return {"error": "Server not initialized."}
+
+    record = _task_store.get_task(task_id)
+    if record is None:
+        return {"error": f"No task found for id: {task_id}"}
+
+    accepted = _task_store.cancel_task(task_id)
+    if not accepted:
+        return {
+            "task_id": task_id,
+            "status": record.status.value,
+            "cancelled": False,
+            "message": "Task is not running; nothing to cancel.",
+        }
+
+    # cancel_task() above already flipped the status; cancelling the
+    # underlying coroutine stops the actual pipeline work (best-effort —
+    # work already dispatched to a domain agent's own event loop may still
+    # finish server-side, but TaskStore.complete_task/fail_task are guarded
+    # to no-op once status has left RUNNING, so a late completion can't
+    # overwrite the cancellation).
+    bg_task = _task_id_to_asyncio_task.get(task_id)
+    if bg_task is not None:
+        bg_task.cancel()
+
+    logger.info("RCA task cancelled task_id=%s", task_id)
+    return {"task_id": task_id, "status": "cancelled", "cancelled": True}
 
 
 @rca_server.tool()

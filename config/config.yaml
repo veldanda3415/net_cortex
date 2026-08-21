@@ -79,3 +79,10 @@ agents:
 ingestion:
   host: 0.0.0.0
   port: 8000
+  # Shared-secret bearer auth for the /incidents webhook (`serve` mode).
+  # Disabled by default so local dev works with zero setup. Set enabled:
+  # true and export the token_env variable before exposing this outside
+  # localhost.
+  auth:
+    enabled: false
+    token_env: NETCORTEX_WEBHOOK_TOKEN

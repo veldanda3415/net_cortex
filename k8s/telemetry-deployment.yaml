@@ -17,14 +17,30 @@ spec:
       labels:
         app: netcortex-telemetry
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: telemetry
-        image: netcortex-telemetry:latest
+        image: netcortex-telemetry:2.0.0
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
         ports:
         - containerPort: 9001
           name: mcp
           protocol: TCP
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             memory: "128Mi"
@@ -33,12 +49,17 @@ spec:
             memory: "256Mi"
             cpu: "500m"
         readinessProbe:
-          tcpSocket:
+          httpGet:
+            path: /health
             port: 9001
           initialDelaySeconds: 5
           periodSeconds: 10
         livenessProbe:
-          tcpSocket:
+          httpGet:
+            path: /health
             port: 9001
           initialDelaySeconds: 10
           periodSeconds: 30
+      volumes:
+      - name: tmp
+        emptyDir: {}
