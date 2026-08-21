@@ -52,15 +52,19 @@ If no anomalous findings remain, conclude no-anomaly outcome.
 
 ## Confidence Policy
 
-NetCortex confidence is computed deterministically (not by LLM).
+NetCortex confidence is computed deterministically (not by LLM), in `agents/rca_synthesizer.py::compute_confidence`.
 
 Current framework:
 
-- `corroborating_signals / total_signals`
+- `corroborating_signals / total_agents_dispatched`
 - domain-weight factor based on agreeing domains
 - conflict penalty when findings disagree
 
 This ensures reproducibility across identical inputs.
+
+**`total_agents_dispatched`, not `total_signals` that responded.** `total` in the ratio is the count of agents the supervisor actually dispatched for this incident (`len(active_agents)`), not the count of findings that came back. This matters specifically under partial failure: if 4 agents are dispatched and 3 time out or error, leaving only 1 finding, the denominator stays 4 — losing agents does not shrink the denominator and inflate the ratio. `agents/rca_synthesizer.py::synthesize_report` is called with `total_agents=len(state["active_agents"])` from the orchestrator for exactly this reason.
+
+`RCAReport` also carries `timed_out_agents` and `errored_agents` (populated from `core/orchestrator.py`'s `analysis_node`, which now distinguishes a genuine `asyncio.TimeoutError` from any other exception during analysis) so a caller can see *why* the corroborating count is lower than the dispatched count, not just that it is.
 
 ### Worked Example
 
@@ -73,6 +77,22 @@ Given 4 active domains with 3 corroborating anomalies and no conflict:
 Computed score:
 
 `confidence = 0.75 * 0.90 * (1 - 0.00) = 0.675 -> 0.68`
+
+### Worked Example — Partial Failure
+
+Given 4 agents dispatched, 3 time out, and the 1 survivor is anomalous:
+
+- corroborating ratio = 1/4 = 0.25 (denominator stays 4, the dispatched count — **not** 1/1)
+- domain weight (1 agreeing domain) = 0.50
+- conflict penalty = 0.00 (only one finding exists, so the unanimity check below doesn't trigger)
+
+Computed score:
+
+`confidence = 0.25 * 0.50 * (1 - 0.00) = 0.125 -> 0.12`
+
+Losing 3 of 4 agents to timeout does not make the report *more* confident — it stays low, and `timed_out_agents` on the report says why.
+
+**Known remaining simplification (intentionally out of scope of the fix above):** `conflict_detected` is `0 < corroborating < len(findings)` — it's computed against the number of findings that actually *came back*, not the dispatched count, and it means "not unanimous among survivors," not "genuinely contradictory." A single-domain finding that's the only survivor (as in the example above) reads as non-conflicting for this reason, even though 3 domains never got to weigh in. This is a known, named simplification, not an oversight — see `docs/NetCortex_Code_Review.md` §6 for the fuller critique if you're evaluating whether to redesign it.
 
 ## Conflict Handling Policy
 
@@ -115,6 +135,12 @@ When confidence is low or data is weak:
 - Suggest what telemetry would disambiguate cause.
 
 This is preferable to overconfident incorrect root cause claims.
+
+### Verified-Clean vs. Degraded-Data "No Anomaly"
+
+A report of "no anomaly" carries two structurally different meanings that must not be collapsed into the same text: telemetry was retrieved and genuinely showed nothing wrong, versus telemetry could not be retrieved at all. The never-raise provider adapters (`providers/adapters/mcp_adapter.py`) degrade every failure — timeout, unreachable server, malformed response — to an empty result at WARNING, which is correct behavior for *that* layer (an agent shouldn't crash because telemetry is unavailable), but it means an agent's own finding can't distinguish "verified clean" from "saw nothing" without an explicit signal.
+
+That signal is `AgentFinding.data_degraded` (set by each agent from `provider.degraded` immediately after the fetch call) and `RCAReport.data_degraded` (true if any finding is degraded). When every finding is non-anomalous *and* at least one is degraded, `agents/rca_synthesizer.py::synthesize_report` produces `root_cause = "RCA inconclusive: telemetry could not be retrieved for <domains>, so 'no anomaly' cannot be verified."` instead of the normal `"No anomaly detected across all monitored domains."` text — a total outage must never read as a confident clean report.
 
 ## Governance Recommendations
 
