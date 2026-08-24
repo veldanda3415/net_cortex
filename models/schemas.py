@@ -72,6 +72,11 @@ class AgentFinding(BaseModel):
     confidence: float
     revised: bool = False
     revision_count: int = 0
+    data_degraded: bool = Field(
+        default=False,
+        description="True when the domain's telemetry fetch failed/degraded rather than "
+        "genuinely returning no data, so a downstream 'no anomaly' can't be read as verified-clean.",
+    )
 
 
 class A2AMessage(BaseModel):
@@ -106,6 +111,13 @@ class RCAReport(BaseModel):
     confidence_score: float
     corroborating_domain_count: int
     conflict_detected: bool
+    timed_out_agents: list[str] = Field(default_factory=list)
+    errored_agents: list[str] = Field(default_factory=list)
+    data_degraded: bool = Field(
+        default=False,
+        description="True when at least one domain's telemetry fetch failed/degraded, "
+        "so a clean report may reflect missing data rather than a verified absence of anomalies.",
+    )
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

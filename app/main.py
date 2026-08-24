@@ -99,8 +99,8 @@ async def start_runtime(cfg: dict[str, Any]):
     logger.info("Starting domain agent services on ports 8001-8004")
     tasks = [
         asyncio.create_task(start_server(build_metrics_app(cfg), "0.0.0.0", 8001)),
-        asyncio.create_task(start_server(build_log_app(), "0.0.0.0", 8002)),
-        asyncio.create_task(start_server(build_routing_app(), "0.0.0.0", 8003)),
+        asyncio.create_task(start_server(build_log_app(cfg), "0.0.0.0", 8002)),
+        asyncio.create_task(start_server(build_routing_app(cfg), "0.0.0.0", 8003)),
         asyncio.create_task(start_server(build_config_app(cfg), "0.0.0.0", 8004)),
     ]
     await asyncio.sleep(1.0)
@@ -287,7 +287,7 @@ def serve(config: str = typer.Option("config/config.yaml")):
         cfg = load_config(config)
         tasks, engine = await start_runtime(cfg)
 
-        webhook = WebhookServer()
+        webhook = WebhookServer(cfg)
         webhook.set_handler(engine.run_incident)
         ingest_task = asyncio.create_task(start_server(webhook.app, cfg["ingestion"]["host"], int(cfg["ingestion"]["port"])))
 
@@ -401,6 +401,75 @@ def eval(
 
     asyncio.run(_run_eval())
     raise SystemExit(0)
+
+
+@app.command(name="mcp-serve")
+def mcp_serve(
+    host: str = typer.Option("0.0.0.0", help="Host to bind MCP server"),
+    port: int = typer.Option(9000, help="Port for MCP RCA server"),
+    config: str = typer.Option("config/config.yaml"),
+    verbose: bool = typer.Option(False, help="Enable debug logging"),
+    require_llm: bool = typer.Option(False, help="Fail if LLM unavailable"),
+):
+    """Start NetCortex as an MCP server (2026-07-28 spec, Streamable HTTP)."""
+    async def _serve_mcp():
+        configure_runtime_logging(verbose)
+        logger.info("Starting NetCortex MCP RCA Server on %s:%s", host, port)
+
+        cfg = load_config(config)
+        cfg.setdefault("llm", {})["require_success"] = bool(require_llm)
+
+        # Start domain agent services
+        tasks, engine = await start_runtime(cfg)
+
+        # Initialize MCP server with engine
+        from mcp_server.server import initialize_server, rca_server
+        initialize_server(engine, cfg)
+        logger.info("MCP RCA Server initialized with %s tools", len(rca_server._tool_manager._tools))
+
+        # --- OAuth/OIDC resource-server auth (fails closed if misconfigured) ---
+        from mcp_server.auth import BearerAuthASGIMiddleware, load_auth_config
+        auth_config = load_auth_config(cfg)  # raises AuthConfigError if enabled but incomplete
+        if auth_config.enabled:
+            logger.info(
+                "MCP auth ENABLED issuer=%s audience=%s required_scope=%s",
+                auth_config.issuer, auth_config.audience, auth_config.required_scope,
+            )
+        else:
+            logger.warning(
+                "MCP auth DISABLED (mcp_server.auth.enabled is false/unset) — "
+                "server is open to any client that can reach %s:%s. "
+                "Do not run this way outside local demos.", host, port,
+            )
+
+        # Prefer wrapping the SDK's ASGI app directly so auth covers every
+        # route (tool calls, tasks/get polling, server/discover) uniformly.
+        # Fall back to the SDK's own run helper (unauthenticated) only if this
+        # SDK version doesn't expose an ASGI app hook, and say so loudly.
+        streamable_app_factory = getattr(rca_server, "streamable_http_app", None)
+        if callable(streamable_app_factory):
+            import uvicorn
+            asgi_app = streamable_app_factory()
+            wrapped_app = BearerAuthASGIMiddleware(asgi_app, auth_config)
+            logger.info("MCP RCA Server listening on http://%s:%s/mcp", host, port)
+            uv_config = uvicorn.Config(wrapped_app, host=host, port=port, log_level="warning")
+            server = uvicorn.Server(uv_config)
+            await server.serve()
+        else:
+            if auth_config.enabled:
+                raise RuntimeError(
+                    "mcp_server.auth.enabled=true but the installed 'mcp' SDK does not "
+                    "expose streamable_http_app() to wrap with auth middleware. "
+                    "Upgrade the mcp package or disable auth for local-only use."
+                )
+            logger.warning(
+                "Installed 'mcp' SDK has no streamable_http_app() hook — running via "
+                "run_streamable_http_async() with NO auth middleware applied."
+            )
+            logger.info("MCP RCA Server listening on http://%s:%s/mcp", host, port)
+            await rca_server.run_streamable_http_async(host=host, port=port)
+
+    asyncio.run(_serve_mcp())
 
 
 if __name__ == "__main__":

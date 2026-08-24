@@ -1,0 +1,38 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY models/ models/
+COPY simulation/ simulation/
+COPY providers/ providers/
+COPY agents/ agents/
+COPY core/ core/
+COPY communication/ communication/
+COPY ingestion/ ingestion/
+COPY actions/ actions/
+COPY app/ app/
+COPY mcp_server/ mcp_server/
+COPY mcp_telemetry_server/ mcp_telemetry_server/
+COPY config/ config/
+
+# Run as a non-root user (neither the image nor the k8s Deployment set this
+# before, so the container ran as UID 0). UID/GID match the pod
+# securityContext in k8s/rca-deployment.yaml. /app/output is where
+# configure_runtime_logging() writes log files in mcp-serve mode.
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin appuser \
+    && mkdir -p /app/output \
+    && chown -R appuser:appuser /app
+USER 1000:1000
+
+EXPOSE 9000 8001 8002 8003 8004
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:9000/health', timeout=3)" || exit 1
+
+CMD ["python", "app/main.py", "mcp-serve"]

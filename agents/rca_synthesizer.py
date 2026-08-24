@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from datetime import datetime, timezone
 
 from models.schemas import A2AMessage, AgentFinding, RCAReport
@@ -45,9 +46,15 @@ def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], m
     )
 
 
+_RETRYABLE_STATUS_CODES = {429, 503}
+_MAX_ATTEMPTS = 3
+_RETRY_BACKOFF_SECONDS = 2.0
+
+
 def _call_gemini(prompt: str, model_name: str) -> dict | None:
     try:
         from google import genai  # type: ignore
+        from google.genai import errors  # type: ignore
         from google.genai import types  # type: ignore
     except ImportError:
         logger.info("LLM disabled: google-genai package not installed")
@@ -55,33 +62,55 @@ def _call_gemini(prompt: str, model_name: str) -> dict | None:
     api_key = os.environ.get("GEMINI_API_KEY", "")
     gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
     gcp_location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-    try:
-        if api_key:
-            # Explicit API key — uses Gemini Developer API directly.
-            logger.info("LLM auth mode=api_key model=%s", model_name)
-            client = genai.Client(api_key=api_key)
-        elif gcp_project:
-            # ADC via Vertex AI — requires GOOGLE_CLOUD_PROJECT env var.
-            logger.info("LLM auth mode=adc project=%s location=%s model=%s", gcp_project, gcp_location, model_name)
-            client = genai.Client(vertexai=True, project=gcp_project, location=gcp_location)
-        else:
-            logger.info("LLM disabled: no GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT configured")
-            return None
-        response = client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
-        )
-        return json.loads(response.text)
-    except Exception as exc:
-        logger.warning("LLM call failed, using deterministic fallback: %s", exc)
+    if api_key:
+        # Explicit API key — uses Gemini Developer API directly.
+        logger.info("LLM auth mode=api_key model=%s", model_name)
+        client = genai.Client(api_key=api_key)
+    elif gcp_project:
+        # ADC via Vertex AI — requires GOOGLE_CLOUD_PROJECT env var.
+        logger.info("LLM auth mode=adc project=%s location=%s model=%s", gcp_project, gcp_location, model_name)
+        client = genai.Client(vertexai=True, project=gcp_project, location=gcp_location)
+    else:
+        logger.info("LLM disabled: no GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT configured")
         return None
 
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                ),
+            )
+            return json.loads(response.text)
+        except errors.APIError as exc:
+            if exc.code in _RETRYABLE_STATUS_CODES and attempt < _MAX_ATTEMPTS:
+                logger.warning(
+                    "LLM call attempt %d/%d failed with transient error, retrying: %s",
+                    attempt, _MAX_ATTEMPTS, exc,
+                )
+                time.sleep(_RETRY_BACKOFF_SECONDS * attempt)
+                continue
+            logger.warning("LLM call failed, using deterministic fallback: %s", exc)
+            return None
+        except Exception as exc:
+            logger.warning("LLM call failed, using deterministic fallback: %s", exc)
+            return None
+    return None
 
-def compute_confidence(findings: list[AgentFinding]) -> tuple[float, int, bool]:
-    total = max(len(findings), 1)
+
+def compute_confidence(findings: list[AgentFinding], total_agents: int) -> tuple[float, int, bool]:
+    # total is the number of agents *dispatched*, not the number that
+    # survived (len(findings)). Basing it on survivors meant that losing
+    # agents to timeout/error shrank the denominator and *increased*
+    # reported confidence — e.g. 4 findings with 1 anomalous gives
+    # 0.25 * 0.50 * 0.9 = 0.11, but if the 3 non-anomalous agents time out
+    # (leaving 1 finding) the old formula gave 1.0 * 0.50 * 1.0 = 0.50.
+    # max(..., len(findings), 1) is defensive only: total_agents should
+    # always be >= len(findings) since findings only contains agents that
+    # actually responded.
+    total = max(total_agents, len(findings), 1)
     corroborating = sum(1 for f in findings if f.anomaly_detected)
     agreeing = corroborating
 
@@ -100,6 +129,30 @@ def compute_confidence(findings: list[AgentFinding]) -> tuple[float, int, bool]:
     return round(confidence, 2), corroborating, conflict
 
 
+def _coerce_llm_field(llm_result: dict, key: str, expected_type: type, fallback):
+    """Validate one field's shape before trusting LLM output structurally.
+
+    The LLM is asked for JSON but nothing upstream validates it — a
+    parseable-but-wrong-typed field (e.g. a string where a list was
+    expected) previously raised an uncaught pydantic ValidationError deep
+    in RCAReport construction and crashed synthesizer_node. Falls back to
+    the deterministic value for just that field instead.
+    """
+    if key not in llm_result:
+        return fallback
+    value = llm_result[key]
+    if not isinstance(value, expected_type):
+        logger.warning(
+            "LLM field '%s' has unexpected type %s (expected %s); using deterministic fallback",
+            key, type(value).__name__, expected_type.__name__,
+        )
+        return fallback
+    if expected_type is list and not all(isinstance(item, str) for item in value):
+        logger.warning("LLM field '%s' list contains non-string items; using deterministic fallback", key)
+        return fallback
+    return value
+
+
 def synthesize_report(
     incident_id: str,
     findings: list[AgentFinding],
@@ -107,17 +160,47 @@ def synthesize_report(
     incident_description: str = "",
     llm_model: str = "gemini-2.5-flash",
     require_llm: bool = False,
+    total_agents: int | None = None,
+    timed_out_agents: list[str] | None = None,
+    errored_agents: list[str] | None = None,
 ) -> RCAReport:
-    score, corroborating_count, conflict = compute_confidence(findings)
+    timed_out_agents = list(timed_out_agents or [])
+    errored_agents = list(errored_agents or [])
+    resolved_total_agents = total_agents if total_agents is not None else len(findings)
+    score, corroborating_count, conflict = compute_confidence(findings, resolved_total_agents)
     anomaly_findings = [f for f in findings if f.anomaly_detected]
+    data_degraded = any(f.data_degraded for f in findings)
+    degraded_domains = sorted({f.domain for f in findings if f.data_degraded})
 
     # --- Deterministic fallback (always computed, used if LLM unavailable) ---
     if not anomaly_findings:
-        det_root = "No anomaly detected across all monitored domains."
-        det_contributing = ["No corroborating anomalies across domains"]
-        det_chain = ["Signals remained within baseline noise"]
-        det_affected: list[str] = []
-        det_summary = "All domain agents reported metrics within normal baseline. No root cause was identified."
+        if data_degraded:
+            # A total telemetry outage degrades every adapter to an empty
+            # result at WARNING with no signal the caller can see — which
+            # made should_short_circuit's "all no-anomaly" case read as a
+            # confident, clean report indistinguishable from a verified
+            # absence of anomalies. Surface the distinction instead.
+            det_root = (
+                "RCA inconclusive: telemetry could not be retrieved for "
+                f"{', '.join(degraded_domains)}, so 'no anomaly' cannot be verified."
+            )
+            det_contributing = [
+                f"{domain}: telemetry fetch failed or was degraded during this window"
+                for domain in degraded_domains
+            ]
+            det_chain = ["Telemetry collection failed before analysis could complete"]
+            det_affected: list[str] = []
+            det_summary = (
+                "One or more domains could not retrieve telemetry for this incident window, so this "
+                "report reflects missing data rather than a verified absence of anomalies. "
+                f"Affected domains: {', '.join(degraded_domains)}."
+            )
+        else:
+            det_root = "No anomaly detected across all monitored domains."
+            det_contributing = ["No corroborating anomalies across domains"]
+            det_chain = ["Signals remained within baseline noise"]
+            det_affected: list[str] = []
+            det_summary = "All domain agents reported metrics within normal baseline. No root cause was identified."
     else:
         top = sorted(anomaly_findings, key=lambda f: f.confidence, reverse=True)[0]
         # Build a richer deterministic root cause from the top finding's key_events
@@ -157,6 +240,11 @@ def synthesize_report(
             f"The highest-confidence signal came from {top.domain} ({top.confidence:.0%}): {top.summary}. "
             f"Confidence score: {score:.0%}."
             + (" Conflicting signals were detected across domains." if conflict else "")
+            + (
+                f" Note: telemetry from [{', '.join(degraded_domains)}] could not be fully retrieved "
+                "during this window."
+                if degraded_domains else ""
+            )
         )
 
     # --- LLM enrichment (optional, overwrites deterministic values if successful) ---
@@ -171,11 +259,14 @@ def synthesize_report(
             "Check Gemini auth/project permissions and verify aiplatform.endpoints.predict access."
         )
 
-    root = llm_result.get("root_cause", det_root) if llm_result else det_root
-    contributing = llm_result.get("contributing_factors", det_contributing) if llm_result else det_contributing
-    chain = llm_result.get("causal_chain", det_chain) if llm_result else det_chain
-    affected = llm_result.get("metrics_affected", det_affected) if llm_result else det_affected
-    summary = llm_result.get("human_readable_summary", det_summary) if llm_result else det_summary
+    # Each field is validated and falls back independently — an LLM response
+    # that got one field's shape wrong (e.g. a string where a list was
+    # expected) no longer takes down the whole report; see _coerce_llm_field.
+    root = _coerce_llm_field(llm_result, "root_cause", str, det_root) if llm_result else det_root
+    contributing = _coerce_llm_field(llm_result, "contributing_factors", list, det_contributing) if llm_result else det_contributing
+    chain = _coerce_llm_field(llm_result, "causal_chain", list, det_chain) if llm_result else det_chain
+    affected = _coerce_llm_field(llm_result, "metrics_affected", list, det_affected) if llm_result else det_affected
+    summary = _coerce_llm_field(llm_result, "human_readable_summary", str, det_summary) if llm_result else det_summary
 
     return RCAReport(
         incident_id=incident_id,
@@ -189,5 +280,8 @@ def synthesize_report(
         confidence_score=score,
         corroborating_domain_count=corroborating_count,
         conflict_detected=conflict,
+        timed_out_agents=timed_out_agents,
+        errored_agents=errored_agents,
+        data_degraded=data_degraded,
         generated_at=datetime.now(timezone.utc),
     )

@@ -53,6 +53,7 @@ class NetCortexState(TypedDict):
     collaboration_round: int
     collaboration_complete: bool
     timed_out_agents: list[str]
+    errored_agents: list[str]
     rca_report: RCAReport | None
 
 
@@ -73,8 +74,18 @@ def validate_config(cfg: dict[str, Any]) -> None:
 
     baselines = cfg.get("baselines", {})
     provider = str(baselines.get("provider", "simulation")).lower()
-    if provider not in {"simulation", "prometheus"}:
-        raise ValueError("ConfigValidationError: baselines.provider must be either 'simulation' or 'prometheus'")
+    if provider == "prometheus":
+        # PrometheusBaselineProvider.get_baseline() is an unimplemented stub
+        # (raises NotImplementedError on first use) — accepting this value
+        # here let it pass startup validation only to silently degrade every
+        # baseline lookup to the legacy-threshold fallback at runtime. Reject
+        # it until the adapter is actually implemented.
+        raise ValueError(
+            "ConfigValidationError: baselines.provider='prometheus' is not implemented yet "
+            "(PrometheusBaselineProvider is a stub) — use 'simulation' until it's implemented."
+        )
+    if provider != "simulation":
+        raise ValueError("ConfigValidationError: baselines.provider must be 'simulation'")
 
     metrics_z_threshold = float(baselines.get("metrics_z_threshold", 3.0))
     if metrics_z_threshold <= 0:
@@ -108,7 +119,15 @@ class NetCortexEngine:
             incident = state["incident"]
             llm_model = self.cfg.get("llm", {}).get("model", "gemini-2.5-flash")
             llm_required = bool(self.cfg.get("llm", {}).get("require_success", False))
-            dtype = classify_degradation(incident, llm_model=llm_model, require_llm=llm_required)
+            # classify_degradation calls out to a synchronous Gemini client
+            # (blocking network I/O, plus a blocking time.sleep on retry) —
+            # run it off the event loop thread so it can't stall the agent
+            # uvicorn servers running as tasks on this same loop (see
+            # start_runtime in app/main.py) or the asyncio.wait_for timers
+            # in analysis_node below.
+            dtype = await asyncio.to_thread(
+                classify_degradation, incident, llm_model=llm_model, require_llm=llm_required
+            )
             active = select_active_agents(dtype)
             logger.info(
                 "Supervisor classified incident=%s degradation_type=%s active_agents=%s llm_required=%s",
@@ -155,13 +174,21 @@ class NetCortexEngine:
 
             findings: list[AgentFinding] = []
             timed_out: list[str] = []
+            errored: list[str] = []
             results = await asyncio.gather(*task_list, return_exceptions=True)
             for agent, result in zip(agent_order, results):
                 try:
-                    if isinstance(result, Exception):
+                    # BaseException, not Exception: asyncio.gather(return_exceptions=True)
+                    # can hand back a CancelledError, which is a BaseException
+                    # subclass, not an Exception subclass. The old `isinstance(result,
+                    # Exception)` check let a CancelledError object fall through as
+                    # `finding`, get appended to `findings`, and only then blow up
+                    # reading `finding.domain` on the next line — by which point the
+                    # bad object was already in the list, later crashing
+                    # merge_findings on `f.agent_id`.
+                    if isinstance(result, BaseException):
                         raise result
                     finding = result
-                    findings.append(finding)
                     logger.info(
                         "Analysis result incident=%s agent=%s domain=%s anomaly=%s confidence=%.2f summary=%s key_events=%s",
                         incident.incident_id,
@@ -172,21 +199,26 @@ class NetCortexEngine:
                         finding.summary,
                         len(finding.key_events),
                     )
+                    # Appended only after the finding has proven safe to log
+                    # (i.e. is a real AgentFinding), so a malformed/exception
+                    # result never lands in `findings`.
+                    findings.append(finding)
                 except asyncio.TimeoutError:
                     timed_out.append(agent)
                     logger.warning("Analysis timeout incident=%s agent=%s", incident.incident_id, agent)
-                except Exception:
-                    timed_out.append(agent)
+                except BaseException:
+                    errored.append(agent)
                     logger.exception("Analysis error incident=%s agent=%s", incident.incident_id, agent)
 
             logger.info(
-                "Analysis finished incident=%s findings=%s timed_out=%s",
+                "Analysis finished incident=%s findings=%s timed_out=%s errored=%s",
                 incident.incident_id,
                 len(findings),
                 len(timed_out),
+                len(errored),
             )
 
-            return {"findings": findings, "timed_out_agents": timed_out}
+            return {"findings": findings, "timed_out_agents": timed_out, "errored_agents": errored}
 
         async def collaboration_node(state: NetCortexState):
             findings = list(state["findings"])
@@ -284,13 +316,20 @@ class NetCortexEngine:
                 llm_model,
                 len(state["revised_findings"]),
             )
-            report = synthesize_report(
+            # synthesize_report calls out to a synchronous Gemini client
+            # (blocking network I/O, plus a blocking time.sleep on retry) —
+            # see the identical rationale on classify_degradation above.
+            report = await asyncio.to_thread(
+                synthesize_report,
                 state["incident"].incident_id,
                 state["revised_findings"],
                 state["a2a_messages"],
                 incident_description=state["incident"].description,
                 llm_model=llm_model,
                 require_llm=llm_required,
+                total_agents=len(state["active_agents"]),
+                timed_out_agents=state["timed_out_agents"],
+                errored_agents=state["errored_agents"],
             )
             logger.info(
                 "Synthesizer finished incident=%s confidence=%.2f",
@@ -324,6 +363,7 @@ class NetCortexEngine:
             "collaboration_round": 0,
             "collaboration_complete": False,
             "timed_out_agents": [],
+            "errored_agents": [],
             "rca_report": None,
         }
         result = await self.graph.ainvoke(initial)

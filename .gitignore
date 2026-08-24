@@ -33,6 +33,13 @@ Thumbs.db
 .vscode/
 .idea/
 
+#docs for project
+docs/*
+
 # Secrets and local env overrides
 config/.env
 *.env
+
+# Local Copilot steering files
+.github/copilot-instructions.md
+.github/instructions/

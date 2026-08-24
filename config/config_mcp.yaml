@@ -1,14 +1,24 @@
+# config_mcp.yaml — Local development config using MCP providers.
+#
+# Use this when testing the MCP adapter pipeline locally:
+#   Terminal 1: python -m mcp_telemetry_server
+#   Terminal 2: python app/main.py mcp-serve --config config/config_mcp.yaml
+#
+# Or for a single run:
+#   Terminal 1: python -m mcp_telemetry_server
+#   Terminal 2: python app/main.py run --scenario 1 --config config/config_mcp.yaml
+
 llm:
   provider: google
-  model: gemini-flash-lite-latest
+  model: gemini-2.5-flash
   api_key_env: GEMINI_API_KEY
   require_success: false
 
 providers:
-  metrics: simulation
-  logs: simulation
-  routing: simulation
-  config: simulation
+  metrics: mcp
+  logs: mcp
+  routing: mcp
+  config: mcp
 
 mcp_endpoints:
   metrics:
@@ -25,20 +35,13 @@ mcp_endpoints:
     timeout_seconds: 30
 
 mcp_server:
+  host: "0.0.0.0"
+  port: 9000
+  transport: streamable_http
+  server_name: "NetCortex-RCA"
+  server_version: "2.0.0"
   task_ttl_seconds: 3600
   max_concurrent_tasks: 10
-  # OAuth 2.1 / OIDC resource-server auth for the `mcp-serve` HTTP surface.
-  # Disabled by default so local dev / `--scenario` demos work with zero setup.
-  # Set enabled: true and fill in issuer/audience/jwks_uri before exposing
-  # this server outside localhost. All three are required when enabled.
-  auth:
-    enabled: false
-    issuer: ""            # e.g. https://your-tenant.auth0.com/  or https://accounts.google.com
-    audience: ""           # e.g. netcortex-mcp-rca (the resource-server identifier you registered)
-    jwks_uri: ""            # e.g. https://your-tenant.auth0.com/.well-known/jwks.json
-    required_scope: ""     # e.g. netcortex:run_rca — leave blank to skip scope enforcement
-    jwks_cache_seconds: 300
-    leeway_seconds: 30
 
 a2a:
   protocol_mode: adk
@@ -79,10 +82,3 @@ agents:
 ingestion:
   host: 0.0.0.0
   port: 8000
-  # Shared-secret bearer auth for the /incidents webhook (`serve` mode).
-  # Disabled by default so local dev works with zero setup. Set enabled:
-  # true and export the token_env variable before exposing this outside
-  # localhost.
-  auth:
-    enabled: false
-    token_env: NETCORTEX_WEBHOOK_TOKEN

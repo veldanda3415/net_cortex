@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
@@ -10,6 +11,8 @@ import httpx
 from communication.agent_registry import AgentRegistry
 from communication.message_types import JsonRpcMessage, JsonRpcPart, TaskParams, TaskRequest
 from models.schemas import A2AMessage, AgentFinding
+
+logger = logging.getLogger("net_cortex.a2a_router")
 
 
 class A2ARouter:
@@ -69,20 +72,31 @@ class A2ARouter:
         )
         try:
             resp = await self._post_task(endpoint, req.model_dump())
-            state = (
-                resp.get("result", {})
-                .get("status", {})
-                .get("state", "completed")
+        except Exception as exc:
+            logger.warning(
+                "A2A send_direct failed sender=%s target=%s message_type=%s round=%s error=%s",
+                sender, target, message_type, round_number, exc,
             )
-            normalized = str(state).lower()
-            if normalized in {"completed", "queued", "working", "submitted"}:
-                status = normalized
-            elif normalized in {"canceled", "cancelled"}:
-                status = "cancelled"
-            else:
-                status = "failed"
-        except Exception:
             status = "failed"
+        else:
+            status_block = resp.get("result", {}).get("status")
+            if not isinstance(status_block, dict) or "state" not in status_block:
+                # Missing/malformed status must not silently read as success —
+                # a well-formed agent response always has status.state (see
+                # agents/a2a_protocol.py:build_task_result).
+                logger.warning(
+                    "A2A send_direct got a response with no status.state sender=%s target=%s response=%s",
+                    sender, target, resp,
+                )
+                status = "failed"
+            else:
+                normalized = str(status_block["state"]).lower()
+                if normalized in {"completed", "queued", "working", "submitted"}:
+                    status = normalized
+                elif normalized in {"canceled", "cancelled"}:
+                    status = "cancelled"
+                else:
+                    status = "failed"
 
         return A2AMessage(
             sender_agent=sender,

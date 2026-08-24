@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netcortex-rca
+  namespace: netcortex
+  labels:
+    app: netcortex-rca
+    app.kubernetes.io/part-of: netcortex
+    app.kubernetes.io/component: rca-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netcortex-rca
+  template:
+    metadata:
+      labels:
+        app: netcortex-rca
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: rca-server
+        image: netcortex-rca:2.0.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - containerPort: 9000
+          name: mcp
+          protocol: TCP
+        volumeMounts:
+        - name: config
+          mountPath: /app/config/config.yaml
+          subPath: config.yaml
+        - name: output
+          mountPath: /app/output
+        - name: tmp
+          mountPath: /tmp
+        env:
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: netcortex-secrets
+              key: gemini-api-key
+              optional: true
+        - name: GOOGLE_CLOUD_PROJECT
+          value: "net-cortex-dev-new"
+        - name: GOOGLE_CLOUD_LOCATION
+          value: "us-central1"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 9000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+      volumes:
+      - name: config
+        configMap:
+          name: netcortex-config
+      - name: output
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
