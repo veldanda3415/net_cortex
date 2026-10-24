@@ -1,0 +1,23 @@
+# Detection catalog override, mounted into BOTH the RCA and telemetry pods at
+# /app/catalog-override ($NETCORTEX_CATALOG_DIR). Each key is one catalog file
+# (entities.json, signals.json, domains.json, correlation.json, sources.json);
+# its entries replace the shipped defaults (contract/catalog/) by key.
+#
+# Empty = run with the shipped defaults. Example — make latency a detection signal:
+#
+#   data:
+#     signals.json: |
+#       {"signals": {"latency_ms": {"signal_type": "metric", "domain": "metrics", "unit": "ms",
+#         "description": "Round-trip latency; above 200 ms breaks voice SLOs.",
+#         "rule": {"type": "threshold", "op": "gt", "value": 200}}}}
+#
+# `python deploy.py` validates this override (same check as
+# `python app/main.py catalog validate <dir>`) before applying anything, and
+# stamps a hash of the catalog into each pod template's
+# netcortex.dev/catalog-hash annotation so a catalog change rolls both pods.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netcortex-catalog-override
+  namespace: netcortex
+data: {}

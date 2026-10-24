@@ -178,3 +178,33 @@ def test_engine_and_telemetry_server_refuse_to_start_on_invalid_catalog(tmp_path
     finally:
         monkeypatch.delenv(CATALOG_ENV)
         reset_catalog_cache()
+
+
+# ------------------------------------------------------------------- deploy
+
+def test_deploy_catalog_hash_tracks_override_and_renders_into_both_deployments(tmp_path, monkeypatch):
+    monkeypatch.chdir(REPO)
+    import deploy
+
+    base = deploy.catalog_hash()
+    assert len(base) == 64 and base == deploy.catalog_hash()       # deterministic
+    for manifest in deploy.CATALOG_DEPLOYMENTS:
+        rendered = deploy.render_with_catalog_hash(manifest, base)
+        assert f'netcortex.dev/catalog-hash: "{base}"' in rendered
+        assert "NETCORTEX_CATALOG_DIR" in rendered and "netcortex-catalog-override" in rendered
+
+    changed = tmp_path / "cm.yaml"
+    changed.write_text(
+        "apiVersion: v1\nkind: ConfigMap\nmetadata: {name: netcortex-catalog-override}\n"
+        "data:\n  signals.json: '" + json.dumps({"signals": {"latency_ms": {
+            "signal_type": "metric", "domain": "metrics", "description": "d",
+            "rule": {"type": "threshold", "op": "gt", "value": 200}}}}) + "'\n",
+        encoding="utf-8",
+    )
+    assert deploy.catalog_hash(changed) != base
+    deploy.validate_catalog_override(changed)                         # valid override passes
+
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("data:\n  domains.json: '{\"degradation_map\": {\"network\": [\"ghost\"]}}'\n", encoding="utf-8")
+    with pytest.raises(SystemExit):
+        deploy.validate_catalog_override(bad)

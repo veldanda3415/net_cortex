@@ -12,6 +12,7 @@ COPY models/ models/
 COPY simulation/ simulation/
 COPY providers/ providers/
 COPY agents/ agents/
+COPY detection/ detection/
 COPY core/ core/
 COPY communication/ communication/
 COPY ingestion/ ingestion/

@@ -16,6 +16,10 @@ spec:
     metadata:
       labels:
         app: netcortex-rca
+      annotations:
+        # Replaced by deploy.py with a sha256 of the shipped catalog + the
+        # netcortex-catalog-override ConfigMap: a catalog change rolls the pod.
+        netcortex.dev/catalog-hash: "__CATALOG_HASH__"
     spec:
       securityContext:
         runAsNonRoot: true
@@ -46,7 +50,12 @@ spec:
           mountPath: /app/output
         - name: tmp
           mountPath: /tmp
+        - name: catalog-override
+          mountPath: /app/catalog-override
+          readOnly: true
         env:
+        - name: NETCORTEX_CATALOG_DIR
+          value: /app/catalog-override
         - name: GEMINI_API_KEY
           valueFrom:
             secretKeyRef:
@@ -77,6 +86,9 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 30
       volumes:
+      - name: catalog-override
+        configMap:
+          name: netcortex-catalog-override
       - name: config
         configMap:
           name: netcortex-config

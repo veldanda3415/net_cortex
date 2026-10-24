@@ -16,11 +16,16 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
+
+import yaml
 
 # Keep in sync with the `image:` tags in k8s/rca-deployment.yaml and
 # k8s/telemetry-deployment.yaml. A mutable `:latest` tag combined with
@@ -138,19 +143,77 @@ def provision_secret() -> None:
     print("  [OK] netcortex-secrets provisioned from config/.env.")
 
 
+CATALOG_CONFIGMAP = Path("k8s/catalog-configmap.yaml")
+DEFAULT_CATALOG = Path("contract/catalog")
+CATALOG_HASH_PLACEHOLDER = "__CATALOG_HASH__"
+# Deployments that mount the catalog and carry the catalog-hash annotation.
+CATALOG_DEPLOYMENTS = ("k8s/telemetry-deployment.yaml", "k8s/rca-deployment.yaml")
+
+
+def catalog_override_files(configmap: Path = CATALOG_CONFIGMAP) -> dict[str, str]:
+    data = yaml.safe_load(configmap.read_text(encoding="utf-8")).get("data") or {}
+    return {str(k): str(v) for k, v in data.items()}
+
+
+def catalog_hash(configmap: Path = CATALOG_CONFIGMAP, default_dir: Path = DEFAULT_CATALOG) -> str:
+    """sha256 over the shipped default catalog and the override ConfigMap data.
+
+    Stamped into each pod template (netcortex.dev/catalog-hash), so editing
+    either one changes the template and Kubernetes rolls the pods; a mounted
+    ConfigMap update alone would never restart them.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(default_dir.glob("*.json")):
+        digest.update(path.name.encode() + b"\0" + path.read_bytes() + b"\0")
+    digest.update(json.dumps(catalog_override_files(configmap), sort_keys=True).encode())
+    return digest.hexdigest()
+
+
+def validate_catalog_override(configmap: Path = CATALOG_CONFIGMAP) -> None:
+    """Refuse to deploy an override the pods would refuse to start with."""
+    from contract.catalog_loader import CatalogError, load_catalog
+
+    with tempfile.TemporaryDirectory() as tmp:
+        for name, content in catalog_override_files(configmap).items():
+            (Path(tmp) / name).write_text(content, encoding="utf-8")
+        try:
+            load_catalog(tmp)
+        except CatalogError as exc:
+            print(f"ERROR: {configmap} holds an invalid catalog override: {exc}")
+            sys.exit(1)
+
+
+def render_with_catalog_hash(manifest: str, digest: str) -> str:
+    return Path(manifest).read_text(encoding="utf-8").replace(CATALOG_HASH_PLACEHOLDER, digest)
+
+
+def apply_rendered(manifest: str, content: str) -> None:
+    print(f"  $ kubectl apply -f {manifest}  (catalog-hash rendered)")
+    result = subprocess.run(["kubectl", "apply", "-f", "-"], input=content, text=True)
+    if result.returncode != 0:
+        sys.exit(1)
+
+
 def apply_manifests() -> None:
     """Apply all K8s manifests in order."""
     print("\n[2/5] Applying Kubernetes manifests...")
+    validate_catalog_override()
+    digest = catalog_hash()
+    print(f"  Detection catalog hash: {digest[:16]}…")
     run("kubectl apply -f k8s/namespace.yaml")
     provision_secret()
     for m in [
         "k8s/configmap.yaml",
+        str(CATALOG_CONFIGMAP),
         "k8s/telemetry-deployment.yaml",
         "k8s/telemetry-service.yaml",
         "k8s/rca-deployment.yaml",
         "k8s/rca-service.yaml",
     ]:
-        run(f"kubectl apply -f {m}")
+        if m in CATALOG_DEPLOYMENTS:
+            apply_rendered(m, render_with_catalog_hash(m, digest))
+        else:
+            run(f"kubectl apply -f {m}")
     print("[OK] Manifests applied.")
 
 
