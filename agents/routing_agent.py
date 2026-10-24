@@ -7,7 +7,9 @@ from fastapi import FastAPI
 
 from agents.a2a_protocol import build_task_result, extract_request_context
 from models.schemas import AgentFinding
-from providers.factory import create_routing_provider
+from providers.compat import to_routing_events
+from providers.factory import create_telemetry_provider
+from providers.query import query_from_request
 
 
 logger = logging.getLogger("net_cortex.agent.routing")
@@ -80,7 +82,7 @@ def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding])
 
 def build_routing_app(cfg: dict | None = None) -> FastAPI:
     app = FastAPI(title="netcortex-routing-agent")
-    provider = create_routing_provider(cfg or {})
+    telemetry = create_telemetry_provider(cfg or {}, domains=("routing",))
 
     @app.get("/.well-known/agent.json")
     async def agent_card():
@@ -119,8 +121,9 @@ def build_routing_app(cfg: dict | None = None) -> FastAPI:
         logger.info("Received request skill=%s incident=%s", skill, incident_for_log)
 
         if skill == "analyze-routing":
-            events = provider.get_routing_events(data["region"], int(data["window_minutes"]), data.get("scenario_id"))
-            data_degraded = getattr(provider, "degraded", False)
+            telemetry_response = await telemetry.fetch("routing", query_from_request(data))
+            events = to_routing_events(telemetry_response, data["region"])
+            data_degraded = telemetry_response.degraded
             anomaly = len(events) > 0
             summary = "No routing changes"
             if anomaly:
@@ -132,7 +135,7 @@ def build_routing_app(cfg: dict | None = None) -> FastAPI:
             logger.info(
                 "Analyzed routing region=%s window=%s scenario=%s events=%s anomaly=%s data_degraded=%s",
                 data["region"],
-                data["window_minutes"],
+                f'{data.get("start_time")}..{data.get("end_time")}',
                 data.get("scenario_id"),
                 len(events),
                 anomaly,

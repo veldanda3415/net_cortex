@@ -10,7 +10,9 @@ from models.schemas import AgentFinding
 from providers.adapters.prometheus_baseline_adapter import PrometheusBaselineProvider
 from providers.baseline_utils import compute_z_score, is_anomalous
 from providers.simulation.baseline_sim import SimulationBaselineProvider
-from providers.factory import create_metrics_provider
+from providers.compat import to_metric_snapshots
+from providers.factory import create_telemetry_provider
+from providers.query import query_from_request
 
 
 logger = logging.getLogger("net_cortex.agent.metrics")
@@ -82,7 +84,7 @@ def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding])
 
 def build_metrics_app(cfg: dict | None = None) -> FastAPI:
     app = FastAPI(title="netcortex-metrics-agent")
-    provider = create_metrics_provider(cfg or {})
+    telemetry = create_telemetry_provider(cfg or {}, domains=("metrics",))
     baseline_cfg = (cfg or {}).get("baselines", {})
     baseline_provider_name = str(baseline_cfg.get("provider", "simulation")).lower()
     if baseline_provider_name == "simulation":
@@ -131,8 +133,9 @@ def build_metrics_app(cfg: dict | None = None) -> FastAPI:
         logger.info("Received request skill=%s incident=%s", skill, incident_for_log)
 
         if skill == "analyze-metrics":
-            metrics = provider.get_metrics(data["region"], int(data["window_minutes"]), data.get("scenario_id"))
-            data_degraded = getattr(provider, "degraded", False)
+            telemetry_response = await telemetry.fetch("metrics", query_from_request(data))
+            metrics = to_metric_snapshots(telemetry_response, data["region"])
+            data_degraded = telemetry_response.degraded
             impacted: list[tuple[dict, list[str]]] = []
             for metric in metrics:
                 metric_row = metric.model_dump(mode="json")
@@ -178,7 +181,7 @@ def build_metrics_app(cfg: dict | None = None) -> FastAPI:
             logger.info(
                 "Analyzed metrics region=%s window=%s scenario=%s points=%s anomaly=%s data_degraded=%s",
                 data["region"],
-                data["window_minutes"],
+                f'{data.get("start_time")}..{data.get("end_time")}',
                 data.get("scenario_id"),
                 len(metrics),
                 anomaly,

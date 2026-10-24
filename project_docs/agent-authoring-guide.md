@@ -30,9 +30,9 @@ Note on `respond-to-peer`: the registry still requires every agent to advertise 
 Implement this 6-step pattern in every domain:
 
 1. Input acquisition
-- Pull telemetry for region and incident window via the domain's `Provider` (`providers/factory.py` selects `simulation` or `mcp` per `config.providers.<domain>`).
-- Return deterministic data shape.
-- Check `getattr(provider, "degraded", False)` immediately after the call and propagate it into `AgentFinding.data_degraded` (see "Reporting Degraded Data" below) — don't let a fetch failure silently masquerade as "no anomaly."
+- Pull telemetry for the region and the incident window via the shared `TelemetryRegistry`. Get it with `create_telemetry_provider(cfg, domains=(...))` from `providers/factory.py`; it calls every endpoint configured under `telemetry.domains.<domain>.endpoints`. Build the query with `providers/query.py::query_from_request(data)`. The window comes from the orchestrator's `start_time`/`end_time`, which are anchored on `incident.reported_at`.
+- Return deterministic data shape. Until agents read contract v2 signals directly, convert with `providers/compat.py`.
+- Propagate `response.degraded` into `AgentFinding.data_degraded` (see "Reporting Degraded Data" below). A fetch failure must not silently look like "no anomaly."
 
 2. Quality checks
 - Validate required fields.
@@ -181,7 +181,7 @@ Practical guidance for a new/replacement agent:
 4. Output schema validates as AgentFinding.
 5. `respond-to-peer` returns a valid JSON-RPC ack result.
 6. `reconsider_finding` (called directly, not through the endpoint) flips `revised=true` and increments `revision_count` on first call, and is a no-op on a second call with the same peer findings (idempotency).
-7. A provider fetch failure (mock the provider to raise, or set `provider.degraded = True`) results in `AgentFinding.data_degraded=True`, not just an empty/no-anomaly finding.
+7. A telemetry failure results in `AgentFinding.data_degraded=True`, not just an empty or no-anomaly finding. To test this, point an endpoint at an unreachable URL or use a source plugin that raises; see `tests/integration/test_provider_connectivity.py`.
 
 ## Baseline-Aware Anomaly Detection
 
@@ -242,18 +242,21 @@ When `relevant_changes` is empty (the volume-anomaly-without-direct-changes bran
 
 ## Reporting Degraded Data
 
-Every `Provider` (`MetricsProvider`/`LogProvider`/`RoutingProvider`/`ConfigProvider`, `providers/base.py`) carries a `degraded: bool = False` class-level default. Simulation providers never set it — there's nothing to fail. `providers/adapters/mcp_adapter.py`'s MCP-backed adapters set `self.degraded = True` in their `except` branch (and reset it to `False` at the top of each call) whenever a fetch/parse fails and the method falls back to returning `[]` — this is the same "never raise" contract as before, just with a visible flag attached.
+`TelemetryRegistry.fetch(domain, query)` returns a contract v2 `ToolResponse`. Its `coverage` list has one entry per configured endpoint, and `response.degraded` is true when any required endpoint is not `ok`. That covers a timeout, a refused connection, an open circuit breaker, a contract mismatch, or a source that only returned part of its data. Degradation is computed from **this request's** coverage. Providers are shared by every concurrent incident and hold no per-request flags.
 
-**Every built-in agent's `analyze-<domain>` handler reads this immediately after calling the provider**, before any `await`, and sets it on the constructed `AgentFinding`:
+**Every built-in agent's `analyze-<domain>` handler copies it onto the finding:**
 
 ```python
-metrics = provider.get_metrics(region, window_minutes, scenario_id)
-data_degraded = getattr(provider, "degraded", False)
+telemetry_response = await telemetry.fetch("metrics", query_from_request(data))
+metrics = to_metric_snapshots(telemetry_response, data["region"])
+data_degraded = telemetry_response.degraded
 ...
 finding = AgentFinding(..., data_degraded=data_degraded)
 ```
 
-Do this in any new/replacement agent too. Without it, a total telemetry outage (every provider call fails, every finding comes back `anomaly_detected=False`) is indistinguishable from a genuinely clean incident — both look like a confident "no anomaly" report. `agents/rca_synthesizer.py::synthesize_report` checks `any(f.data_degraded for f in findings)` and, when true and there are no anomalous findings, produces an explicit "RCA inconclusive: telemetry could not be retrieved for ..." report instead of the normal clean-report text, and sets `RCAReport.data_degraded=True` so callers can distinguish "verified clean" from "saw nothing."
+Do this in any new or replacement agent too. Without it, a total telemetry outage (every finding comes back `anomaly_detected=False`) looks the same as a genuinely clean incident: both read as a confident "no anomaly" report.
+
+`agents/rca_synthesizer.py::synthesize_report` checks `any(f.data_degraded for f in findings)`. When that is true and no finding is anomalous, it produces an explicit "RCA inconclusive: telemetry could not be retrieved for ..." report instead of the normal clean-report text. It also sets `RCAReport.data_degraded=True`, so callers can tell "verified clean" apart from "saw nothing". See [CONTRACT.md](../CONTRACT.md#no-data-vs-data-unavailable) for how "no data" differs from "data unavailable".
 
 ## Peer Collaboration Safety Rules
 

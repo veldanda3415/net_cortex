@@ -26,6 +26,7 @@ from communication.agent_registry import AgentRegistry
 from ingestion.webhook_server import WebhookServer
 from models.schemas import IncidentRequest
 from core.orchestrator import NetCortexEngine
+from providers.adapters.mcp_adapter import close_all_sessions
 from simulation.scenarios import SCENARIOS
 
 app = typer.Typer(help="NetCortex runtime")
@@ -272,6 +273,7 @@ def run(
         if print_json:
             print(json.dumps(report_data, indent=2))
 
+        await close_all_sessions()
         for t in tasks:
             t.cancel()
         # Suppress benign CancelledError from uvicorn lifespan shutdown.
@@ -361,6 +363,7 @@ def eval(
             eval_error = exc
             logger.exception("Evaluation aborted after %s completed scenario(s)", len(results))
         finally:
+            await close_all_sessions()
             for t in tasks:
                 t.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)

@@ -11,7 +11,9 @@ from models.schemas import AgentFinding
 from providers.adapters.prometheus_baseline_adapter import PrometheusBaselineProvider
 from providers.baseline_utils import compute_z_score, is_anomalous
 from providers.simulation.baseline_sim import SimulationBaselineProvider
-from providers.factory import create_config_provider
+from providers.compat import to_config_changes
+from providers.factory import create_telemetry_provider
+from providers.query import query_from_request
 
 
 logger = logging.getLogger("net_cortex.agent.config")
@@ -97,7 +99,7 @@ def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding])
 
 def build_config_app(cfg: dict | None = None) -> FastAPI:
     app = FastAPI(title="netcortex-config-agent")
-    provider = create_config_provider(cfg or {})
+    telemetry = create_telemetry_provider(cfg or {}, domains=("config",))
     baseline_cfg = (cfg or {}).get("baselines", {})
     baseline_provider_name = str(baseline_cfg.get("provider", "simulation")).lower()
     if baseline_provider_name == "simulation":
@@ -146,8 +148,9 @@ def build_config_app(cfg: dict | None = None) -> FastAPI:
         logger.info("Received request skill=%s incident=%s", skill, incident_for_log)
 
         if skill == "analyze-config":
-            changes = provider.get_config_changes(data["region"], int(data["window_minutes"]), data.get("scenario_id"))
-            data_degraded = getattr(provider, "degraded", False)
+            telemetry_response = await telemetry.fetch("config", query_from_request(data))
+            changes = to_config_changes(telemetry_response)
+            data_degraded = telemetry_response.degraded
             incident_description = str(data.get("incident_description", ""))
             relevant_changes = [c for c in changes if _is_change_relevant(c, incident_description)]
             component_counts: dict[str, int] = defaultdict(int)
@@ -198,7 +201,7 @@ def build_config_app(cfg: dict | None = None) -> FastAPI:
             logger.info(
                 "Analyzed config region=%s window=%s scenario=%s changes=%s relevant_changes=%s anomaly=%s data_degraded=%s",
                 data["region"],
-                data["window_minutes"],
+                f'{data.get("start_time")}..{data.get("end_time")}',
                 data.get("scenario_id"),
                 len(changes),
                 len(relevant_changes),

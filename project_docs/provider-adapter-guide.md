@@ -1,159 +1,165 @@
 # Provider Adapter Guide
 
-This guide explains how to connect real telemetry backends to NetCortex without changing orchestration logic.
+This guide explains how to connect a telemetry backend (CloudWatch, CloudTrail, Prometheus, a log store, …) to NetCortex without touching orchestration or agent logic.
 
-## Adapter Principle
+## Architecture
 
-NetCortex separates decision logic from data retrieval.
-
-- Adapters fetch raw data from external systems.
-- Agents consume normalized provider outputs.
-- Orchestrator remains unchanged.
-
-## Current Extension Points
-
-Implement these files:
-
-- `providers/adapters/prometheus_adapter.py`
-- `providers/adapters/elk_adapter.py`
-- `providers/adapters/splunk_adapter.py`
-- `providers/adapters/mcp_adapter.py`
-- `providers/adapters/prometheus_baseline_adapter.py` — baseline adapter (stub already present, implement `get_baseline`)
-
-Each adapter should conform to the abstract provider interface for its domain.
-
-## Adapter Design Requirements
-
-1. Deterministic return shape
-- Return only schema-compatible objects.
-- Convert backend-specific fields to canonical model fields.
-
-2. Time-window fidelity
-- Respect requested region and window exactly.
-- Avoid hidden default windows.
-
-3. Reliability controls
-- Request timeout
-- Retry with bounded attempts
-- Circuit-breaker or fast-fail mode when upstream is down
-
-4. Data quality metadata
-- Return enough context for agent confidence down-weighting when data is stale/incomplete.
-- Set the instance-level `degraded: bool` flag (see `providers/base.py`) whenever a fetch/parse failure caused the method to fall back to an empty result — this is separate from the "never raise" contract below and is what lets a caller distinguish "verified nothing wrong" from "telemetry unavailable." See "Reporting Degraded Fetches" further down.
-
-5. Security
-- Never log secrets or bearer tokens.
-- Use environment variables or secret managers for credentials.
-
-6. Fail on genuinely unresolvable input, don't silently degrade it
-- An unknown `scenario_id` (simulation mode) or any input that has no sane fallback should raise a clear, catchable error (e.g. `ValueError(f"Unknown scenario_id: {scenario_id}")`), not return an empty result or crash later with an unrelated `AttributeError`. This is distinct from #4/the "never raise" contract, which is about *transport* failures (timeout, unreachable server) where an empty result is the correct degrade-gracefully behavior. A malformed *request* should fail loudly and immediately.
-
-## Minimal Adapter Contract by Domain
-
-### Metrics Adapter
-Must provide:
-- timestamp
-- region
-- error_rate
-- packet_loss
-- throughput_gbps
-- latency_ms
-
-Example normalized row:
-
-```json
-{
-	"timestamp": "2026-05-05T10:14:00Z",
-	"region": "us-east",
-	"error_rate": 0.081,
-	"packet_loss": 0.024,
-	"throughput_gbps": 0.61,
-	"latency_ms": 124.5,
-	"tags": {
-		"service": "gateway",
-		"node": "edge-3"
-	}
-}
+```
+RCA pod                                         telemetry pod(s)
+┌──────────────────────────────┐   MCP        ┌──────────────────────────────────────┐
+│ domain agents                │  contract v2 │ mcp_telemetry_server                 │
+│   └ TelemetryRegistry ───────┼─────────────▶│   tools: get_metrics … get_topology  │
+│       endpoints per domain   │              │   TelemetryService (fan-out)         │
+│       retry · breaker · sess │              │     └ source plugins ── backend APIs │
+└──────────────────────────────┘              └──────────────────────────────────────┘
+        no cloud credentials                      credentials + IAM live here only
 ```
 
-### Log Adapter
-Must provide:
-- timestamp
-- level
-- service
-- message
+A new data source is a **source plugin inside a telemetry server**, never code in the RCA pod. The RCA pod only learns endpoint URLs from config. That gives three properties:
 
-### Routing Adapter
-Must provide:
-- timestamp
-- region
-- path_id
-- change_type
-- details
+- **Least privilege.** Only the telemetry pod holds credentials and IAM.
+- **Smaller blast radius.** A misbehaving backend integration can't take down the RCA process.
+- **One fixed wire contract.** Every source emits the same envelope, specified in [CONTRACT.md](../CONTRACT.md).
 
-### Config Adapter
-Must provide:
-- timestamp
-- component
-- change_type
-- before
-- after
+## Writing a source plugin
 
-## Backend Mapping Notes
+Plugins live in `mcp_telemetry_server/plugins/`. Each one subclasses `SourcePlugin` (in `plugins/base.py`) and registers itself with a decorator:
 
-### Prometheus
-- Map queries to normalized metric snapshots.
-- Use recording rules when raw queries are too expensive.
+```python
+from contract import Coverage, Entity, Signal, TelemetryQuery
+from mcp_telemetry_server.plugins.base import SourcePlugin, register_plugin
 
-### ELK/Splunk
-- Normalize severity and service fields.
-- Keep message truncation deterministic.
 
-### MCP
-- Keep MCP tool contracts stable.
-- Validate response payload shape before model conversion.
+@register_plugin
+class CloudWatchPlugin(SourcePlugin):
+    name = "cloudwatch"                  # key under the `sources:` config section
+    domains = frozenset({"metrics"})     # which tools fan out to this plugin
+    needs_cloud_credentials = True       # refused in the RCA pod's in-process server
 
-### Simulation
+    def __init__(self, config=None):
+        super().__init__(config)         # self.config = sources.cloudwatch.*
+        # build clients here; fail fast on bad config with ValueError("ConfigValidationError: ...")
 
-`providers/simulation/*.py` are the default, network-free providers backing `SCENARIOS`. Two things worth knowing if you're extending them:
+    async def fetch(self, query: TelemetryQuery, *, domain: str) -> tuple[list[Signal], Coverage]:
+        rows, truncated = await self._read(query)    # your backend call(s)
+        signals = [self._to_signal(r) for r in rows]
+        return signals, self.coverage("partial" if truncated else "ok", truncated=truncated, lag_seconds=...)
 
-- `SCENARIOS.get(scenario_id or 1)` returning `None` for an unknown id now raises `ValueError(f"Unknown scenario_id: {scenario_id}")` in every simulation provider, rather than letting the `None` propagate into an unrelated `AttributeError` on first attribute access.
-- `LogEvent` and `ConfigChange` carry no per-row `region` field (unlike `MetricSnapshot`/`RoutingEvent`), so `SimulationLogProvider`/`SimulationConfigProvider` filter by region at the *bundle* level instead — comparing the requested `region` against `scenario.incident_request.region` and returning `[]` on a mismatch. Every bundled scenario is single-region today, so this is equivalent to per-row filtering in practice; it's the reason logs/config previously leaked cross-region data that metrics/routing correctly excluded (a request for a region that didn't match the scenario's data still got the scenario's full log/config set). The same fix applies in `mcp_telemetry_server/server.py`'s `get_logs`/`get_config_changes` tools, which back the MCP-mode adapters.
+    def health(self) -> dict:
+        return {"status": "ok"}          # ok | degraded | down — shown on /health, gates /ready
+```
 
-## Reporting Degraded Fetches
+Then import the module in `mcp_telemetry_server/plugins/__init__.py` so the decorator runs, and enable the plugin in the server's config.
 
-Every provider ABC (`providers/base.py`) declares a `degraded: bool = False` class-level default. Simulation providers never set it — there's nothing to fail. `providers/adapters/mcp_adapter.py`'s adapters set `self.degraded = True` in their `except` branch (resetting to `False` at the start of each call) whenever a fetch/parse failure caused the "never raise" contract to fall back to `[]`, so the flag reflects only the *most recent* call on that provider instance — callers must read it immediately after calling the fetch method, before any `await`, since a long-lived provider instance is reused across requests.
+Optional: if the source knows about entities and relationships, add `"topology"` to `domains` and implement `async topology(region, scenario_id) -> (entities, edges, coverage)`.
 
-A real backend adapter (Prometheus/ELK/Splunk) implementing this contract should do the same: set `degraded = True` whenever falling back to an empty/partial result due to a transport or backend failure, and leave it `False` when a genuinely empty result reflects the query actually returning nothing. Domain agents read this flag right after calling the provider and set it on `AgentFinding.data_degraded`, which `agents/rca_synthesizer.py` uses to distinguish a verified-clean incident from one where telemetry simply couldn't be retrieved — see `project_docs/decision-policy.md`'s "Verified-Clean vs. Degraded-Data" section for the full rationale.
+### Plugin rules
 
-## Configuration Pattern
+1. **Emit contract v2 signals only.** Map the backend's fields into `Signal` (see [CONTRACT.md](../CONTRACT.md#signal-envelope)):
+   - Put the native metric or event name in `name` and the native resource in `entity`. Both are free strings, so don't invent enums.
+   - Put everything else in `attributes`.
+2. **Set `evidence_ref` on every signal.** It must be unique per signal and stable across reads, for example a CloudTrail `eventID` or `<log group>/<query id>`. The RCA side deduplicates on `(source, evidence_ref)`, and investigators use it to jump to the raw record.
+3. **Respect the window exactly.** Return only signals with `start_time <= timestamp <= end_time` (or inside `baseline_window` when `include_baseline` is set). No hidden default windows. Use event time for `timestamp` and your read time for `observed_at`.
+4. **Report coverage honestly.** This is what separates "no data" from "data unavailable":
+   - Return `ok` with no signals when the backend answered and nothing matched.
+   - Return `partial` when you hit a page or row limit (also set `truncated=True`) or when part of the read failed.
+   - **Raise** on a hard failure. The service turns the exception into a `failed` coverage entry with the error text, and other plugins for the same domain are unaffected.
+5. **Keep state out of requests.** A plugin instance serves every concurrent RCA task. Clients and connection pools are fine to keep on the instance; per-request results and flags are not.
+6. **Never log secrets.** Read credentials from the pod's environment or IAM role (IRSA / instance profile), never from config files checked into git.
+7. **Fail at startup, not at first use.** An enabled plugin that can't work, such as a missing required config key, should raise `ValueError("ConfigValidationError: ...")` from `__init__`.
 
-Use `config/config.yaml` to choose provider mode by domain.
+Timeouts are applied for you. Each plugin call is wrapped in `sources.<name>.timeout_seconds` (default 10 s), and a plugin that times out gets a `failed` coverage entry.
 
-Example strategy:
+### Bundled plugins
 
-- Start hybrid: metrics real, others simulation.
-- Validate output quality.
-- Progressively move remaining domains to real adapters.
+| Plugin | Domains | Status |
+|---|---|---|
+| `simulation` | metrics, logs, routing, config, topology | Implemented. Serves `simulation/scenarios.py`, rebased so each scenario's incident time lands on `end_time`. Ages are rounded to whole seconds. LogEvent/ConfigChange rows have no region, so they are filtered at bundle level. |
+| `replay` | metrics, logs, routing, config, topology | Implemented. Reads recorded v2 fixtures (`fixtures_dir` or `fixtures`) and shifts every timestamp by `query.end_time − recorded_window.end`. Used for CI, and later for replaying recorded AWS sessions offline. See `tests/fixtures/replay/`. |
+| `cloudwatch` | metrics | Skeleton |
+| `cloudtrail` | config | Skeleton |
+| `tgw_routes` | routing, topology | Skeleton |
+| `flow_logs` | logs, metrics | Skeleton |
+| `frr_ssm` | logs, routing | Skeleton |
+| `prometheus` | metrics | Skeleton (moved here from `providers/adapters/`) |
+| `elk`, `splunk` | logs | Skeleton (moved here from `providers/adapters/`) |
 
-## Adapter Validation Checklist
+Skeletons (`SkeletonPlugin`) raise `NotImplementedError` and contain no boto3. Their docstrings list the API calls and IAM actions the real implementation will need, so the telemetry pod's IAM policy can be reviewed up front. Enabling a skeleton fails server startup with a clear error rather than serving guaranteed-failed coverage.
 
-1. Unit tests for field mapping.
-2. Timeout and retry behavior tests.
-3. Empty-result behavior test.
-4. Partial-data behavior test.
-5. End-to-end scenario run with adapter enabled.
+### Configuring sources (telemetry server)
 
-## Rollout Strategy
+```yaml
+# config/telemetry.yaml   (python -m mcp_telemetry_server --config …, or $NETCORTEX_TELEMETRY_CONFIG)
+sources:
+  simulation:
+    enabled: true
+  replay:
+    enabled: true
+    fixtures_dir: tests/fixtures/replay
+    domains: [metrics, routing]     # optional: narrow the plugin's domains
+    timeout_seconds: 10
+    required: false                 # optional source: failure doesn't degrade findings
+```
 
-1. Shadow mode
-- Run adapter in parallel to simulation, compare findings.
+Every tool fans out concurrently to all enabled plugins for its domain and returns one coverage entry per plugin. `/health` shows the status of each plugin. `/ready` returns 503 when none is usable.
 
-2. Canary mode
-- Enable adapter for subset of incidents/regions.
+## Connecting the RCA pod (endpoint registry)
 
-3. Full mode
-- Switch provider in config after stability and quality thresholds are met.
+`providers/factory.py` builds a `TelemetryRegistry` from config. Each domain lists one or more telemetry MCP endpoints:
+
+```yaml
+telemetry:
+  defaults:
+    timeout_seconds: 8
+    retry: {max_attempts: 2, base_delay_seconds: 0.2, max_delay_seconds: 2.0}
+    circuit_breaker: {failure_threshold: 3, reset_timeout_seconds: 30}
+  domains:
+    metrics:
+      endpoints:
+        - name: aws-telemetry
+          url: http://netcortex-telemetry-aws:9001/mcp
+          auth: bearer_env           # none | bearer_env (token_env) | oidc (not yet)
+          token_env: TELEMETRY_TOKEN
+          required: true
+        - name: dc-telemetry         # adding a second source is config-only
+          url: http://netcortex-telemetry-dc:9001/mcp
+          required: false
+```
+
+For each domain fetch, the registry does the following:
+
+- Calls all of the domain's endpoints concurrently.
+- Merges their signals, deduplicated on `(source, evidence_ref)`.
+- Returns **one coverage entry per endpoint**.
+
+The agent copies `response.degraded` into `AgentFinding.data_degraded`. Degradation is computed from that request's coverage, never from provider state, because providers are shared across concurrent incidents.
+
+Each endpoint gets these reliability controls, implemented in `providers/adapters/mcp_adapter.py` and `providers/resilience.py`:
+
+- **Reused MCP session.** One session per endpoint, opened lazily and owned by a background task. All callers share it. It is reopened after a transport failure. There is no thread or event loop per call.
+- **Per-attempt timeout.** Set with `timeout_seconds`.
+- **Bounded retry with full jitter.** Applies to **transport errors only**: connection failures, timeouts, closed streams, HTTP 429/502/503/504. A tool error, such as a bad argument or a contract version mismatch, is not retried.
+- **Circuit breaker.** It opens after `failure_threshold` consecutive transport failures. While open, calls fail immediately with "circuit open". After `reset_timeout_seconds` it lets one trial call through: success closes the breaker, failure reopens it.
+
+Keep `timeout_seconds × max_attempts` comfortably below `a2a.analysis_timeout_seconds`, or the orchestrator will time the agent out before the registry can report coverage.
+
+**`inproc://<name>` endpoints** run a real telemetry MCP server inside the RCA process, using the SDK's in-memory transport. Its sources come from `telemetry.inproc_sources`, which defaults to simulation. This is the zero-setup default for local runs and `eval`, and it still goes through MCP and the contract. Plugins with `needs_cloud_credentials = True` are refused there.
+
+Configs without a `telemetry:` section still accept the old `providers:` / `mcp_endpoints:` keys, with a deprecation warning.
+
+## Validation checklist for a new plugin
+
+1. Unit tests mapping backend rows to `Signal`, covering `evidence_ref` uniqueness and window filtering.
+2. A replay fixture recorded from the real backend (scrubbed), so CI exercises realistic shapes without cloud access.
+3. A test for each coverage status: empty-but-ok, partial/truncated, and raising → `failed`.
+4. `/health` reports something meaningful when the backend is down.
+5. An end-to-end run with the plugin enabled in a telemetry pod and a second endpoint configured. Confirm that partial outages show up as degraded findings.
+
+## Rollout strategy
+
+1. **Shadow.** Add the new telemetry endpoint as `required: false` alongside the existing source, and compare findings.
+2. **Canary.** Make it `required: true` for a subset of regions or incidents.
+3. **Full.** Remove the old endpoint once quality thresholds are met. All three steps are config changes.
 
 ## Baseline Provider
 

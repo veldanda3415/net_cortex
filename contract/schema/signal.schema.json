@@ -1,0 +1,140 @@
+{
+  "$defs": {
+    "Entity": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "object"
+        },
+        "type": {
+          "description": "Free-form entity type, e.g. 'tunnel', 'tgw_attachment', 'switch'.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Entity",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/2.0/signal.json",
+  "additionalProperties": false,
+  "properties": {
+    "attributes": {
+      "additionalProperties": true,
+      "title": "Attributes",
+      "type": "object"
+    },
+    "domain": {
+      "description": "Telemetry domain: metrics | logs | routing | config | topology.",
+      "title": "Domain",
+      "type": "string"
+    },
+    "entity": {
+      "$ref": "#/$defs/Entity"
+    },
+    "evidence_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Raw pointer back to the source record (CloudTrail eventID, log group/stream + query id, ...). Together with `source` it is the dedupe key when several endpoints return the same record.",
+      "title": "Evidence Ref"
+    },
+    "name": {
+      "description": "Free-form signal name, e.g. 'TunnelState', 'error_rate', 'ModifyVpnConnection'.",
+      "title": "Name",
+      "type": "string"
+    },
+    "observed_at": {
+      "description": "Ingest time: when the telemetry server read it.",
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "severity": {
+      "default": "info",
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "signal_type": {
+      "enum": [
+        "metric",
+        "event",
+        "state"
+      ],
+      "title": "Signal Type",
+      "type": "string"
+    },
+    "source": {
+      "description": "Plugin that produced the signal, e.g. 'cloudwatch', 'simulation'.",
+      "title": "Source",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "Event time: when the thing happened at the source.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "unit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unit"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value"
+    }
+  },
+  "required": [
+    "signal_type",
+    "timestamp",
+    "observed_at",
+    "entity",
+    "name",
+    "domain",
+    "source"
+  ],
+  "title": "Signal",
+  "type": "object",
+  "x-contract-version": "2.0"
+}

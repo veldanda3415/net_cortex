@@ -303,16 +303,14 @@ Validation checks enforce compatible timeout relationships at startup.
 
 ## Integrating Real Data Sources
 
-Simulation providers are enabled by default.
+The RCA pod reads all telemetry over MCP using the v2 signal envelope; see [CONTRACT.md](CONTRACT.md).
 
-Adapter extension points:
+- **RCA side.** `telemetry.domains.<domain>.endpoints` in `config/config.yaml` lists one or more telemetry MCP endpoints per domain. Each endpoint has its own timeout, a retry policy that only retries transport errors, a circuit breaker, and a reused MCP session. Adding a second endpoint for a domain is a config change.
+- **Default.** The default endpoint is `inproc://local`: a telemetry server running inside the RCA process, serving the simulation plugin. Local runs and `eval` need no setup.
+- **Telemetry side.** `python -m mcp_telemetry_server --config config/telemetry.yaml` hosts source plugins from `mcp_telemetry_server/plugins/`. The implemented plugins are `simulation` and `replay` (recorded fixtures rebased into the query window). `cloudwatch`, `cloudtrail`, `tgw_routes`, `flow_logs`, `frr_ssm`, `prometheus`, `elk` and `splunk` are interface skeletons. `/health` and `/ready` report per-plugin status.
+- **Credentials.** Cloud credentials belong only in telemetry pods.
 
-- `providers/adapters/prometheus_adapter.py`
-- `providers/adapters/elk_adapter.py`
-- `providers/adapters/splunk_adapter.py`
-- `providers/adapters/mcp_adapter.py`
-
-To move toward production-like integrations, implement adapter methods and update provider mode in `config/config.yaml`.
+To add a source, see [project_docs/provider-adapter-guide.md](project_docs/provider-adapter-guide.md).
 
 ## Open Source Metadata
 

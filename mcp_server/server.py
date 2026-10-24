@@ -16,6 +16,7 @@ import asyncio
 import json
 import logging
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -92,6 +93,7 @@ async def run_rca(
     severity: str,
     scenario_id: int = 1,
     source_system: str = "mcp_client",
+    reported_at: str | None = None,
 ) -> dict:
     """Run root cause analysis on a network incident.
 
@@ -104,6 +106,8 @@ async def run_rca(
         severity: Incident severity — low, medium, high, or critical.
         scenario_id: Simulation scenario ID (default: 1).
         source_system: Originating system identifier.
+        reported_at: ISO-8601 alarm time; anchors the telemetry window
+            (end = reported_at, start = end - window). Defaults to now.
     """
     if _task_store is None or _engine is None:
         return {"error": "Server not initialized. Start with mcp-serve command."}
@@ -111,6 +115,15 @@ async def run_rca(
     # Validate severity
     if severity not in ("low", "medium", "high", "critical"):
         return {"error": f"Invalid severity: {severity}. Must be low|medium|high|critical."}
+
+    alarm_time = None
+    if reported_at:
+        try:
+            alarm_time = datetime.fromisoformat(reported_at)
+        except ValueError:
+            return {"error": f"Invalid reported_at: {reported_at!r}. Expected ISO-8601."}
+        if alarm_time.tzinfo is None:
+            alarm_time = alarm_time.replace(tzinfo=timezone.utc)
 
     # Create incident request
     incident = IncidentRequest(
@@ -120,6 +133,7 @@ async def run_rca(
         severity=severity,
         source_system=source_system,
         external_incident_id=f"MCP-{scenario_id}",
+        **({"reported_at": alarm_time} if alarm_time else {}),
     )
 
     # Create task
