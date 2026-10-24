@@ -1,0 +1,38 @@
+# Telemetry MCP server config (python -m mcp_telemetry_server --config config/telemetry.yaml,
+# or set NETCORTEX_TELEMETRY_CONFIG). Only the `sources:` section is read.
+#
+# Each enabled source plugin serves the domains it declares (optionally
+# narrowed with `domains:`). Every tool call fans out to all enabled plugins
+# for its domain and reports one coverage entry per plugin.
+#
+# Cloud plugins (cloudwatch, cloudtrail, tgw_routes, flow_logs, frr_ssm) and
+# prometheus/elk/splunk are interface skeletons in this release: enabling one
+# fails startup with a clear error.
+
+sources:
+  simulation:
+    enabled: true
+    timeout_seconds: 10
+
+  replay:
+    enabled: false
+    fixtures_dir: tests/fixtures/replay
+    timeout_seconds: 10
+    # required: false   # failures of an optional source don't degrade findings
+
+  cloudwatch:
+    enabled: false
+  cloudtrail:
+    enabled: false
+  tgw_routes:
+    enabled: false
+  flow_logs:
+    enabled: false
+  frr_ssm:
+    enabled: false
+  prometheus:
+    enabled: false
+  elk:
+    enabled: false
+  splunk:
+    enabled: false

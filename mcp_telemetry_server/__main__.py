@@ -3,6 +3,7 @@
 Usage:
     python -m mcp_telemetry_server
     python -m mcp_telemetry_server --port 9001
+    python -m mcp_telemetry_server --config config/telemetry.yaml
     python -m mcp_telemetry_server --transport stdio
 """
 
@@ -17,13 +18,19 @@ _project_root = str(Path(__file__).resolve().parents[1])
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-from mcp_telemetry_server.server import telemetry
+from mcp_telemetry_server.server import build_server
+from mcp_telemetry_server.service import TelemetryService, load_sources_config
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="NetCortex MCP Telemetry Server")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=9001, help="Port to listen on (default: 9001)")
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="YAML file with a `sources:` section (default: $NETCORTEX_TELEMETRY_CONFIG, else simulation only)",
+    )
     parser.add_argument(
         "--transport",
         choices=["streamable-http", "stdio"],
@@ -32,8 +39,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    server = build_server(TelemetryService(load_sources_config(args.config)))
     print(f"Starting NetCortex MCP Telemetry Server on {args.host}:{args.port} ({args.transport})")
-    telemetry.run(transport=args.transport, host=args.host, port=args.port)
+    server.run(transport=args.transport, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
