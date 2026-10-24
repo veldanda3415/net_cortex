@@ -312,6 +312,13 @@ The RCA pod reads all telemetry over MCP using the v2 signal envelope; see [CONT
 
 To add a source, see [project_docs/provider-adapter-guide.md](project_docs/provider-adapter-guide.md).
 
+Detection is data as well. The signals, their rules, the domains that run, and cross-domain corroboration all live in the detection catalog (`contract/catalog/*.json`):
+
+- **Add a signal or a domain** by editing JSON in an override directory (`$NETCORTEX_CATALOG_DIR`, or the `netcortex-catalog-override` ConfigMap in k8s). No code change is needed.
+- **Validate before deploying** with `python app/main.py catalog validate <dir>`.
+
+See the Detection catalog section of [CONTRACT.md](CONTRACT.md#detection-catalog).
+
 ## Open Source Metadata
 
 - License: MIT (see `LICENSE`).
