@@ -1,0 +1,52 @@
+{
+  "contract_version": "2.0",
+  "description": "Synthetic recording: VPN tunnel 1 down after a CGW BGP hold-timer expiry; TGW route to on-prem goes blackhole. Shapes mirror CloudWatch / CloudTrail / TGW / FRR sources.",
+  "region": "us-east-1",
+  "recorded_window": {"start": "2026-09-14T09:30:00Z", "end": "2026-09-14T10:00:00Z"},
+  "signals": [
+    {
+      "signal_type": "metric", "timestamp": "2026-09-14T09:40:00Z", "observed_at": "2026-09-14T09:41:30Z",
+      "entity": {"type": "tunnel", "id": "vpn-0a1b2c3d-tunnel-1", "labels": {"VpnId": "vpn-0a1b2c3d", "TunnelIpAddress": "203.0.113.10"}},
+      "name": "TunnelState", "value": 1.0, "unit": "None", "severity": "info", "domain": "metrics", "source": "cloudwatch",
+      "attributes": {"namespace": "AWS/VPN", "statistic": "Minimum", "period_seconds": 60},
+      "evidence_ref": "AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.10@2026-09-14T09:40:00Z"
+    },
+    {
+      "signal_type": "metric", "timestamp": "2026-09-14T09:52:00Z", "observed_at": "2026-09-14T09:53:30Z",
+      "entity": {"type": "tunnel", "id": "vpn-0a1b2c3d-tunnel-1", "labels": {"VpnId": "vpn-0a1b2c3d", "TunnelIpAddress": "203.0.113.10"}},
+      "name": "TunnelState", "value": 0.0, "unit": "None", "severity": "critical", "domain": "metrics", "source": "cloudwatch",
+      "attributes": {"namespace": "AWS/VPN", "statistic": "Minimum", "period_seconds": 60},
+      "evidence_ref": "AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.10@2026-09-14T09:52:00Z"
+    },
+    {
+      "signal_type": "event", "timestamp": "2026-09-14T09:51:40Z", "observed_at": "2026-09-14T09:52:05Z",
+      "entity": {"type": "bgp_neighbor", "id": "169.254.10.1", "labels": {"instance_id": "i-0cgw000001"}},
+      "name": "bgp_hold_timer_expired", "severity": "error", "domain": "logs", "source": "frr_ssm",
+      "attributes": {"level": "ERROR", "message": "%NOTIFICATION: sent to neighbor 169.254.10.1 4/0 (Hold Timer Expired)"},
+      "evidence_ref": "ssm-cmd-0f1e2d3c/i-0cgw000001#line-4411"
+    },
+    {
+      "signal_type": "state", "timestamp": "2026-09-14T09:52:30Z", "observed_at": "2026-09-14T09:53:00Z",
+      "entity": {"type": "tgw_route_table", "id": "tgw-rtb-0core0001", "labels": {"cidr": "10.100.0.0/16"}},
+      "name": "tgw_route", "severity": "critical", "domain": "routing", "source": "tgw_routes",
+      "attributes": {"destination_cidr": "10.100.0.0/16", "state": "blackhole", "previous_state": "active", "attachment": "tgw-attach-0vpn0001"},
+      "evidence_ref": "tgw-rtb-0core0001/10.100.0.0/16@2026-09-14T09:52:30Z"
+    },
+    {
+      "signal_type": "event", "timestamp": "2026-09-14T09:20:00Z", "observed_at": "2026-09-14T09:25:00Z",
+      "entity": {"type": "vpn_connection", "id": "vpn-0a1b2c3d"},
+      "name": "ModifyVpnTunnelOptions", "severity": "info", "domain": "config", "source": "cloudtrail",
+      "attributes": {"note": "outside the 30 minute window; must be dropped by the window filter"},
+      "evidence_ref": "c0ffee00-1111-2222-3333-444455556666"
+    }
+  ],
+  "topology": {
+    "entities": [
+      {"type": "tunnel", "id": "vpn-0a1b2c3d-tunnel-1"},
+      {"type": "vpn_connection", "id": "vpn-0a1b2c3d"}
+    ],
+    "relationships": [
+      {"type": "member_of", "source": {"type": "tunnel", "id": "vpn-0a1b2c3d-tunnel-1"}, "target": {"type": "vpn_connection", "id": "vpn-0a1b2c3d"}}
+    ]
+  }
+}
