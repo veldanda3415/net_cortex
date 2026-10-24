@@ -1,0 +1,277 @@
+{
+  "$defs": {
+    "Coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "lag_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How far behind real time the source is, if known.",
+          "title": "Lag Seconds"
+        },
+        "required": {
+          "default": true,
+          "description": "Whether a non-ok status on this source makes the response degraded. Optional sources (enrichment) can fail without degrading the finding.",
+          "title": "Required",
+          "type": "boolean"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "truncated": {
+          "default": false,
+          "description": "True when the source hit a page/row limit.",
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "status"
+      ],
+      "title": "Coverage",
+      "type": "object"
+    },
+    "Entity": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "object"
+        },
+        "type": {
+          "description": "Free-form entity type, e.g. 'tunnel', 'tgw_attachment', 'switch'.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Entity",
+      "type": "object"
+    },
+    "Signal": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": true,
+          "title": "Attributes",
+          "type": "object"
+        },
+        "domain": {
+          "description": "Telemetry domain: metrics | logs | routing | config | topology.",
+          "title": "Domain",
+          "type": "string"
+        },
+        "entity": {
+          "$ref": "#/$defs/Entity"
+        },
+        "evidence_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Raw pointer back to the source record (CloudTrail eventID, log group/stream + query id, ...). Together with `source` it is the dedupe key when several endpoints return the same record.",
+          "title": "Evidence Ref"
+        },
+        "name": {
+          "description": "Free-form signal name, e.g. 'TunnelState', 'error_rate', 'ModifyVpnConnection'.",
+          "title": "Name",
+          "type": "string"
+        },
+        "observed_at": {
+          "description": "Ingest time: when the telemetry server read it.",
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "severity": {
+          "default": "info",
+          "enum": [
+            "debug",
+            "info",
+            "warning",
+            "error",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "signal_type": {
+          "enum": [
+            "metric",
+            "event",
+            "state"
+          ],
+          "title": "Signal Type",
+          "type": "string"
+        },
+        "source": {
+          "description": "Plugin that produced the signal, e.g. 'cloudwatch', 'simulation'.",
+          "title": "Source",
+          "type": "string"
+        },
+        "timestamp": {
+          "description": "Event time: when the thing happened at the source.",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "signal_type",
+        "timestamp",
+        "observed_at",
+        "entity",
+        "name",
+        "domain",
+        "source"
+      ],
+      "title": "Signal",
+      "type": "object"
+    },
+    "TimeWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "format": "date-time",
+          "title": "End",
+          "type": "string"
+        },
+        "start": {
+          "format": "date-time",
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "TimeWindow",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/2.0/tool_response.json",
+  "additionalProperties": false,
+  "properties": {
+    "baseline_window": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TimeWindow"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "contract_version": {
+      "default": "2.0",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "coverage": {
+      "items": {
+        "$ref": "#/$defs/Coverage"
+      },
+      "title": "Coverage",
+      "type": "array"
+    },
+    "next_cursor": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Next Cursor"
+    },
+    "signals": {
+      "items": {
+        "$ref": "#/$defs/Signal"
+      },
+      "title": "Signals",
+      "type": "array"
+    },
+    "window": {
+      "$ref": "#/$defs/TimeWindow"
+    }
+  },
+  "required": [
+    "window"
+  ],
+  "title": "ToolResponse",
+  "type": "object",
+  "x-contract-version": "2.0"
+}

@@ -1,0 +1,102 @@
+{
+  "$defs": {
+    "EntityFilter": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "object"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        }
+      },
+      "title": "EntityFilter",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/2.0/telemetry_query.json",
+  "additionalProperties": false,
+  "properties": {
+    "end_time": {
+      "format": "date-time",
+      "title": "End Time",
+      "type": "string"
+    },
+    "entity_filters": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/EntityFilter"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Entity Filters"
+    },
+    "include_baseline": {
+      "default": false,
+      "title": "Include Baseline",
+      "type": "boolean"
+    },
+    "region": {
+      "pattern": "^[a-z]{2}(-[a-z0-9]+)+$",
+      "title": "Region",
+      "type": "string"
+    },
+    "scenario_id": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Simulation only; ignored by every other source.",
+      "title": "Scenario Id"
+    },
+    "start_time": {
+      "format": "date-time",
+      "title": "Start Time",
+      "type": "string"
+    }
+  },
+  "required": [
+    "region",
+    "start_time",
+    "end_time"
+  ],
+  "title": "TelemetryQuery",
+  "type": "object",
+  "x-contract-version": "2.0"
+}

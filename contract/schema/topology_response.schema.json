@@ -1,0 +1,160 @@
+{
+  "$defs": {
+    "Coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "lag_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How far behind real time the source is, if known.",
+          "title": "Lag Seconds"
+        },
+        "required": {
+          "default": true,
+          "description": "Whether a non-ok status on this source makes the response degraded. Optional sources (enrichment) can fail without degrading the finding.",
+          "title": "Required",
+          "type": "boolean"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "truncated": {
+          "default": false,
+          "description": "True when the source hit a page/row limit.",
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "status"
+      ],
+      "title": "Coverage",
+      "type": "object"
+    },
+    "Entity": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "object"
+        },
+        "type": {
+          "description": "Free-form entity type, e.g. 'tunnel', 'tgw_attachment', 'switch'.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "title": "Entity",
+      "type": "object"
+    },
+    "TopologyEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": true,
+          "title": "Attributes",
+          "type": "object"
+        },
+        "source": {
+          "$ref": "#/$defs/Entity"
+        },
+        "target": {
+          "$ref": "#/$defs/Entity"
+        },
+        "type": {
+          "description": "Relationship type, e.g. 'attached_to', 'routes_via', 'peers_with'.",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "source",
+        "target"
+      ],
+      "title": "TopologyEdge",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/2.0/topology_response.json",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "default": "2.0",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "coverage": {
+      "items": {
+        "$ref": "#/$defs/Coverage"
+      },
+      "title": "Coverage",
+      "type": "array"
+    },
+    "entities": {
+      "items": {
+        "$ref": "#/$defs/Entity"
+      },
+      "title": "Entities",
+      "type": "array"
+    },
+    "region": {
+      "title": "Region",
+      "type": "string"
+    },
+    "relationships": {
+      "items": {
+        "$ref": "#/$defs/TopologyEdge"
+      },
+      "title": "Relationships",
+      "type": "array"
+    }
+  },
+  "required": [
+    "region"
+  ],
+  "title": "TopologyResponse",
+  "type": "object",
+  "x-contract-version": "2.0"
+}
