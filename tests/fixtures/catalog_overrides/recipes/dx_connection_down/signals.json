@@ -1,0 +1,9 @@
+{
+  "signals": {
+    "ConnectionState": {
+      "signal_type": "metric", "domain": "metrics", "unit": "None", "entity_types": ["dx_connection"],
+      "description": "AWS/DX ConnectionState: 1 when the Direct Connect connection is up, 0 when down.",
+      "rule": {"type": "state_equals", "value": 0, "reason": "Direct Connect connection down (ConnectionState=0)"}
+    }
+  }
+}

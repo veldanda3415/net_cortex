@@ -201,9 +201,130 @@ Example override: [`tests/fixtures/catalog_overrides/latency_signal/`](tests/fix
 
 Worked example, with zero code: [`tests/fixtures/catalog_overrides/dns/`](tests/fixtures/catalog_overrides/dns/) plus [`tests/fixtures/replay_dns/`](tests/fixtures/replay_dns/) add a `dns` domain with an NXDOMAIN-spike rule. `tests/integration/test_catalog_overrides.py` shows the DNS finding in the RCA report.
 
+### Recipes
+
+Each recipe below is an override directory you can copy as-is. [`tests/integration/test_catalog_recipes.py`](tests/integration/test_catalog_recipes.py) runs every one through the real engine, before and after the override, and fails if a snippet on this page drifts from its fixture.
+
+Two rules apply to every recipe:
+
+- **An override entry replaces the default entry with the same key as a whole.** To change one field of an existing signal, copy the whole default entry from `contract/catalog/` and edit it.
+- **A signal's raw `name` must reach the catalog.** A catalog key or a `match_names` entry has to equal the `name` a source emits. Until one does, the signal shows up in `unclassified_evidence` and no rule judges it. Use that to find which names to add: run the incident, then read `unclassified_evidence` in `rca_report.json`.
+
+#### Treat WARN log lines as anomalous
+
+The default `log_message` rule only fires at `error` and above. Lowering the severity floor makes scenario 2's `WARN BGP session flap` line anomalous.
+
+<!-- recipe: tests/fixtures/catalog_overrides/recipes/warn_logs/signals.json -->
+```json
+{
+  "signals": {
+    "log_message": {
+      "signal_type": "event", "domain": "log",
+      "description": "Application/network log line; WARN and above are anomalous.",
+      "rule": {"type": "event_presence", "min_severity": "warning"}
+    }
+  }
+}
+```
+
+#### Detect a new named error, such as a syslog mnemonic
+
+Use this when a source emits each error type under its own `name`, such as a syslog mnemonic, an FRR event or a CloudTrail event name. List every raw name the signal covers in `match_names`. Unless the rule's `names` narrows it, `event_presence` fires on the signal's own key plus all of its `match_names`.
+
+<!-- recipe: tests/fixtures/catalog_overrides/recipes/syslog_link_down/signals.json -->
+```json
+{
+  "signals": {
+    "link_down": {
+      "signal_type": "event", "domain": "log",
+      "match_names": ["LINK-3-UPDOWN"],
+      "description": "Syslog from a network device: an interface changed state to down.",
+      "rule": {"type": "event_presence", "min_severity": "error"}
+    }
+  }
+}
+```
+
+With [`tests/fixtures/replay_recipes/syslog_link_down.json`](tests/fixtures/replay_recipes/syslog_link_down.json) replayed:
+
+- the `LINK-3-UPDOWN` line fires `link_down.event_presence`, and its `evidence_ref` is in the key event;
+- the uncatalogued `SYS-5-CONFIG_I` line stays in `unclassified_evidence`.
+
+**When the error is only in the message text.** If a source emits every line under one generic name (simulation emits all logs as `log_message`), a rule can't tell one error from another: rules match on `name` and severity, never on message text. You have two options:
+
+- **Give each error type its own name at the source.** Do this in the plugin that builds the signals, then use this recipe. This is a code change in the plugin.
+- **Use the text for corroboration only.** A correlation `key_event` condition can test a peer's `message` with `contains` (see the corroboration recipe below). It adjusts confidence, but it can't make a finding anomalous.
+
+#### Add an AWS state metric (Direct Connect `ConnectionState`)
+
+A new state check is a `state_equals` rule. A new entity type goes in `entities.json` in the same override directory.
+
+<!-- recipe: tests/fixtures/catalog_overrides/recipes/dx_connection_down/entities.json -->
+```json
+{
+  "entity_types": {
+    "dx_connection": {"description": "AWS Direct Connect dedicated or hosted connection"}
+  }
+}
+```
+
+<!-- recipe: tests/fixtures/catalog_overrides/recipes/dx_connection_down/signals.json -->
+```json
+{
+  "signals": {
+    "ConnectionState": {
+      "signal_type": "metric", "domain": "metrics", "unit": "None", "entity_types": ["dx_connection"],
+      "description": "AWS/DX ConnectionState: 1 when the Direct Connect connection is up, 0 when down.",
+      "rule": {"type": "state_equals", "value": 0, "reason": "Direct Connect connection down (ConnectionState=0)"}
+    }
+  }
+}
+```
+
+With [`tests/fixtures/replay_recipes/dx_connection_down.json`](tests/fixtures/replay_recipes/dx_connection_down.json) replayed, only the sample with value 0 fires.
+
+The other single-signal shapes follow the same pattern:
+
+- **A fixed limit:** `{"type": "threshold", "op": "gt", "value": 200}`. See `latency_signal/` above.
+- **A deviation from baseline:** `zscore_baseline`.
+- **A spike or collapse against the signal's recent level:** `rate_change` with `direction` and `factor`. See `TunnelDataIn` in the defaults and the `dns` example.
+
+#### Add a cross-domain corroboration rule
+
+A finding's confidence goes up when a peer's evidence matches. In scenario 4, the throughput drop on LAG0 is corroborated by the log agent's `LACP timeout` line.
+
+<!-- recipe: tests/fixtures/catalog_overrides/recipes/lacp_corroboration/correlation.json -->
+```json
+{
+  "rules": {
+    "metrics.lacp_error_on_lag": {
+      "domain": "metrics", "priority": 20,
+      "description": "A metrics anomaly plus an LACP error in the logs points at a LAG member failure.",
+      "when": {
+        "self_anomaly": true,
+        "all": [{"key_event": {"scope": "peers", "domains": ["log"], "field": "message", "op": "contains", "value": "LACP"}}]
+      },
+      "effect": {
+        "kind": "corroboration",
+        "confidence": {"op": "at_least", "value": 0.9},
+        "note": "Peer corroboration: log agent reported an LACP error; metrics confidence elevated to 0.90"
+      }
+    }
+  }
+}
+```
+
+How the rule fields behave:
+
+- **Order.** Rules for a domain are tried in `priority` order, lowest first, and only the first match applies.
+- **Marker.** The `note` must start with `Peer corroboration:` (or `Peer contradiction:` for `kind: contradiction`). The marker stops the rule from applying twice across collaboration rounds.
+- **Fields a `key_event` condition can test:** anything a key event carries, which means the signal's metric value under its name, its attributes (such as `message` and `change_type`), `entity_type` and `entity_id`.
+
 ### What still requires code
 
 - **A new data source.** A telemetry source plugin, such as the CloudWatch/CloudTrail/TGW/Flow Logs/FRR skeletons, plus its credentials and IAM. Once written, its field mapping can live in `sources.json`.
 - **A new rule type.** Add it to `contract/catalog_models.py` and `detection/rules.py`. This is deliberate: the set stays closed and reviewable.
 - **A new MCP tool.** Today these are `get_metrics`, `get_logs`, `get_routing_events`, `get_config_changes`, `get_signals` and `get_topology`. New domains use `get_signals`, so they don't need one.
+- **Detecting on log message text.** Rules match a signal's `name` and severity, never its free text, so there is no substring or regex detection. The workaround is to name the error at the source (see the recipes above). A `message_match` option on `event_presence` would be a new rule capability.
+- **Conditions over several signals within one domain.** "A and B together", "A before B" and "the ratio of A to B" can't be detected. Each rule judges one signal; a derived per-entity count (`domains.json` `derived`) is the only aggregation. Across domains, `correlation.json` can combine evidence, but only to adjust confidence.
 - **New agent reasoning.** Anything the generic pipeline can't express: new correlation condition types, summary placeholders, relevance filter types, or LLM prompting. The default catalog's `incident_text` relevance filter is an example of reasoning that lives in code but is configured by data.

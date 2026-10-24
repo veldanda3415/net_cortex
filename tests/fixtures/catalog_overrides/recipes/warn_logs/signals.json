@@ -1,0 +1,9 @@
+{
+  "signals": {
+    "log_message": {
+      "signal_type": "event", "domain": "log",
+      "description": "Application/network log line; WARN and above are anomalous.",
+      "rule": {"type": "event_presence", "min_severity": "warning"}
+    }
+  }
+}

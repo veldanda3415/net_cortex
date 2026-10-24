@@ -317,7 +317,14 @@ Detection is data as well. The signals, their rules, the domains that run, and c
 - **Add a signal or a domain** by editing JSON in an override directory (`$NETCORTEX_CATALOG_DIR`, or the `netcortex-catalog-override` ConfigMap in k8s). No code change is needed.
 - **Validate before deploying** with `python app/main.py catalog validate <dir>`.
 
-See the Detection catalog section of [CONTRACT.md](CONTRACT.md#detection-catalog).
+See the Detection catalog section of [CONTRACT.md](CONTRACT.md#detection-catalog). Its [Recipes](CONTRACT.md#recipes) are copy-paste overrides, each tested end to end:
+
+- WARN logs as anomalies
+- a new named log error, such as a syslog mnemonic
+- an AWS state metric
+- a cross-domain corroboration rule
+
+That section also lists what still needs code, for example detecting on free-text log messages.
 
 ## Open Source Metadata
 

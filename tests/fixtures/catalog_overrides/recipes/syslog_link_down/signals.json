@@ -1,0 +1,10 @@
+{
+  "signals": {
+    "link_down": {
+      "signal_type": "event", "domain": "log",
+      "match_names": ["LINK-3-UPDOWN"],
+      "description": "Syslog from a network device: an interface changed state to down.",
+      "rule": {"type": "event_presence", "min_severity": "error"}
+    }
+  }
+}
