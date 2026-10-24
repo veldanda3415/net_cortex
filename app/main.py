@@ -16,20 +16,20 @@ import yaml
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from agents.config_agent import build_config_app
-from agents.log_agent import build_log_app
-from agents.metrics_agent import build_metrics_app
-from agents.routing_agent import build_routing_app
+from agents.domain_agent import build_domain_app
 from communication.a2a_router import A2ARouter
 from communication.adk_a2a_router import ADKA2ARouter
 from communication.agent_registry import AgentRegistry
 from ingestion.webhook_server import WebhookServer
 from models.schemas import IncidentRequest
+from contract.catalog_loader import CatalogError, get_catalog, load_catalog
 from core.orchestrator import NetCortexEngine
 from providers.adapters.mcp_adapter import close_all_sessions
 from simulation.scenarios import SCENARIOS
 
 app = typer.Typer(help="NetCortex runtime")
+catalog_app = typer.Typer(help="Detection catalog tools")
+app.add_typer(catalog_app, name="catalog")
 logger = logging.getLogger("net_cortex")
 
 
@@ -87,7 +87,14 @@ def load_env_file(path: str = "config/.env") -> None:
 
 def load_config(path: str = "config/config.yaml") -> dict[str, Any]:
     load_env_file("config/.env")
-    return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    cfg = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    # Refuse to start on an invalid detection catalog (defaults + $NETCORTEX_CATALOG_DIR).
+    try:
+        catalog = get_catalog()
+    except CatalogError as exc:
+        raise SystemExit(f"Invalid detection catalog: {exc}") from None
+    logger.info("Detection catalog loaded: %s", ", ".join(catalog.origin))
+    return cfg
 
 
 async def start_server(fastapi_app, host: str, port: int):
@@ -96,19 +103,31 @@ async def start_server(fastapi_app, host: str, port: int):
     await server.serve()
 
 
+def _agent_entry(cfg: dict[str, Any], domain_id: str, port: int) -> dict[str, str]:
+    """Endpoint/card URL for a domain agent: config.yaml `agents.<id>` when present,
+    otherwise derived from the catalog port (agents run in this process)."""
+    entry = dict((cfg.get("agents") or {}).get(domain_id) or {})
+    entry.setdefault("endpoint", f"http://localhost:{port}/a2a")
+    entry.setdefault("card_url", f"http://localhost:{port}/.well-known/agent.json")
+    return entry
+
+
 async def start_runtime(cfg: dict[str, Any]):
-    logger.info("Starting domain agent services on ports 8001-8004")
+    catalog = get_catalog()
+    domains = catalog.domain_ids
+    logger.info("Starting domain agent services: %s", ", ".join(
+        f"{d}:{catalog.domain(d).agent.port}" for d in domains))
     tasks = [
-        asyncio.create_task(start_server(build_metrics_app(cfg), "0.0.0.0", 8001)),
-        asyncio.create_task(start_server(build_log_app(cfg), "0.0.0.0", 8002)),
-        asyncio.create_task(start_server(build_routing_app(cfg), "0.0.0.0", 8003)),
-        asyncio.create_task(start_server(build_config_app(cfg), "0.0.0.0", 8004)),
+        asyncio.create_task(start_server(build_domain_app(d, cfg, catalog), "0.0.0.0", catalog.domain(d).agent.port))
+        for d in domains
     ]
     await asyncio.sleep(1.0)
 
     registry = AgentRegistry()
-    for agent_id, entry in cfg["agents"].items():
-        await registry.register_from_card(agent_id, entry["card_url"], entry["endpoint"])
+    for agent_id in domains:
+        entry = _agent_entry(cfg, agent_id, catalog.domain(agent_id).agent.port)
+        await registry.register_from_card(agent_id, entry["card_url"], entry["endpoint"],
+                                          required_skill=catalog.domain(agent_id).agent.skill.id)
         card = registry.agents[agent_id].card
         skills = [s.get("id", "") for s in card.get("skills", [])]
         logger.info(
@@ -125,7 +144,7 @@ async def start_runtime(cfg: dict[str, Any]):
         router = A2ARouter(registry, int(cfg["a2a"]["message_timeout_seconds"]))
     else:
         raise ValueError("ConfigValidationError: a2a.protocol_mode must be either 'custom' or 'adk'")
-    engine = NetCortexEngine(cfg, router)
+    engine = NetCortexEngine(cfg, router, catalog)
     logger.info("Runtime initialized protocol_mode=%s", protocol_mode)
     return tasks, engine
 
@@ -473,6 +492,26 @@ def mcp_serve(
             await rca_server.run_streamable_http_async(host=host, port=port)
 
     asyncio.run(_serve_mcp())
+
+
+@catalog_app.command("validate")
+def catalog_validate(
+    directory: str = typer.Argument(None, help="Override directory to merge onto the default catalog "
+                                             "(omit to validate the shipped defaults)"),
+):
+    """Validate the detection catalog; exits 1 naming the file and field on error (for CI)."""
+    try:
+        catalog = load_catalog(directory)
+    except CatalogError as exc:
+        print(f"INVALID: {exc}")
+        raise typer.Exit(code=1)
+    print(
+        f"OK: {len(catalog.signals.signals)} signals, {len(catalog.domains.domains)} domains "
+        f"({', '.join(catalog.domain_ids)}), {len(catalog.correlation.rules)} correlation rules, "
+        f"{len(catalog.sources.mappings)} source mappings"
+    )
+    for origin in catalog.origin:
+        print(f"  from {origin}")
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ _project_root = str(Path(__file__).resolve().parents[1])
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
+from contract.catalog_loader import CatalogError
 from mcp_telemetry_server.server import build_server
 from mcp_telemetry_server.service import TelemetryService, load_sources_config
 
@@ -39,7 +40,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    server = build_server(TelemetryService(load_sources_config(args.config)))
+    try:
+        server = build_server(TelemetryService(load_sources_config(args.config)))
+    except CatalogError as exc:
+        raise SystemExit(f"Invalid detection catalog: {exc}") from None
     print(f"Starting NetCortex MCP Telemetry Server on {args.host}:{args.port} ({args.transport})")
     server.run(transport=args.transport, host=args.host, port=args.port)
 

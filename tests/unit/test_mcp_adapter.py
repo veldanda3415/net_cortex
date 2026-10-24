@@ -18,7 +18,6 @@ import pytest
 
 from contract import TelemetryQuery
 from providers.adapters.mcp_adapter import EndpointConfig, MCPEndpointClient
-from providers.compat import to_config_changes, to_log_events, to_metric_snapshots, to_routing_events
 from providers.factory import TelemetryRegistry
 from providers.resilience import RetryPolicy
 
@@ -96,12 +95,12 @@ async def test_metrics_adapter_parses_valid_rows():
     fake = _FakeMCPClient(response=_tool_result(_response(_metric_row(
         {"error_rate": 0.081, "packet_loss": 0.024, "throughput_gbps": 0.61, "latency_ms": 124.5}))))
     response = await _registry("metrics", fake).fetch("metrics", _query())
-    rows = to_metric_snapshots(response, "us-east")
+    by_name = {s.name: s for s in response.signals}
 
-    assert len(rows) == 1
-    assert rows[0].region == "us-east"
-    assert rows[0].error_rate == 0.081
-    assert rows[0].tags == {"service": "gateway"}
+    assert set(by_name) == {"error_rate", "packet_loss", "throughput_gbps", "latency_ms"}
+    assert by_name["error_rate"].attributes["region"] == "us-east"
+    assert by_name["error_rate"].value == 0.081
+    assert by_name["error_rate"].entity.labels == {"service": "gateway"}
     assert not response.degraded
     assert fake.calls == [("get_metrics", {
         "region": "us-east", "start_time": START.isoformat().replace("+00:00", "Z"),
@@ -118,7 +117,7 @@ async def test_metrics_adapter_skips_malformed_rows_without_raising():
     response = await _registry("metrics", fake).fetch("metrics", _query())
 
     assert len(response.signals) == 4  # malformed one skipped, the rest parsed
-    assert len(to_metric_snapshots(response, "us-east")) == 1
+    assert {s.name for s in response.signals} == {"error_rate", "packet_loss", "throughput_gbps", "latency_ms"}
     assert response.coverage[0].status == "partial"
     assert "1 malformed signal" in response.coverage[0].error
 
@@ -165,9 +164,9 @@ async def test_log_adapter_parses_valid_rows():
         signal_type="event", name="log_message", value=None, domain="logs", severity="error",
         entity={"type": "service", "id": "api-gw"}, attributes={"level": "ERROR", "message": "boom"})])))
     response = await _registry("logs", fake).fetch("logs", _query(scenario_id=2))
-    rows = to_log_events(response)
-    assert len(rows) == 1
-    assert rows[0].level == "ERROR" and rows[0].service == "api-gw"
+    assert len(response.signals) == 1
+    sig = response.signals[0]
+    assert sig.severity == "error" and sig.attributes["level"] == "ERROR" and sig.entity.id == "api-gw"
     assert fake.calls[0][0] == "get_logs" and fake.calls[0][1]["scenario_id"] == 2
 
 
@@ -175,7 +174,7 @@ async def test_log_adapter_parses_valid_rows():
 async def test_log_adapter_never_raises_on_failure():
     fake = _FakeMCPClient(raise_on_call=TimeoutError("slow telemetry"))
     response = await _registry("logs", fake).fetch("logs", _query())
-    assert to_log_events(response) == [] and response.degraded
+    assert response.signals == [] and response.degraded
 
 
 @pytest.mark.asyncio
@@ -185,16 +184,15 @@ async def test_routing_adapter_parses_valid_rows():
         entity={"type": "path", "id": "us-east-core"},
         attributes={"change_type": "reroute", "details": "A->B->D to A->C->D", "region": "us-east"})])))
     response = await _registry("routing", fake).fetch("routing", _query(scenario_id=9))
-    rows = to_routing_events(response, "us-east")
-    assert len(rows) == 1
-    assert rows[0].change_type == "reroute"
+    assert len(response.signals) == 1
+    assert response.signals[0].attributes["change_type"] == "reroute"
 
 
 @pytest.mark.asyncio
 async def test_routing_adapter_never_raises_on_failure():
     fake = _FakeMCPClient(raise_on_call=OSError("dns failure"))
     response = await _registry("routing", fake).fetch("routing", _query())
-    assert to_routing_events(response, "us-east") == [] and response.degraded
+    assert response.signals == [] and response.degraded
 
 
 @pytest.mark.asyncio
@@ -204,16 +202,15 @@ async def test_config_adapter_parses_valid_rows():
         entity={"type": "component", "id": "Switch-C eth0/1"},
         attributes={"change_type": "bandwidth_limit", "before": {"capacity_gbps": 10}, "after": {"capacity_gbps": 5}})])))
     response = await _registry("config", fake).fetch("config", _query())
-    rows = to_config_changes(response)
-    assert len(rows) == 1
-    assert rows[0].after == {"capacity_gbps": 5}
+    assert len(response.signals) == 1
+    assert response.signals[0].attributes["after"] == {"capacity_gbps": 5}
 
 
 @pytest.mark.asyncio
 async def test_config_adapter_never_raises_on_failure():
     fake = _FakeMCPClient(raise_on_call=RuntimeError("mcp server 500"))
     response = await _registry("config", fake).fetch("config", _query())
-    assert to_config_changes(response) == [] and response.degraded
+    assert response.signals == [] and response.degraded
 
 
 # ---------------------------------------------------------------------------

@@ -24,7 +24,7 @@ async def main() -> None:
         tools_result = await client.list_tools()
         tool_names = [t.name for t in tools_result.tools]
         print(f"Tools available: {tool_names}")
-        assert len(tool_names) == 5, f"Expected 5 tools, got {len(tool_names)}"
+        assert len(tool_names) == 6, f"Expected 6 tools, got {len(tool_names)}"
 
         for tool, scenario in (("get_metrics", 1), ("get_logs", 1), ("get_routing_events", 2),
                                ("get_config_changes", 1), ("get_metrics", 7)):

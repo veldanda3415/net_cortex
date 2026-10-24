@@ -6,10 +6,11 @@ from typing import Annotated, Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from agents import config_agent, log_agent, metrics_agent, routing_agent
 from agents.rca_synthesizer import synthesize_report
 from agents.supervisor import classify_degradation, select_active_agents
 from communication.router_base import RouterBase
+from contract.catalog_loader import Catalog, get_catalog
+from detection import reconsider
 from models.schemas import A2AMessage, AgentFinding, IncidentRequest, RCAReport
 from providers.query import query_window
 
@@ -17,19 +18,11 @@ from providers.query import query_window
 logger = logging.getLogger("net_cortex.orchestrator")
 
 
-_RECONSIDER_FN_BY_AGENT: dict[str, Any] = {
-    "metrics": getattr(metrics_agent, "reconsider_finding", None),
-    "log": getattr(log_agent, "reconsider_finding", None),
-    "routing": getattr(routing_agent, "reconsider_finding", None),
-    "config": getattr(config_agent, "reconsider_finding", None),
-}
-
-
-def apply_local_reconsideration(finding: AgentFinding, peer_findings: list[AgentFinding]) -> AgentFinding:
-    fn = _RECONSIDER_FN_BY_AGENT.get(finding.agent_id)
-    if callable(fn):
-        return fn(finding, peer_findings)
-    return finding.model_copy(deep=True)
+def apply_local_reconsideration(
+    finding: AgentFinding, peer_findings: list[AgentFinding], catalog: Catalog | None = None
+) -> AgentFinding:
+    """Apply correlation.json to one finding given its peers' findings."""
+    return reconsider(finding, peer_findings, catalog or get_catalog())
 
 
 def merge_findings(existing: list[AgentFinding], new: list[AgentFinding]) -> list[AgentFinding]:
@@ -102,11 +95,13 @@ def validate_config(cfg: dict[str, Any]) -> None:
 
 
 class NetCortexEngine:
-    def __init__(self, cfg: dict[str, Any], router: RouterBase):
+    def __init__(self, cfg: dict[str, Any], router: RouterBase, catalog: Catalog | None = None):
         self.cfg = cfg
         self.router = router
         self.last_result_state: dict[str, Any] | None = None
         validate_config(cfg)
+        # Loading the catalog here makes an invalid one fail engine startup.
+        self.catalog = catalog or get_catalog()
         self.graph = self._build_graph().compile()
 
     @staticmethod
@@ -129,7 +124,7 @@ class NetCortexEngine:
             dtype = await asyncio.to_thread(
                 classify_degradation, incident, llm_model=llm_model, require_llm=llm_required
             )
-            active = select_active_agents(dtype)
+            active = select_active_agents(dtype, self.catalog)
             logger.info(
                 "Supervisor classified incident=%s degradation_type=%s active_agents=%s llm_required=%s",
                 incident.incident_id,
@@ -156,12 +151,7 @@ class NetCortexEngine:
             agent_order: list[str] = []
             task_list: list[asyncio.Task[AgentFinding]] = []
             for agent in state["active_agents"]:
-                skill = {
-                    "metrics": "analyze-metrics",
-                    "log": "analyze-logs",
-                    "routing": "analyze-routing",
-                    "config": "analyze-config",
-                }[agent]
+                skill = self.catalog.domain(agent).agent.skill.id
                 coro = self.router.send_analysis(
                     agent,
                     incident.incident_id,
@@ -270,14 +260,15 @@ class NetCortexEngine:
                         )
                     )
 
-                # NOTE: reconsideration is applied locally by the orchestrator after
-                # broadcast, not by agents processing live A2A messages. This is a
-                # Phase 0 simplification; a full A2A implementation would have each
-                # agent apply reconsideration on peer finding_publish receipt.
+                # NOTE: reconsideration (correlation.json) is applied locally by the
+                # orchestrator after broadcast, not by agents processing live A2A
+                # messages. This is a Phase 0 simplification; a full A2A
+                # implementation would have each agent apply it on peer
+                # finding_publish receipt.
                 revised = []
                 for finding in findings:
                     peer_findings = [f for f in findings if f.agent_id != finding.agent_id]
-                    new_finding = apply_local_reconsideration(finding, peer_findings)
+                    new_finding = apply_local_reconsideration(finding, peer_findings, self.catalog)
                     revised.append(new_finding)
                 findings = revised
                 all_messages.extend(round_messages)
@@ -338,6 +329,7 @@ class NetCortexEngine:
                 total_agents=len(state["active_agents"]),
                 timed_out_agents=state["timed_out_agents"],
                 errored_agents=state["errored_agents"],
+                catalog=self.catalog,
             )
             logger.info(
                 "Synthesizer finished incident=%s confidence=%.2f",

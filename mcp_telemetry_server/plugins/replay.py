@@ -61,7 +61,7 @@ def rebase_signal(signal: Signal, offset: timedelta, fixture_name: str) -> Signa
 @register_plugin
 class ReplayPlugin(SourcePlugin):
     name = "replay"
-    domains = frozenset({"metrics", "logs", "routing", "config", "topology"})
+    domains = frozenset({"*"})  # any catalog domain: fixtures say which domain each signal is
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         super().__init__(config)

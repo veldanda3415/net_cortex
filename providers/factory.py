@@ -32,14 +32,14 @@ import logging
 from typing import Any
 
 from contract import Coverage, Signal, TelemetryQuery, ToolResponse
-from providers.adapters.mcp_adapter import DOMAIN_TOOLS, INPROC_SCHEME, EndpointConfig, MCPEndpointClient
+from contract.catalog_loader import Catalog, get_catalog
+from providers.adapters.mcp_adapter import INPROC_SCHEME, EndpointConfig, MCPEndpointClient
 from providers.base import TelemetryProvider
 from providers.inproc import DEFAULT_INPROC_URL, ensure_inproc_server
 from providers.resilience import RetryPolicy
 
 logger = logging.getLogger("net_cortex.providers.factory")
 
-DOMAINS = tuple(DOMAIN_TOOLS)
 _LEGACY_DOMAIN_KEYS = {"metrics": "metrics", "logs": "logs", "routing": "routing", "config": "config"}
 
 
@@ -90,15 +90,19 @@ def telemetry_section(cfg: dict[str, Any]) -> dict[str, Any]:
     return section if section else _legacy_telemetry_section(cfg)
 
 
-def parse_endpoints(cfg: dict[str, Any]) -> dict[str, list[EndpointConfig]]:
+def parse_endpoints(cfg: dict[str, Any], catalog: Catalog | None = None) -> dict[str, list[EndpointConfig]]:
+    """Endpoints per telemetry domain. The domain list comes from the
+    detection catalog (domains.json `telemetry_domain`)."""
+    known = list((catalog or get_catalog()).telemetry_domains())
     section = telemetry_section(cfg)
     defaults = section.get("defaults", {}) or {}
     domains_cfg = section.get("domains", {}) or {}
-    unknown = set(domains_cfg) - set(DOMAINS)
+    unknown = set(domains_cfg) - set(known)
     if unknown:
-        raise ValueError(f"ConfigValidationError: telemetry.domains has unknown domain(s) {sorted(unknown)}; expected {list(DOMAINS)}")
+        raise ValueError(f"ConfigValidationError: telemetry.domains has unknown domain(s) {sorted(unknown)}; "
+                         f"the catalog defines {known}")
     parsed: dict[str, list[EndpointConfig]] = {}
-    for domain in DOMAINS:
+    for domain in known:
         raw_eps = (domains_cfg.get(domain) or {}).get("endpoints")
         if raw_eps is None:
             raw_eps = [{"name": "local", "url": DEFAULT_INPROC_URL}]
@@ -134,8 +138,9 @@ def _endpoint_coverage(client: MCPEndpointClient, response: ToolResponse, skippe
 
 
 class TelemetryRegistry(TelemetryProvider):
-    def __init__(self, endpoints: dict[str, list[MCPEndpointClient]]) -> None:
+    def __init__(self, endpoints: dict[str, list[MCPEndpointClient]], tools: dict[str, str] | None = None) -> None:
         self._endpoints = endpoints
+        self._tools = tools or {}
 
     def endpoints(self, domain: str) -> list[MCPEndpointClient]:
         return list(self._endpoints.get(domain, []))
@@ -144,7 +149,8 @@ class TelemetryRegistry(TelemetryProvider):
         if domain not in self._endpoints:
             raise ValueError(f"unknown telemetry domain '{domain}'")
         clients = self._endpoints[domain]
-        results = await asyncio.gather(*(c.fetch(domain, query) for c in clients), return_exceptions=True)
+        tool = self._tools.get(domain)
+        results = await asyncio.gather(*(c.fetch(domain, query, tool) for c in clients), return_exceptions=True)
 
         coverage: list[Coverage] = []
         signals: list[Signal] = []
@@ -176,17 +182,20 @@ class TelemetryRegistry(TelemetryProvider):
                 await client.aclose()
 
 
-def create_telemetry_provider(cfg: dict[str, Any], domains: tuple[str, ...] | None = None) -> TelemetryRegistry:
+def create_telemetry_provider(cfg: dict[str, Any], domains: tuple[str, ...] | None = None,
+                              catalog: Catalog | None = None) -> TelemetryRegistry:
     """Build the registry for `domains` (default: all) from config.
 
     Endpoint clients are shared across domains when two domains list the
     same endpoint name + url, so they also share a session and a breaker.
     """
-    parsed = parse_endpoints(cfg)
+    catalog = catalog or get_catalog()
+    parsed = parse_endpoints(cfg, catalog)
+    tools = catalog.telemetry_domains()
     inproc_sources = telemetry_section(cfg).get("inproc_sources")
     shared: dict[tuple[str, str], MCPEndpointClient] = {}
     endpoints: dict[str, list[MCPEndpointClient]] = {}
-    for domain in domains or DOMAINS:
+    for domain in domains or tuple(tools):
         clients = []
         for ep in parsed[domain]:
             key = (ep.name, ep.url)
@@ -198,4 +207,4 @@ def create_telemetry_provider(cfg: dict[str, Any], domains: tuple[str, ...] | No
                             domain, ep.name, ep.url, ep.timeout_seconds, ep.required)
             clients.append(shared[key])
         endpoints[domain] = clients
-    return TelemetryRegistry(endpoints)
+    return TelemetryRegistry(endpoints, {d: tools[d] for d in endpoints})

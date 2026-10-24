@@ -15,7 +15,9 @@ from typing import Any, ClassVar
 
 from contract import Coverage, Entity, Signal, TelemetryQuery, TopologyEdge
 
-TELEMETRY_DOMAINS = frozenset({"metrics", "logs", "routing", "config", "topology"})
+# "*" in a plugin's `domains` means "any domain the catalog defines" (e.g.
+# replay can serve a domain added through the catalog alone).
+ANY_DOMAIN = "*"
 
 _PLUGINS: dict[str, type["SourcePlugin"]] = {}
 
@@ -36,7 +38,7 @@ class SourcePlugin(ABC):
         configured = self.config.get("domains")
         if configured is not None:
             unknown = set(configured) - set(type(self).domains)
-            if unknown:
+            if unknown and ANY_DOMAIN not in type(self).domains:
                 raise ValueError(
                     f"ConfigValidationError: sources.{self.name}.domains has {sorted(unknown)}, "
                     f"but plugin '{self.name}' only serves {sorted(type(self).domains)}"
@@ -59,6 +61,9 @@ class SourcePlugin(ABC):
     def health(self) -> dict[str, Any]:
         return {"status": "ok"}
 
+    def serves(self, domain: str) -> bool:
+        return domain in self.domains or ANY_DOMAIN in self.domains
+
     def coverage(self, status: str = "ok", **kwargs: Any) -> Coverage:
         return Coverage(source=self.name, status=status, required=bool(self.config.get("required", True)), **kwargs)
 
@@ -67,9 +72,8 @@ def register_plugin(cls: type[SourcePlugin]) -> type[SourcePlugin]:
     name = getattr(cls, "name", None)
     if not name:
         raise TypeError(f"{cls.__name__} must define a class-level `name`")
-    unknown = set(cls.domains) - TELEMETRY_DOMAINS
-    if unknown:
-        raise TypeError(f"plugin '{name}' declares unknown domains {sorted(unknown)}")
+    if not cls.domains or not all(isinstance(d, str) and d for d in cls.domains):
+        raise TypeError(f"plugin '{name}' must declare a non-empty set of domain names")
     existing = _PLUGINS.get(name)
     if existing is not None and existing is not cls:
         raise TypeError(f"plugin name '{name}' already registered by {existing.__name__}")

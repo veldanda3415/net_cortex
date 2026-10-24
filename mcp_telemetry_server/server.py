@@ -2,6 +2,7 @@
 
 Tools (all return contract v2 JSON, see CONTRACT.md):
   get_metrics / get_logs / get_routing_events / get_config_changes -> ToolResponse
+  get_signals(domain=...)  any catalog domain (domains.json)       -> ToolResponse
   get_topology                                                    -> TopologyResponse
 
 Each tool fans out to the source plugins enabled for its domain (see
@@ -31,6 +32,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from contract import CONTRACT_VERSION, ContractVersionError, TelemetryQuery, check_contract_version
+from contract.catalog_loader import Catalog, get_catalog
 from mcp_telemetry_server.service import TelemetryService, load_sources_config
 
 
@@ -45,7 +47,9 @@ def _validated_query(contract_version: str, **fields: Any) -> TelemetryQuery:
         raise ToolError(f"Invalid telemetry query: {exc}") from exc
 
 
-def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry") -> MCPServer:
+def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry", catalog: Catalog | None = None) -> MCPServer:
+    # Loading here makes an invalid catalog stop the telemetry pod at startup.
+    catalog = catalog or get_catalog()
     server = MCPServer(name)
     server.telemetry_service = service  # type: ignore[attr-defined]  (handy for tests/introspection)
 
@@ -131,6 +135,28 @@ def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry") -
     ) -> dict:
         """Configuration change signals in [start_time, end_time]. Returns a contract v2 ToolResponse."""
         return await _domain_tool("config", region, start_time, end_time, entity_filters,
+                                  include_baseline, scenario_id, contract_version)
+
+    @server.tool()
+    async def get_signals(
+        domain: str,
+        region: str,
+        start_time: datetime,
+        end_time: datetime,
+        entity_filters: list[dict[str, Any]] | None = None,
+        include_baseline: bool = False,
+        scenario_id: int | None = None,
+        contract_version: str = CONTRACT_VERSION,
+    ) -> dict:
+        """Signals for any telemetry domain defined in the detection catalog (domains.json
+        `telemetry_domain`), in [start_time, end_time]. Returns a contract v2 ToolResponse.
+
+        Lets a new domain be served by configuring source plugins, with no new tool.
+        """
+        known = sorted(catalog.telemetry_domains())
+        if domain not in known:
+            raise ToolError(f"Unknown telemetry domain '{domain}'; the catalog defines {known}")
+        return await _domain_tool(domain, region, start_time, end_time, entity_filters,
                                   include_baseline, scenario_id, contract_version)
 
     @server.tool()

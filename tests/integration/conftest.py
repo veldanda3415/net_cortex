@@ -34,10 +34,7 @@ import httpx
 import pytest
 import pytest_asyncio
 
-from agents.config_agent import build_config_app
-from agents.log_agent import build_log_app
-from agents.metrics_agent import build_metrics_app
-from agents.routing_agent import build_routing_app
+from agents.domain_agent import build_all_domain_apps
 from communication.message_types import JsonRpcMessage, JsonRpcPart, TaskParams, TaskRequest
 from core.orchestrator import NetCortexEngine
 from models.schemas import A2AMessage, AgentFinding
@@ -152,12 +149,9 @@ class ASGITestRouter:
 
 @pytest_asyncio.fixture
 async def asgi_router(cfg):
-    apps = {
-        "metrics": build_metrics_app(cfg),
-        "log": build_log_app(cfg),
-        "routing": build_routing_app(cfg),
-        "config": build_config_app(cfg),
-    }
+    # One generic agent per catalog domain (contract/catalog/domains.json), so a
+    # domain added through a catalog override gets an agent with no code.
+    apps = build_all_domain_apps(cfg)
     clients: dict[str, httpx.AsyncClient] = {}
     try:
         for agent_id, agent_app in apps.items():
