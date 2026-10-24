@@ -1,228 +1,239 @@
-"""Unit tests for providers/adapters/mcp_adapter.py.
+"""Unit tests for providers/adapters/mcp_adapter.py + the registry around it.
 
-Covers the adapter-guide contract directly: deterministic return shapes,
-never-raises failure handling, malformed-row skipping, and the sync/async
-bridge that lets these synchronous provider methods be called from both a
-plain sync context and from inside an already-running event loop (the
-agents call these methods from async FastAPI handlers).
+Covers the adapter-guide contract on the v2 client: deterministic return
+shapes, failures surfacing as coverage (never as an exception out of
+registry.fetch), malformed-signal skipping, the exact tool arguments sent,
+and session reuse (one MCP session per endpoint, not one per call).
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import patch
 
 import pytest
 
-from providers.adapters.mcp_adapter import (
-    MCPConfigAdapter,
-    MCPLogAdapter,
-    MCPMetricsAdapter,
-    MCPRoutingAdapter,
-)
+from contract import TelemetryQuery
+from providers.adapters.mcp_adapter import EndpointConfig, MCPEndpointClient
+from providers.compat import to_config_changes, to_log_events, to_metric_snapshots, to_routing_events
+from providers.factory import TelemetryRegistry
+from providers.resilience import RetryPolicy
+
+END = datetime(2026, 5, 5, 10, 30, tzinfo=timezone.utc)
+START = END - timedelta(minutes=30)
+TS = "2026-05-05T10:14:00Z"
 
 
 def _tool_result(payload: dict) -> SimpleNamespace:
     """Shape a fake MCP tool_call result matching result.content[0].text."""
-    return SimpleNamespace(content=[SimpleNamespace(text=json.dumps(payload))])
+    return SimpleNamespace(content=[SimpleNamespace(text=json.dumps(payload))], is_error=False, structured_content=None)
+
+
+def _response(signals: list[dict]) -> dict:
+    return {
+        "contract_version": "2.0",
+        "window": {"start": START.isoformat(), "end": END.isoformat()},
+        "coverage": [{"source": "simulation", "status": "ok"}],
+        "signals": signals,
+    }
+
+
+def _signal(**overrides) -> dict:
+    base = {
+        "signal_type": "metric", "timestamp": TS, "observed_at": TS,
+        "entity": {"type": "service", "id": "gateway", "labels": {"service": "gateway"}},
+        "name": "error_rate", "value": 0.5, "domain": "metrics", "source": "simulation",
+        "attributes": {"region": "us-east"}, "evidence_ref": "ref-1",
+    }
+    base.update(overrides)
+    return base
+
+
+def _metric_row(values: dict[str, float], ref: str = "row") -> list[dict]:
+    return [_signal(name=n, value=v, evidence_ref=f"{ref}/{n}") for n, v in values.items()]
 
 
 class _FakeMCPClient:
-    """Fake async context manager standing in for mcp.Client."""
-
-    def __init__(self, endpoint, *, response=None, raise_on_call: Exception | None = None):
+    def __init__(self, *, response=None, raise_on_call: Exception | None = None):
         self._response = response
         self._raise_on_call = raise_on_call
         self.calls: list[tuple[str, dict]] = []
+        self.sessions_opened = 0
 
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *exc):
-        return False
+    def factory(self):
+        @asynccontextmanager
+        async def _cm():
+            self.sessions_opened += 1
+            yield self
+        return _cm()
 
     async def call_tool(self, name: str, args: dict):
         self.calls.append((name, args))
+        await asyncio.sleep(0)
         if self._raise_on_call:
             raise self._raise_on_call
         return self._response
 
 
-def _patch_client(response=None, raise_on_call=None):
-    fake = _FakeMCPClient(None, response=response, raise_on_call=raise_on_call)
-    return patch("providers.adapters.mcp_adapter.Client", return_value=fake), fake
+def _registry(domain: str, fake: _FakeMCPClient) -> TelemetryRegistry:
+    config = EndpointConfig(name="telemetry", url="http://telemetry:9001/mcp", retry=RetryPolicy(max_attempts=1))
+    return TelemetryRegistry({domain: [MCPEndpointClient(config, client_factory=fake.factory)]})
+
+
+def _query(scenario_id: int | None = 1) -> TelemetryQuery:
+    return TelemetryQuery(region="us-east", start_time=START, end_time=END, scenario_id=scenario_id)
 
 
 # ---------------------------------------------------------------------------
-# MCPMetricsAdapter
+# metrics
 # ---------------------------------------------------------------------------
 
-def test_metrics_adapter_parses_valid_rows():
-    response = _tool_result({"metrics": [
-        {
-            "timestamp": "2026-05-05T10:14:00Z", "region": "us-east",
-            "error_rate": 0.081, "packet_loss": 0.024, "throughput_gbps": 0.61,
-            "latency_ms": 124.5, "tags": {"service": "gateway"},
-        },
-    ]})
-    patcher, fake = _patch_client(response=response)
-    with patcher:
-        adapter = MCPMetricsAdapter(endpoint="http://telemetry:9001/mcp")
-        rows = adapter.get_metrics("us-east", 30, scenario_id=1)
+@pytest.mark.asyncio
+async def test_metrics_adapter_parses_valid_rows():
+    fake = _FakeMCPClient(response=_tool_result(_response(_metric_row(
+        {"error_rate": 0.081, "packet_loss": 0.024, "throughput_gbps": 0.61, "latency_ms": 124.5}))))
+    response = await _registry("metrics", fake).fetch("metrics", _query())
+    rows = to_metric_snapshots(response, "us-east")
 
     assert len(rows) == 1
     assert rows[0].region == "us-east"
     assert rows[0].error_rate == 0.081
     assert rows[0].tags == {"service": "gateway"}
-    assert fake.calls == [("get_metrics", {"region": "us-east", "window_minutes": 30, "scenario_id": 1})]
+    assert not response.degraded
+    assert fake.calls == [("get_metrics", {
+        "region": "us-east", "start_time": START.isoformat().replace("+00:00", "Z"),
+        "end_time": END.isoformat().replace("+00:00", "Z"), "include_baseline": False,
+        "scenario_id": 1, "contract_version": "2.0",
+    })]
 
 
-def test_metrics_adapter_skips_malformed_rows_without_raising():
-    response = _tool_result({"metrics": [
-        {"timestamp": "2026-05-05T10:14:00Z", "region": "us-east", "error_rate": "not-a-number",
-         "packet_loss": 0.0, "throughput_gbps": 1.0, "latency_ms": 50},
-        {"timestamp": "2026-05-05T10:15:00Z", "region": "us-east", "error_rate": 0.5,
-         "packet_loss": 0.2, "throughput_gbps": 1.0, "latency_ms": 50},
-    ]})
-    patcher, _ = _patch_client(response=response)
-    with patcher:
-        adapter = MCPMetricsAdapter(endpoint="http://telemetry:9001/mcp")
-        rows = adapter.get_metrics("us-east", 30, scenario_id=1)
+@pytest.mark.asyncio
+async def test_metrics_adapter_skips_malformed_rows_without_raising():
+    signals = [_signal(value="not-a-number", evidence_ref="bad")] + _metric_row(
+        {"error_rate": 0.5, "packet_loss": 0.2, "throughput_gbps": 1.0, "latency_ms": 50})
+    fake = _FakeMCPClient(response=_tool_result(_response(signals)))
+    response = await _registry("metrics", fake).fetch("metrics", _query())
 
-    assert len(rows) == 1  # first row skipped, second parsed
+    assert len(response.signals) == 4  # malformed one skipped, the rest parsed
+    assert len(to_metric_snapshots(response, "us-east")) == 1
+    assert response.coverage[0].status == "partial"
+    assert "1 malformed signal" in response.coverage[0].error
 
 
-def test_metrics_adapter_missing_key_returns_empty_list():
-    response = _tool_result({"metrics": [{"region": "us-east"}]})  # missing required fields
-    patcher, _ = _patch_client(response=response)
-    with patcher:
-        adapter = MCPMetricsAdapter(endpoint="http://telemetry:9001/mcp")
-        rows = adapter.get_metrics("us-east", 30, scenario_id=1)
-    assert rows == []
+@pytest.mark.asyncio
+async def test_metrics_adapter_missing_key_returns_empty_list():
+    fake = _FakeMCPClient(response=_tool_result(_response([{"signal_type": "metric"}])))  # missing required fields
+    response = await _registry("metrics", fake).fetch("metrics", _query())
+    assert response.signals == []
+    assert response.degraded
 
 
-def test_metrics_adapter_empty_metrics_key_returns_empty_list():
-    response = _tool_result({})  # no "metrics" key at all
-    patcher, _ = _patch_client(response=response)
-    with patcher:
-        adapter = MCPMetricsAdapter(endpoint="http://telemetry:9001/mcp")
-        rows = adapter.get_metrics("us-east", 30, scenario_id=1)
-    assert rows == []
+@pytest.mark.asyncio
+async def test_metrics_adapter_empty_signals_is_verified_no_data():
+    fake = _FakeMCPClient(response=_tool_result(_response([])))
+    response = await _registry("metrics", fake).fetch("metrics", _query())
+    assert response.signals == []
+    assert response.status == "ok" and not response.degraded  # "no data", not "data unavailable"
 
 
-def test_metrics_adapter_connection_failure_never_raises():
-    patcher, _ = _patch_client(raise_on_call=ConnectionError("telemetry unreachable"))
-    with patcher:
-        adapter = MCPMetricsAdapter(endpoint="http://telemetry:9001/mcp")
-        rows = adapter.get_metrics("us-east", 30, scenario_id=1)  # must not raise
-    assert rows == []
+@pytest.mark.asyncio
+async def test_metrics_adapter_connection_failure_never_raises():
+    fake = _FakeMCPClient(raise_on_call=ConnectionError("telemetry unreachable"))
+    response = await _registry("metrics", fake).fetch("metrics", _query())  # must not raise
+    assert response.signals == []
+    assert response.coverage[0].status == "failed"
+    assert response.degraded
 
 
-def test_metrics_adapter_defaults_scenario_id_to_1_when_none():
-    response = _tool_result({"metrics": []})
-    patcher, fake = _patch_client(response=response)
-    with patcher:
-        adapter = MCPMetricsAdapter(endpoint="http://telemetry:9001/mcp")
-        adapter.get_metrics("us-east", 30, scenario_id=None)
-    assert fake.calls[0][1]["scenario_id"] == 1
+@pytest.mark.asyncio
+async def test_metrics_adapter_omits_scenario_id_when_none():
+    fake = _FakeMCPClient(response=_tool_result(_response([])))
+    await _registry("metrics", fake).fetch("metrics", _query(scenario_id=None))
+    assert "scenario_id" not in fake.calls[0][1]
 
 
 # ---------------------------------------------------------------------------
-# MCPLogAdapter / MCPRoutingAdapter / MCPConfigAdapter — one solid pass each,
-# mirroring the metrics coverage above without repeating every case.
+# logs / routing / config — one solid pass each.
 # ---------------------------------------------------------------------------
 
-def test_log_adapter_parses_valid_rows():
-    response = _tool_result({"logs": [
-        {"timestamp": "2026-05-05T10:14:00Z", "level": "ERROR", "service": "api-gw", "message": "boom"},
-    ]})
-    patcher, fake = _patch_client(response=response)
-    with patcher:
-        adapter = MCPLogAdapter(endpoint="http://telemetry:9001/mcp")
-        rows = adapter.get_logs("us-east", 30, scenario_id=2)
+@pytest.mark.asyncio
+async def test_log_adapter_parses_valid_rows():
+    fake = _FakeMCPClient(response=_tool_result(_response([_signal(
+        signal_type="event", name="log_message", value=None, domain="logs", severity="error",
+        entity={"type": "service", "id": "api-gw"}, attributes={"level": "ERROR", "message": "boom"})])))
+    response = await _registry("logs", fake).fetch("logs", _query(scenario_id=2))
+    rows = to_log_events(response)
     assert len(rows) == 1
-    assert rows[0].level == "ERROR"
-    assert fake.calls == [("get_logs", {"region": "us-east", "window_minutes": 30, "scenario_id": 2})]
+    assert rows[0].level == "ERROR" and rows[0].service == "api-gw"
+    assert fake.calls[0][0] == "get_logs" and fake.calls[0][1]["scenario_id"] == 2
 
 
-def test_log_adapter_never_raises_on_failure():
-    patcher, _ = _patch_client(raise_on_call=TimeoutError("slow telemetry"))
-    with patcher:
-        adapter = MCPLogAdapter(endpoint="http://telemetry:9001/mcp")
-        assert adapter.get_logs("us-east", 30, scenario_id=1) == []
+@pytest.mark.asyncio
+async def test_log_adapter_never_raises_on_failure():
+    fake = _FakeMCPClient(raise_on_call=TimeoutError("slow telemetry"))
+    response = await _registry("logs", fake).fetch("logs", _query())
+    assert to_log_events(response) == [] and response.degraded
 
 
-def test_routing_adapter_parses_valid_rows():
-    response = _tool_result({"routing_events": [
-        {"timestamp": "2026-05-05T10:14:00Z", "region": "us-east", "path_id": "us-east-core",
-         "change_type": "reroute", "details": "A->B->D to A->C->D"},
-    ]})
-    patcher, _ = _patch_client(response=response)
-    with patcher:
-        adapter = MCPRoutingAdapter(endpoint="http://telemetry:9001/mcp")
-        rows = adapter.get_routing_events("us-east", 30, scenario_id=9)
+@pytest.mark.asyncio
+async def test_routing_adapter_parses_valid_rows():
+    fake = _FakeMCPClient(response=_tool_result(_response([_signal(
+        signal_type="event", name="routing_change", value=None, domain="routing",
+        entity={"type": "path", "id": "us-east-core"},
+        attributes={"change_type": "reroute", "details": "A->B->D to A->C->D", "region": "us-east"})])))
+    response = await _registry("routing", fake).fetch("routing", _query(scenario_id=9))
+    rows = to_routing_events(response, "us-east")
     assert len(rows) == 1
     assert rows[0].change_type == "reroute"
 
 
-def test_routing_adapter_never_raises_on_failure():
-    patcher, _ = _patch_client(raise_on_call=OSError("dns failure"))
-    with patcher:
-        adapter = MCPRoutingAdapter(endpoint="http://telemetry:9001/mcp")
-        assert adapter.get_routing_events("us-east", 30, scenario_id=1) == []
+@pytest.mark.asyncio
+async def test_routing_adapter_never_raises_on_failure():
+    fake = _FakeMCPClient(raise_on_call=OSError("dns failure"))
+    response = await _registry("routing", fake).fetch("routing", _query())
+    assert to_routing_events(response, "us-east") == [] and response.degraded
 
 
-def test_config_adapter_parses_valid_rows():
-    response = _tool_result({"config_changes": [
-        {"timestamp": "2026-05-05T10:14:00Z", "component": "Switch-C eth0/1", "change_type": "bandwidth_limit",
-         "before": {"capacity_gbps": 10}, "after": {"capacity_gbps": 5}},
-    ]})
-    patcher, _ = _patch_client(response=response)
-    with patcher:
-        adapter = MCPConfigAdapter(endpoint="http://telemetry:9001/mcp")
-        rows = adapter.get_config_changes("us-east", 30, scenario_id=1)
+@pytest.mark.asyncio
+async def test_config_adapter_parses_valid_rows():
+    fake = _FakeMCPClient(response=_tool_result(_response([_signal(
+        signal_type="event", name="config_change", value=None, domain="config",
+        entity={"type": "component", "id": "Switch-C eth0/1"},
+        attributes={"change_type": "bandwidth_limit", "before": {"capacity_gbps": 10}, "after": {"capacity_gbps": 5}})])))
+    response = await _registry("config", fake).fetch("config", _query())
+    rows = to_config_changes(response)
     assert len(rows) == 1
     assert rows[0].after == {"capacity_gbps": 5}
 
 
-def test_config_adapter_never_raises_on_failure():
-    patcher, _ = _patch_client(raise_on_call=RuntimeError("mcp server 500"))
-    with patcher:
-        adapter = MCPConfigAdapter(endpoint="http://telemetry:9001/mcp")
-        assert adapter.get_config_changes("us-east", 30, scenario_id=1) == []
+@pytest.mark.asyncio
+async def test_config_adapter_never_raises_on_failure():
+    fake = _FakeMCPClient(raise_on_call=RuntimeError("mcp server 500"))
+    response = await _registry("config", fake).fetch("config", _query())
+    assert to_config_changes(response) == [] and response.degraded
 
 
 # ---------------------------------------------------------------------------
-# Sync/async bridge: same adapter call must work whether or not an event
-# loop is already running in the calling context.
+# Session reuse: replaces the old thread + event-loop-per-call bridge.
 # ---------------------------------------------------------------------------
 
-def test_get_metrics_works_from_plain_sync_context():
-    response = _tool_result({"metrics": []})
-    patcher, _ = _patch_client(response=response)
-    with patcher:
-        adapter = MCPMetricsAdapter(endpoint="http://telemetry:9001/mcp")
-        # No event loop running here — exercises the asyncio.run() branch.
-        assert adapter.get_metrics("us-east", 30, scenario_id=1) == []
+@pytest.mark.asyncio
+async def test_session_is_reused_across_sequential_calls():
+    fake = _FakeMCPClient(response=_tool_result(_response([])))
+    registry = _registry("metrics", fake)
+    for _ in range(3):
+        await registry.fetch("metrics", _query())
+    assert len(fake.calls) == 3
+    assert fake.sessions_opened == 1
 
 
 @pytest.mark.asyncio
-async def test_get_metrics_works_from_inside_running_event_loop():
-    response = _tool_result({"metrics": [
-        {"timestamp": "2026-05-05T10:14:00Z", "region": "us-east", "error_rate": 0.5,
-         "packet_loss": 0.2, "throughput_gbps": 1.0, "latency_ms": 50},
-    ]})
-    patcher, _ = _patch_client(response=response)
-    with patcher:
-        adapter = MCPMetricsAdapter(endpoint="http://telemetry:9001/mcp")
-        # This test coroutine runs on pytest-asyncio's event loop. Calling the
-        # *sync* get_metrics() directly here — not via asyncio.to_thread,
-        # which would move to a fresh thread with no loop at all — means
-        # asyncio.get_running_loop() inside _run_async sees a loop IS
-        # running on this thread, forcing the ThreadPoolExecutor bridge
-        # path. That's the exact situation the agents hit when calling
-        # providers from inside async FastAPI handlers.
-        rows = adapter.get_metrics("us-east", 30, 1)
-    assert len(rows) == 1
+async def test_concurrent_calls_share_one_session():
+    fake = _FakeMCPClient(response=_tool_result(_response([])))
+    registry = _registry("metrics", fake)
+    await asyncio.gather(*(registry.fetch("metrics", _query()) for _ in range(5)))
+    assert len(fake.calls) == 5
+    assert fake.sessions_opened == 1

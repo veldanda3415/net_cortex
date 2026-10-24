@@ -45,6 +45,8 @@ class WebhookServer:
                 incident = normalize_incident(payload)
             except ValidationError as exc:
                 raise HTTPException(status_code=422, detail=exc.errors())
+            except ValueError as exc:  # e.g. malformed alarm timestamp
+                raise HTTPException(status_code=422, detail=str(exc))
 
             report: RCAReport = await self._handler(incident)
             return report.model_dump(mode="json")

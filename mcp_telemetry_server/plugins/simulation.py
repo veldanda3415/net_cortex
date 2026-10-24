@@ -2,14 +2,15 @@
 
 Scenario timestamps are stored relative to when the scenarios module was
 imported, so they are rebased onto the query window (the bundle's own
-``incident_request.reported_at`` maps to ``query.end_time``). That keeps a
+``incident_request.reported_at`` maps to ``query.end_time``, ages rounded
+to whole seconds). That keeps a
 long-running server returning data inside the requested window instead of
 drifting out of it after ``window`` minutes of uptime.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from contract import Coverage, Entity, Signal, TelemetryQuery, TopologyEdge
@@ -160,7 +161,16 @@ class SimulationPlugin(SourcePlugin):
     async def fetch(self, query: TelemetryQuery, *, domain: str) -> tuple[list[Signal], Coverage]:
         bundle = self._bundle(query.scenario_id)
         sid = bundle.scenario_id
-        offset = query.end_time - bundle.incident_request.reported_at.astimezone(timezone.utc)
+        anchor = bundle.incident_request.reported_at.astimezone(timezone.utc)
+
+        def rebase(ts: datetime) -> datetime:
+            # Scenarios are authored as "N minutes before the incident", but
+            # reported_at is stamped a few microseconds after the rows were
+            # built. Rounding the age to whole seconds removes that drift, so a
+            # row authored at exactly -window still lands on the window start.
+            age = timedelta(seconds=round((anchor - ts.astimezone(timezone.utc)).total_seconds()))
+            return query.end_time - age
+
         # LogEvent/ConfigChange carry no per-row region, so they are filtered at
         # bundle granularity (every scenario is single-region today).
         bundle_region_matches = bundle.incident_request.region == query.region
@@ -170,17 +180,17 @@ class SimulationPlugin(SourcePlugin):
         if domain == "metrics":
             for idx, row in enumerate(bundle.metrics_data):
                 if row.region == query.region:
-                    signals.extend(metric_signals(row, row.timestamp + offset, f"{ref_base}/{idx}"))
+                    signals.extend(metric_signals(row, rebase(row.timestamp), f"{ref_base}/{idx}"))
         elif domain == "logs" and bundle_region_matches:
             for idx, row in enumerate(bundle.log_events):
-                signals.append(log_signal(row, row.timestamp + offset, f"{ref_base}/{idx}", query.region))
+                signals.append(log_signal(row, rebase(row.timestamp), f"{ref_base}/{idx}", query.region))
         elif domain == "routing":
             for idx, row in enumerate(bundle.routing_events):
                 if row.region == query.region:
-                    signals.append(routing_signal(row, row.timestamp + offset, f"{ref_base}/{idx}"))
+                    signals.append(routing_signal(row, rebase(row.timestamp), f"{ref_base}/{idx}"))
         elif domain == "config" and bundle_region_matches:
             for idx, row in enumerate(bundle.config_changes):
-                signals.append(config_signal(row, row.timestamp + offset, f"{ref_base}/{idx}", query.region))
+                signals.append(config_signal(row, rebase(row.timestamp), f"{ref_base}/{idx}", query.region))
 
         in_window = [s for s in signals if query.start_time <= s.timestamp <= query.end_time]
         return in_window, self.coverage(lag_seconds=0.0)

@@ -7,7 +7,9 @@ from fastapi import FastAPI
 
 from agents.a2a_protocol import build_task_result, extract_request_context
 from models.schemas import AgentFinding
-from providers.factory import create_log_provider
+from providers.compat import to_log_events
+from providers.factory import create_telemetry_provider
+from providers.query import query_from_request
 
 
 logger = logging.getLogger("net_cortex.agent.log")
@@ -50,7 +52,7 @@ def reconsider_finding(finding: AgentFinding, peer_findings: list[AgentFinding])
 
 def build_log_app(cfg: dict | None = None) -> FastAPI:
     app = FastAPI(title="netcortex-log-agent")
-    provider = create_log_provider(cfg or {})
+    telemetry = create_telemetry_provider(cfg or {}, domains=("logs",))
 
     @app.get("/.well-known/agent.json")
     async def agent_card():
@@ -89,8 +91,9 @@ def build_log_app(cfg: dict | None = None) -> FastAPI:
         logger.info("Received request skill=%s incident=%s", skill, incident_for_log)
 
         if skill == "analyze-logs":
-            logs = provider.get_logs(data["region"], int(data["window_minutes"]), data.get("scenario_id"))
-            data_degraded = getattr(provider, "degraded", False)
+            telemetry_response = await telemetry.fetch("logs", query_from_request(data))
+            logs = to_log_events(telemetry_response)
+            data_degraded = telemetry_response.degraded
             error_logs = [l for l in logs if l.level in {"ERROR", "FATAL"}]
             anomaly = len(error_logs) > 0
             summary = "No log anomaly"
@@ -106,7 +109,7 @@ def build_log_app(cfg: dict | None = None) -> FastAPI:
             logger.info(
                 "Analyzed logs region=%s window=%s scenario=%s events=%s anomaly=%s data_degraded=%s",
                 data["region"],
-                data["window_minutes"],
+                f'{data.get("start_time")}..{data.get("end_time")}',
                 data.get("scenario_id"),
                 len(logs),
                 anomaly,

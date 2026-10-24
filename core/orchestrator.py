@@ -11,6 +11,7 @@ from agents.rca_synthesizer import synthesize_report
 from agents.supervisor import classify_degradation, select_active_agents
 from communication.router_base import RouterBase
 from models.schemas import A2AMessage, AgentFinding, IncidentRequest, RCAReport
+from providers.query import query_window
 
 
 logger = logging.getLogger("net_cortex.orchestrator")
@@ -147,6 +148,11 @@ class NetCortexEngine:
                 timeout,
             )
 
+            # Anchor the telemetry window on the alarm time, not on when the
+            # pipeline happens to run: end = reported_at, start = end - window.
+            window_minutes = int(self.cfg["simulation"]["window_minutes"])
+            start_time, end_time = query_window(incident.reported_at, window_minutes)
+
             agent_order: list[str] = []
             task_list: list[asyncio.Task[AgentFinding]] = []
             for agent in state["active_agents"]:
@@ -162,7 +168,9 @@ class NetCortexEngine:
                     skill,
                     {
                         "region": incident.region,
-                        "window_minutes": int(self.cfg["simulation"]["window_minutes"]),
+                        "window_minutes": window_minutes,
+                        "start_time": start_time.isoformat(),
+                        "end_time": end_time.isoformat(),
                         "incident_id": incident.incident_id,
                         "incident_description": incident.description,
                         "scenario_id": incident.scenario_id,

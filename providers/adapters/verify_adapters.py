@@ -1,103 +1,57 @@
-"""Verify MCP adapters work against the in-process MCP Telemetry Server.
+"""Verify the RCA-side telemetry registry against the in-process telemetry server.
 
-Tests all 4 adapters by connecting to the telemetry server object directly
-(no network, same as K8s pod-to-pod but in-process for speed).
+Exercises the same path the agents use (registry -> MCP endpoint client ->
+telemetry MCP server -> simulation plugin -> compat translation) with no
+network, plus a two-endpoint config where one endpoint is unreachable.
 """
 
 from __future__ import annotations
 
 import asyncio
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from mcp_telemetry_server.server import telemetry
-from providers.adapters.mcp_adapter import (
-    MCPConfigAdapter,
-    MCPLogAdapter,
-    MCPMetricsAdapter,
-    MCPRoutingAdapter,
-)
+from providers.compat import to_config_changes, to_log_events, to_metric_snapshots, to_routing_events
+from providers.factory import create_telemetry_provider
+from providers.query import query_from_request, query_window
 
 
 async def main() -> None:
-    # Use in-process server object as endpoint (MCP SDK v2 supports this)
-    endpoint = telemetry
+    start, end = query_window(datetime.now(timezone.utc), 30)
+    window = {"start_time": start.isoformat(), "end_time": end.isoformat()}
+    registry = create_telemetry_provider({})  # default: inproc://local simulation for every domain
 
-    print("--- Testing MCPMetricsAdapter ---")
-    metrics_adapter = MCPMetricsAdapter(endpoint=endpoint, timeout=30)
-    # Need to patch _endpoint since we're using object, not URL
-    metrics_adapter._endpoint = endpoint
-    metrics = await metrics_adapter._fetch("us-east", 30, 1)
-    print(f"  Metrics returned: {len(metrics)}")
-    assert len(metrics) > 0, "Expected metrics data"
-    m = metrics[0]
-    print(f"  Sample: region={m.region} error_rate={m.error_rate} throughput={m.throughput_gbps}")
-    assert m.region == "us-east"
+    for domain, scenario, convert in (
+        ("metrics", 1, lambda r: to_metric_snapshots(r, "us-east")),
+        ("logs", 1, to_log_events),
+        ("routing", 2, lambda r: to_routing_events(r, "us-east")),
+        ("config", 1, to_config_changes),
+    ):
+        query = query_from_request({"region": "us-east", "scenario_id": scenario, **window})
+        response = await registry.fetch(domain, query)
+        rows = convert(response)
+        print(f"{domain}: {len(response.signals)} signal(s) -> {len(rows)} legacy row(s), "
+              f"coverage={response.status} degraded={response.degraded}")
+        assert response.status == "ok" and not response.degraded
 
-    print("\n--- Testing MCPLogAdapter ---")
-    log_adapter = MCPLogAdapter(endpoint=endpoint, timeout=30)
-    log_adapter._endpoint = endpoint
-    logs = await log_adapter._fetch("us-east", 30, 1)
-    print(f"  Logs returned: {len(logs)}")
-    if logs:
-        lg = logs[0]
-        print(f"  Sample: [{lg.level}] {lg.service}: {lg.message[:50]}")
+    print("\n--- Two endpoints, one unreachable ---")
+    cfg = {"telemetry": {"domains": {"metrics": {"endpoints": [
+        {"name": "local", "url": "inproc://local"},
+        {"name": "down", "url": "http://127.0.0.1:1/mcp", "timeout_seconds": 2, "retry": {"max_attempts": 1}},
+    ]}}}}
+    two = create_telemetry_provider(cfg, domains=("metrics",))
+    response = await two.fetch("metrics", query_from_request({"region": "us-east", "scenario_id": 1, **window}))
+    print(f"signals={len(response.signals)} status={response.status} degraded={response.degraded}")
+    for c in response.coverage:
+        print(f"  {c.source}: {c.status} {c.error or ''}")
+    assert response.signals and response.status == "partial" and response.degraded
 
-    print("\n--- Testing MCPRoutingAdapter ---")
-    routing_adapter = MCPRoutingAdapter(endpoint=endpoint, timeout=30)
-    routing_adapter._endpoint = endpoint
-    routes = await routing_adapter._fetch("us-east", 30, 2)  # scenario 2 has routing events
-    print(f"  Routing events (scenario 2): {len(routes)}")
-    if routes:
-        r = routes[0]
-        print(f"  Sample: {r.path_id} ({r.change_type}): {r.details[:50]}")
-
-    print("\n--- Testing MCPConfigAdapter ---")
-    config_adapter = MCPConfigAdapter(endpoint=endpoint, timeout=30)
-    config_adapter._endpoint = endpoint
-    changes = await config_adapter._fetch("us-east", 30, 1)
-    print(f"  Config changes: {len(changes)}")
-    if changes:
-        c = changes[0]
-        print(f"  Sample: {c.component} ({c.change_type})")
-
-    print("\n--- Testing failure handling (bad scenario) ---")
-    metrics_bad = await metrics_adapter._fetch("nonexistent-region", 30, 1)
-    print(f"  Metrics for bad region: {len(metrics_bad)} (should be 0)")
-
-    print("\n--- Testing factory ---")
-    from providers.factory import (
-        create_config_provider,
-        create_log_provider,
-        create_metrics_provider,
-        create_routing_provider,
-    )
-
-    sim_cfg = {"providers": {"metrics": "simulation", "logs": "simulation", "routing": "simulation", "config": "simulation"}}
-    mp = create_metrics_provider(sim_cfg)
-    print(f"  Simulation metrics provider: {type(mp).__name__}")
-
-    mcp_cfg = {
-        "providers": {"metrics": "mcp", "logs": "mcp", "routing": "mcp", "config": "mcp"},
-        "mcp_endpoints": {
-            "metrics": {"url": "http://localhost:9001/mcp", "timeout_seconds": 30},
-            "logs": {"url": "http://localhost:9001/mcp", "timeout_seconds": 30},
-            "routing": {"url": "http://localhost:9001/mcp", "timeout_seconds": 30},
-            "config": {"url": "http://localhost:9001/mcp", "timeout_seconds": 30},
-        },
-    }
-    mp = create_metrics_provider(mcp_cfg)
-    lp = create_log_provider(mcp_cfg)
-    rp = create_routing_provider(mcp_cfg)
-    cp = create_config_provider(mcp_cfg)
-    print(f"  MCP metrics provider: {type(mp).__name__}")
-    print(f"  MCP log provider: {type(lp).__name__}")
-    print(f"  MCP routing provider: {type(rp).__name__}")
-    print(f"  MCP config provider: {type(cp).__name__}")
-
-    print("\n✓ ALL ADAPTERS AND FACTORY VERIFIED SUCCESSFULLY")
+    await registry.aclose()
+    await two.aclose()
+    print("\n✓ TELEMETRY REGISTRY VERIFIED SUCCESSFULLY")
 
 
 if __name__ == "__main__":
