@@ -11,25 +11,41 @@ data:
       api_key_env: GEMINI_API_KEY
       require_success: false
 
-    providers:
-      metrics: mcp
-      logs: mcp
-      routing: mcp
-      config: mcp
-
-    mcp_endpoints:
-      metrics:
-        url: "http://netcortex-telemetry.netcortex.svc.cluster.local:9001/mcp"
-        timeout_seconds: 30
-      logs:
-        url: "http://netcortex-telemetry.netcortex.svc.cluster.local:9001/mcp"
-        timeout_seconds: 30
-      routing:
-        url: "http://netcortex-telemetry.netcortex.svc.cluster.local:9001/mcp"
-        timeout_seconds: 30
-      config:
-        url: "http://netcortex-telemetry.netcortex.svc.cluster.local:9001/mcp"
-        timeout_seconds: 30
+    # RCA pod -> telemetry over MCP only (contract v2, see CONTRACT.md).
+    # A domain can list several endpoints; they are queried concurrently,
+    # merged, and each gets its own coverage entry. Adding one is config-only.
+    telemetry:
+      defaults:
+        timeout_seconds: 8
+        auth: none            # none | bearer_env (+ token_env: VAR) | oidc (not yet supported)
+        retry:
+          max_attempts: 2       # transport errors only; full-jitter backoff
+          base_delay_seconds: 0.2
+          max_delay_seconds: 2.0
+        circuit_breaker:
+          failure_threshold: 3
+          reset_timeout_seconds: 30
+      domains:
+        metrics:
+          endpoints:
+            - name: telemetry
+              url: "http://netcortex-telemetry.netcortex.svc.cluster.local:9001/mcp"
+              required: true
+        logs:
+          endpoints:
+            - name: telemetry
+              url: "http://netcortex-telemetry.netcortex.svc.cluster.local:9001/mcp"
+              required: true
+        routing:
+          endpoints:
+            - name: telemetry
+              url: "http://netcortex-telemetry.netcortex.svc.cluster.local:9001/mcp"
+              required: true
+        config:
+          endpoints:
+            - name: telemetry
+              url: "http://netcortex-telemetry.netcortex.svc.cluster.local:9001/mcp"
+              required: true
 
     mcp_server:
       host: "0.0.0.0"

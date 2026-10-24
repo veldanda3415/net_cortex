@@ -7,10 +7,16 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
+COPY contract/ contract/
 COPY models/ models/
 COPY simulation/ simulation/
 COPY providers/ providers/
 COPY mcp_telemetry_server/ mcp_telemetry_server/
+COPY config/telemetry.yaml config/telemetry.yaml
+
+# Source plugins (sources: section) are configured here; mount a ConfigMap
+# over this path to change them without rebuilding.
+ENV NETCORTEX_TELEMETRY_CONFIG=/app/config/telemetry.yaml
 
 # Run as a non-root user; UID/GID match the pod securityContext in
 # k8s/telemetry-deployment.yaml.
