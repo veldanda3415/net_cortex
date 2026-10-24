@@ -19,8 +19,6 @@ if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
 from contract.catalog_loader import CatalogError
-from mcp_telemetry_server.server import build_server
-from mcp_telemetry_server.service import TelemetryService, load_sources_config
 
 
 def main() -> None:
@@ -41,6 +39,10 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
+        # Imported here: the server module validates the detection catalog on import.
+        from mcp_telemetry_server.server import build_server
+        from mcp_telemetry_server.service import TelemetryService, load_sources_config
+
         server = build_server(TelemetryService(load_sources_config(args.config)))
     except CatalogError as exc:
         raise SystemExit(f"Invalid detection catalog: {exc}") from None
