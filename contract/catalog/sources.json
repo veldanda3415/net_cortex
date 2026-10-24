@@ -1,0 +1,43 @@
+{
+  "catalog_version": "1.0",
+  "mappings": {
+    "simulation.metrics": {
+      "source": "simulation", "record": "metrics_data", "domain": "metrics", "signal_type": "metric",
+      "region_field": "region",
+      "entity": {
+        "label_field": "tags",
+        "type_priority": ["tunnel", "interface", "uplink", "lag", "switch", "core", "service", "dst_prefix"],
+        "fallback_type": "region", "fallback_id_field": "region"
+      },
+      "emit": [
+        {"name": "error_rate", "value_field": "error_rate", "unit": "percent"},
+        {"name": "packet_loss", "value_field": "packet_loss", "unit": "percent"},
+        {"name": "throughput_gbps", "value_field": "throughput_gbps", "unit": "Gbps"},
+        {"name": "latency_ms", "value_field": "latency_ms", "unit": "ms"}
+      ],
+      "attributes": {"region": "region"}
+    },
+    "simulation.logs": {
+      "source": "simulation", "record": "log_events", "domain": "logs", "signal_type": "event",
+      "entity": {"type": "service", "id_field": "service"},
+      "emit": [
+        {"name": "log_message", "severity_field": "level",
+         "severity_map": {"INFO": "info", "WARN": "warning", "ERROR": "error", "FATAL": "critical"}}
+      ],
+      "attributes": {"level": "level", "message": "message"}
+    },
+    "simulation.routing": {
+      "source": "simulation", "record": "routing_events", "domain": "routing", "signal_type": "event",
+      "region_field": "region",
+      "entity": {"type": "path", "id_field": "path_id"},
+      "emit": [{"name": "routing_change", "severity": "warning"}],
+      "attributes": {"change_type": "change_type", "details": "details", "region": "region"}
+    },
+    "simulation.config": {
+      "source": "simulation", "record": "config_changes", "domain": "config", "signal_type": "event",
+      "entity": {"type": "component", "id_field": "component"},
+      "emit": [{"name": "config_change", "severity": "info"}],
+      "attributes": {"change_type": "change_type", "before": "before", "after": "after"}
+    }
+  }
+}

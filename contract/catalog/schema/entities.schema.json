@@ -1,0 +1,75 @@
+{
+  "$defs": {
+    "EntityType": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "title": "EntityType",
+      "type": "object"
+    },
+    "Relationship": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "source": {
+          "description": "Allowed source entity types",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source",
+          "type": "array"
+        },
+        "target": {
+          "description": "Allowed target entity types",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Target",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "title": "Relationship",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/catalog/entities.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "catalog_version": {
+      "default": "1.0",
+      "title": "Catalog Version",
+      "type": "string"
+    },
+    "entity_types": {
+      "additionalProperties": {
+        "$ref": "#/$defs/EntityType"
+      },
+      "title": "Entity Types",
+      "type": "object"
+    },
+    "relationships": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Relationship"
+      },
+      "title": "Relationships",
+      "type": "object"
+    }
+  },
+  "title": "EntitiesFile",
+  "type": "object"
+}

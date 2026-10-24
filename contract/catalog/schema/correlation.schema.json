@@ -1,0 +1,349 @@
+{
+  "$defs": {
+    "Condition": {
+      "additionalProperties": false,
+      "description": "Exactly one key set.",
+      "properties": {
+        "all": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Condition"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "All"
+        },
+        "any": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Condition"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Any"
+        },
+        "key_event": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/KeyEventCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "peer_anomaly": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PeerAnomalyCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "summary_contains": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SummaryContainsCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Condition",
+      "type": "object"
+    },
+    "ConfidenceEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "cap": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cap"
+        },
+        "op": {
+          "enum": [
+            "at_least",
+            "add"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op",
+        "value"
+      ],
+      "title": "ConfidenceEffect",
+      "type": "object"
+    },
+    "CorrelationRule": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "effect": {
+          "$ref": "#/$defs/Effect"
+        },
+        "priority": {
+          "default": 100,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "when": {
+          "$ref": "#/$defs/When"
+        }
+      },
+      "required": [
+        "domain",
+        "when",
+        "effect"
+      ],
+      "title": "CorrelationRule",
+      "type": "object"
+    },
+    "Effect": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceEffect"
+        },
+        "kind": {
+          "enum": [
+            "corroboration",
+            "contradiction"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "note": {
+          "description": "Appended to the summary; may use {peer_anomaly_domains}",
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "confidence",
+        "note"
+      ],
+      "title": "Effect",
+      "type": "object"
+    },
+    "KeyEventCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "domains": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Restrict peers to these domains",
+          "title": "Domains"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "lt",
+            "gt",
+            "contains"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "peer_anomaly": {
+          "default": false,
+          "description": "Only consider peers that detected an anomaly",
+          "title": "Peer Anomaly",
+          "type": "boolean"
+        },
+        "scope": {
+          "enum": [
+            "self",
+            "peers"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "scope",
+        "field",
+        "op",
+        "value"
+      ],
+      "title": "KeyEventCondition",
+      "type": "object"
+    },
+    "PeerAnomalyCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "domains": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Domains"
+        }
+      },
+      "title": "PeerAnomalyCondition",
+      "type": "object"
+    },
+    "SummaryContainsCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "domains": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Restrict peers to these domains",
+          "title": "Domains"
+        },
+        "peer_anomaly": {
+          "default": false,
+          "description": "Only consider peers that detected an anomaly",
+          "title": "Peer Anomaly",
+          "type": "boolean"
+        },
+        "scope": {
+          "enum": [
+            "self",
+            "peers"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "text"
+      ],
+      "title": "SummaryContainsCondition",
+      "type": "object"
+    },
+    "When": {
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "items": {
+            "$ref": "#/$defs/Condition"
+          },
+          "title": "All",
+          "type": "array"
+        },
+        "self_anomaly": {
+          "title": "Self Anomaly",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "self_anomaly"
+      ],
+      "title": "When",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/catalog/correlation.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "catalog_version": {
+      "default": "1.0",
+      "title": "Catalog Version",
+      "type": "string"
+    },
+    "rules": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CorrelationRule"
+      },
+      "title": "Rules",
+      "type": "object"
+    }
+  },
+  "title": "CorrelationFile",
+  "type": "object"
+}

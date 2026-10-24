@@ -1,0 +1,498 @@
+{
+  "$defs": {
+    "AgentCard": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "port": {
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Port",
+          "type": "integer"
+        },
+        "skill": {
+          "$ref": "#/$defs/SkillCard"
+        }
+      },
+      "required": [
+        "name",
+        "port",
+        "description",
+        "skill"
+      ],
+      "title": "AgentCard",
+      "type": "object"
+    },
+    "AnomalyConfidence": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Base",
+          "type": "number"
+        },
+        "derived_z_weight": {
+          "default": 0.0,
+          "title": "Derived Z Weight",
+          "type": "number"
+        },
+        "max": {
+          "default": 0.95,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Max",
+          "type": "number"
+        },
+        "per_hit": {
+          "default": 0.0,
+          "title": "Per Hit",
+          "type": "number"
+        }
+      },
+      "required": [
+        "base"
+      ],
+      "title": "AnomalyConfidence",
+      "type": "object"
+    },
+    "ConfidenceSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "anomaly": {
+          "$ref": "#/$defs/AnomalyConfidence"
+        },
+        "clean": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Clean",
+          "type": "number"
+        }
+      },
+      "required": [
+        "anomaly",
+        "clean"
+      ],
+      "title": "ConfidenceSpec",
+      "type": "object"
+    },
+    "DerivedSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "count_of": {
+          "const": "hits",
+          "default": "hits",
+          "title": "Count Of",
+          "type": "string"
+        },
+        "per": {
+          "const": "entity",
+          "default": "entity",
+          "title": "Per",
+          "type": "string"
+        },
+        "signal": {
+          "description": "Catalog signal (derived: true) to synthesize",
+          "title": "Signal",
+          "type": "string"
+        }
+      },
+      "required": [
+        "signal"
+      ],
+      "title": "DerivedSpec",
+      "type": "object"
+    },
+    "DomainDef": {
+      "additionalProperties": false,
+      "properties": {
+        "agent": {
+          "$ref": "#/$defs/AgentCard"
+        },
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceSpec"
+        },
+        "derived": {
+          "items": {
+            "$ref": "#/$defs/DerivedSpec"
+          },
+          "title": "Derived",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "entity_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Key under which key events carry entity.id (e.g. 'component')",
+          "title": "Entity Field"
+        },
+        "include_baseline": {
+          "default": false,
+          "title": "Include Baseline",
+          "type": "boolean"
+        },
+        "key_events": {
+          "$ref": "#/$defs/KeyEventsSpec"
+        },
+        "metrics_affected": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Metrics Affected",
+          "type": "array"
+        },
+        "observation": {
+          "default": "signal",
+          "enum": [
+            "signal",
+            "entity_time"
+          ],
+          "title": "Observation",
+          "type": "string"
+        },
+        "rank_by": {
+          "description": "Key-event fields summed to pick `worst`",
+          "items": {
+            "type": "string"
+          },
+          "title": "Rank By",
+          "type": "array"
+        },
+        "relevance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelevanceSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "summary": {
+          "$ref": "#/$defs/SummarySpec"
+        },
+        "telemetry_domain": {
+          "description": "Signal.domain value / telemetry endpoint domain",
+          "title": "Telemetry Domain",
+          "type": "string"
+        },
+        "time_range": {
+          "default": "all",
+          "enum": [
+            "all",
+            "hits_else_all"
+          ],
+          "title": "Time Range",
+          "type": "string"
+        },
+        "tool": {
+          "description": "MCP tool that feeds this domain",
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "telemetry_domain",
+        "tool",
+        "agent",
+        "confidence",
+        "summary"
+      ],
+      "title": "DomainDef",
+      "type": "object"
+    },
+    "KeyEventsSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "default": 5,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "source": {
+          "default": "hits_else_all",
+          "enum": [
+            "hits",
+            "all",
+            "hits_else_all"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "title": "KeyEventsSpec",
+      "type": "object"
+    },
+    "RelevanceSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "applies_to": {
+          "description": "Signal names the filter applies to; others always count",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Applies To",
+          "type": "array"
+        },
+        "min_token_length": {
+          "default": 4,
+          "title": "Min Token Length",
+          "type": "integer"
+        },
+        "stopwords": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Stopwords",
+          "type": "array"
+        },
+        "symptom_match": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SymptomMatch"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "symptom_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Symptom Terms",
+          "type": "array"
+        },
+        "text_fields": {
+          "description": "'entity_id', 'name', or 'attributes.<name>'",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Text Fields",
+          "type": "array"
+        },
+        "type": {
+          "const": "incident_text",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "applies_to",
+        "text_fields"
+      ],
+      "title": "RelevanceSpec",
+      "type": "object"
+    },
+    "SkillCard": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ],
+      "title": "SkillCard",
+      "type": "object"
+    },
+    "SummaryCondition": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates_present": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidates Present"
+        },
+        "derived_hits": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Derived Hits"
+        },
+        "hit_names_any": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hit Names Any"
+        }
+      },
+      "title": "SummaryCondition",
+      "type": "object"
+    },
+    "SummarySpec": {
+      "additionalProperties": false,
+      "properties": {
+        "anomaly": {
+          "items": {
+            "$ref": "#/$defs/SummaryVariant"
+          },
+          "minItems": 1,
+          "title": "Anomaly",
+          "type": "array"
+        },
+        "anomaly_suffixes": {
+          "items": {
+            "$ref": "#/$defs/SummaryVariant"
+          },
+          "title": "Anomaly Suffixes",
+          "type": "array"
+        },
+        "clean": {
+          "items": {
+            "$ref": "#/$defs/SummaryVariant"
+          },
+          "minItems": 1,
+          "title": "Clean",
+          "type": "array"
+        }
+      },
+      "required": [
+        "anomaly",
+        "clean"
+      ],
+      "title": "SummarySpec",
+      "type": "object"
+    },
+    "SummaryVariant": {
+      "additionalProperties": false,
+      "properties": {
+        "template": {
+          "title": "Template",
+          "type": "string"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SummaryCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "template"
+      ],
+      "title": "SummaryVariant",
+      "type": "object"
+    },
+    "SymptomMatch": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "field",
+        "values"
+      ],
+      "title": "SymptomMatch",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/catalog/domains.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "catalog_version": {
+      "default": "1.0",
+      "title": "Catalog Version",
+      "type": "string"
+    },
+    "degradation_map": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Degradation Map",
+      "type": "object"
+    },
+    "domains": {
+      "additionalProperties": {
+        "$ref": "#/$defs/DomainDef"
+      },
+      "title": "Domains",
+      "type": "object"
+    }
+  },
+  "title": "DomainsFile",
+  "type": "object"
+}

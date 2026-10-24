@@ -1,0 +1,594 @@
+{
+  "$defs": {
+    "EventPresenceRule": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stable rule id; defaults to '<signal>.<type>'",
+          "title": "Id"
+        },
+        "min_severity": {
+          "default": "info",
+          "enum": [
+            "debug",
+            "info",
+            "warning",
+            "error",
+            "critical"
+          ],
+          "title": "Min Severity",
+          "type": "string"
+        },
+        "names": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Allow-list of signal names; defaults to the signal's name + match_names",
+          "title": "Names"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text recorded as evidence when the rule fires",
+          "title": "Reason"
+        },
+        "type": {
+          "const": "event_presence",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "EventPresenceRule",
+      "type": "object"
+    },
+    "FallbackThreshold": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "default": "value",
+          "description": "'value' or 'attributes.<name>'",
+          "title": "Field",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stable rule id; defaults to '<signal>.<type>'",
+          "title": "Id"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "op": {
+          "enum": [
+            "gt",
+            "lt",
+            "between"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text recorded as evidence when the rule fires",
+          "title": "Reason"
+        },
+        "type": {
+          "const": "threshold",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "type",
+        "op"
+      ],
+      "title": "FallbackThreshold",
+      "type": "object"
+    },
+    "RateChangeRule": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "enum": [
+            "increase",
+            "decrease"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "factor": {
+          "description": "Fires when value >= reference*factor (increase) or <= reference/factor (decrease)",
+          "exclusiveMinimum": 1,
+          "title": "Factor",
+          "type": "number"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stable rule id; defaults to '<signal>.<type>'",
+          "title": "Id"
+        },
+        "min_reference": {
+          "default": 0.0,
+          "description": "Ignore series whose reference level is at or below this",
+          "minimum": 0,
+          "title": "Min Reference",
+          "type": "number"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text recorded as evidence when the rule fires",
+          "title": "Reason"
+        },
+        "type": {
+          "const": "rate_change",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "direction",
+        "factor"
+      ],
+      "title": "RateChangeRule",
+      "type": "object"
+    },
+    "SignalDef": {
+      "additionalProperties": false,
+      "properties": {
+        "derived": {
+          "default": false,
+          "description": "Computed by the domain agent (domains.json `derived`), not emitted by sources",
+          "title": "Derived",
+          "type": "boolean"
+        },
+        "description": {
+          "description": "One line, passed to the LLM synthesizer",
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "domain": {
+          "description": "Catalog domain id (domains.json) that analyzes this signal",
+          "title": "Domain",
+          "type": "string"
+        },
+        "entity_types": {
+          "description": "Expected entity types (informational)",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entity Types",
+          "type": "array"
+        },
+        "match_names": {
+          "description": "Other raw names this definition covers",
+          "items": {
+            "type": "string"
+          },
+          "title": "Match Names",
+          "type": "array"
+        },
+        "rule": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "event_presence": "#/$defs/EventPresenceRule",
+                  "rate_change": "#/$defs/RateChangeRule",
+                  "state_equals": "#/$defs/StateEqualsRule",
+                  "threshold": "#/$defs/ThresholdRule",
+                  "zscore_baseline": "#/$defs/ZScoreBaselineRule"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/ThresholdRule"
+                },
+                {
+                  "$ref": "#/$defs/StateEqualsRule"
+                },
+                {
+                  "$ref": "#/$defs/ZScoreBaselineRule"
+                },
+                {
+                  "$ref": "#/$defs/RateChangeRule"
+                },
+                {
+                  "$ref": "#/$defs/EventPresenceRule"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule"
+        },
+        "signal_type": {
+          "enum": [
+            "metric",
+            "event",
+            "state"
+          ],
+          "title": "Signal Type",
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        }
+      },
+      "required": [
+        "signal_type",
+        "domain",
+        "description"
+      ],
+      "title": "SignalDef",
+      "type": "object"
+    },
+    "StateEqualsRule": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "default": "value",
+          "description": "'value' or 'attributes.<name>'",
+          "title": "Field",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stable rule id; defaults to '<signal>.<type>'",
+          "title": "Id"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text recorded as evidence when the rule fires",
+          "title": "Reason"
+        },
+        "type": {
+          "const": "state_equals",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "title": "StateEqualsRule",
+      "type": "object"
+    },
+    "ThresholdRule": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "default": "value",
+          "description": "'value' or 'attributes.<name>'",
+          "title": "Field",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stable rule id; defaults to '<signal>.<type>'",
+          "title": "Id"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "op": {
+          "enum": [
+            "gt",
+            "lt",
+            "between"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text recorded as evidence when the rule fires",
+          "title": "Reason"
+        },
+        "type": {
+          "const": "threshold",
+          "title": "Type",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "type",
+        "op"
+      ],
+      "title": "ThresholdRule",
+      "type": "object"
+    },
+    "ZScoreBaselineRule": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_keys": {
+          "description": "Ordered baseline lookup keys, each '<prefix>=<entity_id|entity_type|region|label:NAME>'",
+          "items": {
+            "type": "string"
+          },
+          "title": "Baseline Keys",
+          "type": "array"
+        },
+        "baseline_metric": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Metric name in the baseline store; defaults to the signal name",
+          "title": "Baseline Metric"
+        },
+        "fallback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FallbackThreshold"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Used when no baseline exists and baselines.legacy_fallback is on"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stable rule id; defaults to '<signal>.<type>'",
+          "title": "Id"
+        },
+        "min_baseline_samples": {
+          "default": 3,
+          "description": "baseline_window samples needed to use them instead of the baseline provider",
+          "minimum": 2,
+          "title": "Min Baseline Samples",
+          "type": "integer"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text recorded as evidence when the rule fires",
+          "title": "Reason"
+        },
+        "threshold": {
+          "exclusiveMinimum": 0,
+          "title": "Threshold",
+          "type": "number"
+        },
+        "type": {
+          "const": "zscore_baseline",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "threshold"
+      ],
+      "title": "ZScoreBaselineRule",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/catalog/signals.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "catalog_version": {
+      "default": "1.0",
+      "title": "Catalog Version",
+      "type": "string"
+    },
+    "signals": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SignalDef"
+      },
+      "title": "Signals",
+      "type": "object"
+    }
+  },
+  "title": "SignalsFile",
+  "type": "object"
+}
