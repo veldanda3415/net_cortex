@@ -1,0 +1,1078 @@
+{
+ "contract_version": "2.0",
+ "description": "Synthetic: NXDOMAIN spike at the outbound resolver 3 minutes before the alarm.",
+ "region": "us-east",
+ "recorded_window": {
+  "start": "2026-09-14T09:30:00Z",
+  "end": "2026-09-14T10:00:00Z"
+ },
+ "signals": [
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:35:00Z",
+   "observed_at": "2026-09-14T09:36:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:35:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:35:00Z",
+   "observed_at": "2026-09-14T09:36:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:35:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:36:00Z",
+   "observed_at": "2026-09-14T09:37:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:36:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:36:00Z",
+   "observed_at": "2026-09-14T09:37:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:36:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:37:00Z",
+   "observed_at": "2026-09-14T09:38:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:37:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:37:00Z",
+   "observed_at": "2026-09-14T09:38:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:37:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:38:00Z",
+   "observed_at": "2026-09-14T09:39:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:38:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:38:00Z",
+   "observed_at": "2026-09-14T09:39:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:38:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:39:00Z",
+   "observed_at": "2026-09-14T09:40:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:39:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:39:00Z",
+   "observed_at": "2026-09-14T09:40:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:39:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:40:00Z",
+   "observed_at": "2026-09-14T09:41:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:40:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:40:00Z",
+   "observed_at": "2026-09-14T09:41:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:40:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:41:00Z",
+   "observed_at": "2026-09-14T09:42:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:41:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:41:00Z",
+   "observed_at": "2026-09-14T09:42:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:41:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:42:00Z",
+   "observed_at": "2026-09-14T09:43:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:42:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:42:00Z",
+   "observed_at": "2026-09-14T09:43:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:42:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:43:00Z",
+   "observed_at": "2026-09-14T09:44:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:43:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:43:00Z",
+   "observed_at": "2026-09-14T09:44:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:43:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:44:00Z",
+   "observed_at": "2026-09-14T09:45:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:44:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:44:00Z",
+   "observed_at": "2026-09-14T09:45:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:44:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:45:00Z",
+   "observed_at": "2026-09-14T09:46:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:45:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:45:00Z",
+   "observed_at": "2026-09-14T09:46:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:45:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:46:00Z",
+   "observed_at": "2026-09-14T09:47:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:46:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:46:00Z",
+   "observed_at": "2026-09-14T09:47:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:46:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:47:00Z",
+   "observed_at": "2026-09-14T09:48:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:47:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:47:00Z",
+   "observed_at": "2026-09-14T09:48:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:47:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:48:00Z",
+   "observed_at": "2026-09-14T09:49:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:48:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:48:00Z",
+   "observed_at": "2026-09-14T09:49:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:48:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:49:00Z",
+   "observed_at": "2026-09-14T09:50:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:49:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:49:00Z",
+   "observed_at": "2026-09-14T09:50:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:49:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:50:00Z",
+   "observed_at": "2026-09-14T09:51:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:50:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:50:00Z",
+   "observed_at": "2026-09-14T09:51:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:50:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:51:00Z",
+   "observed_at": "2026-09-14T09:52:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:51:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:51:00Z",
+   "observed_at": "2026-09-14T09:52:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:51:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:52:00Z",
+   "observed_at": "2026-09-14T09:53:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:52:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:52:00Z",
+   "observed_at": "2026-09-14T09:53:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:52:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:53:00Z",
+   "observed_at": "2026-09-14T09:54:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:53:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:53:00Z",
+   "observed_at": "2026-09-14T09:54:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:53:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:54:00Z",
+   "observed_at": "2026-09-14T09:55:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:54:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:54:00Z",
+   "observed_at": "2026-09-14T09:55:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:54:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:55:00Z",
+   "observed_at": "2026-09-14T09:56:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:55:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:55:00Z",
+   "observed_at": "2026-09-14T09:56:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:55:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:56:00Z",
+   "observed_at": "2026-09-14T09:57:00Z",
+   "name": "nxdomain_count",
+   "value": 5.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:56:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:56:00Z",
+   "observed_at": "2026-09-14T09:57:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:56:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:57:00Z",
+   "observed_at": "2026-09-14T09:58:00Z",
+   "name": "nxdomain_count",
+   "value": 140.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:57:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:57:00Z",
+   "observed_at": "2026-09-14T09:58:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:57:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:58:00Z",
+   "observed_at": "2026-09-14T09:59:00Z",
+   "name": "nxdomain_count",
+   "value": 140.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:58:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:58:00Z",
+   "observed_at": "2026-09-14T09:59:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:58:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:59:00Z",
+   "observed_at": "2026-09-14T10:00:00Z",
+   "name": "nxdomain_count",
+   "value": 140.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-nxdomain_count@2026-09-14T09:59:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:59:00Z",
+   "observed_at": "2026-09-14T10:00:00Z",
+   "name": "dns_query_count",
+   "value": 2400.0,
+   "unit": "Count",
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234",
+    "labels": {
+     "vpc": "vpc-0app00001"
+    }
+   },
+   "attributes": {
+    "region": "us-east"
+   },
+   "evidence_ref": "logs:/aws/route53resolver/vpc-0app00001/q-dns_query_count@2026-09-14T09:59:00Z"
+  },
+  {
+   "signal_type": "state",
+   "timestamp": "2026-09-14T09:56:00Z",
+   "observed_at": "2026-09-14T09:57:00Z",
+   "name": "ResolverEndpointHealth",
+   "value": 1.0,
+   "domain": "dns",
+   "source": "resolver_query_logs",
+   "entity": {
+    "type": "resolver_endpoint",
+    "id": "rslvr-out-0abc1234"
+   },
+   "attributes": {
+    "note": "not in the catalog: must surface as unclassified evidence"
+   },
+   "evidence_ref": "route53resolver:rslvr-out-0abc1234/health@2026-09-14T09:56:00Z"
+  }
+ ]
+}

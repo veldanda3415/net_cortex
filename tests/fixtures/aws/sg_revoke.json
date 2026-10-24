@@ -1,0 +1,179 @@
+{
+ "contract_version": "2.0",
+ "description": "CloudTrail RevokeSecurityGroupIngress removing 443 from the app SG, amid routine reads.",
+ "region": "us-east-1",
+ "recorded_window": {
+  "start": "2026-09-14T09:30:00Z",
+  "end": "2026-09-14T10:00:00Z"
+ },
+ "signals": [
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:32:00Z",
+   "observed_at": "2026-09-14T09:37:00Z",
+   "entity": {
+    "type": "vpn_connection",
+    "id": "vpn-0a1b2c3d"
+   },
+   "name": "DescribeVpnConnections",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000001",
+     "EventName": "DescribeVpnConnections",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:32:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"DescribeVpnConnections\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {\"vpnConnectionSet\": {}}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000001"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:39:00Z",
+   "observed_at": "2026-09-14T09:44:00Z",
+   "entity": {
+    "type": "route_table",
+    "id": "rtb-0app00001"
+   },
+   "name": "DescribeRouteTables",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000002",
+     "EventName": "DescribeRouteTables",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:39:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"DescribeRouteTables\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {\"routeTableIdSet\": {}}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000002"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:46:00Z",
+   "observed_at": "2026-09-14T09:51:00Z",
+   "entity": {
+    "type": "security_group",
+    "id": "sg-0app00001"
+   },
+   "name": "DescribeSecurityGroups",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000003",
+     "EventName": "DescribeSecurityGroups",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:46:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"DescribeSecurityGroups\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {\"securityGroupIdSet\": {}}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000003"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:53:00Z",
+   "observed_at": "2026-09-14T09:58:00Z",
+   "entity": {
+    "type": "tgw_route_table",
+    "id": "tgw-rtb-0core0001"
+   },
+   "name": "SearchTransitGatewayRoutes",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000004",
+     "EventName": "SearchTransitGatewayRoutes",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:53:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"SearchTransitGatewayRoutes\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {\"transitGatewayRouteTableId\": \"tgw-rtb-0core0001\"}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000004"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:57:00Z",
+   "observed_at": "2026-09-14T10:02:00Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0core0001"
+   },
+   "name": "DescribeTransitGatewayAttachments",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000005",
+     "EventName": "DescribeTransitGatewayAttachments",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:57:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"DescribeTransitGatewayAttachments\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000005"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:48:00Z",
+   "observed_at": "2026-09-14T09:53:00Z",
+   "entity": {
+    "type": "security_group",
+    "id": "sg-0app00001"
+   },
+   "name": "RevokeSecurityGroupIngress",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": false,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "2f0c9a1e-6b3d-4e5f-9a7b-c1d2e3f40506",
+     "EventName": "RevokeSecurityGroupIngress",
+     "ReadOnly": "false",
+     "EventTime": "2026-09-14T09:48:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"RevokeSecurityGroupIngress\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {\"groupId\": \"sg-0app00001\", \"ipPermissions\": {\"items\": [{\"ipProtocol\": \"tcp\", \"fromPort\": 443, \"toPort\": 443, \"ipRanges\": {\"items\": [{\"cidrIp\": \"10.100.0.0/16\"}]}}]}}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "2f0c9a1e-6b3d-4e5f-9a7b-c1d2e3f40506"
+  }
+ ]
+}
