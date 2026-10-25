@@ -1,0 +1,5 @@
+{
+  "entity_types": {
+    "resolver_endpoint": {"description": "Route 53 Resolver inbound/outbound endpoint"}
+  }
+}

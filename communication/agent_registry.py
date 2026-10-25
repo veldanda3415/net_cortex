@@ -25,7 +25,8 @@ class AgentRegistry:
     def agents(self) -> dict[str, RegisteredAgent]:
         return self._agents
 
-    async def register_from_card(self, agent_id: str, card_url: str, endpoint: str) -> None:
+    async def register_from_card(self, agent_id: str, card_url: str, endpoint: str,
+                                 required_skill: str | None = None) -> None:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(card_url)
             resp.raise_for_status()
@@ -36,7 +37,9 @@ class AgentRegistry:
         if contract.get("outputSchema") != "AgentFinding":
             raise AgentRegistrationError(f"{agent_id}: outputSchema must be AgentFinding")
 
-        required_analysis_skill = {
+        # The analysis skill comes from the catalog (domains.json agent.skill.id);
+        # the built-in defaults keep older callers working.
+        required_analysis_skill = required_skill or {
             "metrics": "analyze-metrics",
             "log": "analyze-logs",
             "routing": "analyze-routing",

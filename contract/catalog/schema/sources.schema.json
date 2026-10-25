@@ -1,0 +1,255 @@
+{
+  "$defs": {
+    "EmitSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "enum": [
+                "debug",
+                "info",
+                "warning",
+                "error",
+                "critical"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity"
+        },
+        "severity_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity Field"
+        },
+        "severity_map": {
+          "additionalProperties": {
+            "enum": [
+              "debug",
+              "info",
+              "warning",
+              "error",
+              "critical"
+            ],
+            "type": "string"
+          },
+          "title": "Severity Map",
+          "type": "object"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "value_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value Field"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "EmitSpec",
+      "type": "object"
+    },
+    "EntityMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "fallback_id_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fallback Id Field"
+        },
+        "fallback_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fallback Type"
+        },
+        "id_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id Field"
+        },
+        "label_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label Field"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
+        "type_priority": {
+          "description": "First label present becomes entity type/id",
+          "items": {
+            "type": "string"
+          },
+          "title": "Type Priority",
+          "type": "array"
+        }
+      },
+      "title": "EntityMapping",
+      "type": "object"
+    },
+    "SourceMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "attribute name -> raw field",
+          "title": "Attributes",
+          "type": "object"
+        },
+        "domain": {
+          "description": "Telemetry domain the mapped signals belong to",
+          "title": "Domain",
+          "type": "string"
+        },
+        "emit": {
+          "items": {
+            "$ref": "#/$defs/EmitSpec"
+          },
+          "minItems": 1,
+          "title": "Emit",
+          "type": "array"
+        },
+        "entity": {
+          "$ref": "#/$defs/EntityMapping"
+        },
+        "record": {
+          "description": "Raw record collection the plugin reads, e.g. 'metrics_data'",
+          "title": "Record",
+          "type": "string"
+        },
+        "region_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-record region; omit when the record has none",
+          "title": "Region Field"
+        },
+        "signal_type": {
+          "enum": [
+            "metric",
+            "event",
+            "state"
+          ],
+          "title": "Signal Type",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "timestamp_field": {
+          "default": "timestamp",
+          "title": "Timestamp Field",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "record",
+        "domain",
+        "signal_type",
+        "entity",
+        "emit"
+      ],
+      "title": "SourceMapping",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/catalog/sources.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "catalog_version": {
+      "default": "1.0",
+      "title": "Catalog Version",
+      "type": "string"
+    },
+    "mappings": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SourceMapping"
+      },
+      "title": "Mappings",
+      "type": "object"
+    }
+  },
+  "title": "SourcesFile",
+  "type": "object"
+}

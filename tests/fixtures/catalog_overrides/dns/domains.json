@@ -1,0 +1,28 @@
+{
+  "domains": {
+    "dns": {
+      "description": "DNS resolution health (Route 53 Resolver query logs).",
+      "telemetry_domain": "dns",
+      "tool": "get_signals",
+      "agent": {
+        "name": "netcortex-dns-agent", "port": 8005,
+        "description": "Analyzes DNS resolution failures around incidents.",
+        "skill": {"id": "analyze-dns", "name": "Analyze DNS",
+                  "description": "Analyze DNS signals in a time window and produce an AgentFinding.",
+                  "tags": ["dns", "rca"]}
+      },
+      "observation": "entity_time",
+      "key_events": {"source": "hits_else_all", "limit": 3},
+      "confidence": {"anomaly": {"base": 0.7, "per_hit": 0.05, "max": 0.9}, "clean": 0.2},
+      "summary": {
+        "anomaly": [{"template": "DNS failures: NXDOMAIN spike on {hit_count} sample(s); resolver={worst.entity_id}; nxdomain_count={worst.nxdomain_count:.0f}; evidence={worst.reasons}"}],
+        "clean": [{"template": "DNS resolution within normal levels"}]
+      },
+      "metrics_affected": ["nxdomain_rate"]
+    }
+  },
+  "degradation_map": {
+    "network": ["metrics", "log", "routing", "config", "dns"],
+    "unknown": ["metrics", "log", "routing", "config", "dns"]
+  }
+}

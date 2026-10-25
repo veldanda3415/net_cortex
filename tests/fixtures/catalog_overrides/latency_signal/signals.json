@@ -1,0 +1,9 @@
+{
+  "signals": {
+    "latency_ms": {
+      "signal_type": "metric", "domain": "metrics", "unit": "ms",
+      "description": "Round-trip latency in milliseconds; above 200 ms breaks voice SLOs.",
+      "rule": {"type": "threshold", "op": "gt", "value": 200, "reason": "latency above 200ms SLO"}
+    }
+  }
+}

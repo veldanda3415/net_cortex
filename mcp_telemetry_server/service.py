@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 
 from contract import Coverage, Entity, TelemetryQuery, TimeWindow, ToolResponse, TopologyEdge, TopologyResponse
+from contract.catalog_loader import get_catalog
 from mcp_telemetry_server.plugins import SourcePlugin, get_plugin_class
 
 logger = logging.getLogger("net_cortex.telemetry.service")
@@ -65,6 +66,13 @@ class TelemetryService:
                     "telemetry pod, not in the RCA pod's in-process telemetry server"
                 )
             plugin = cls(plugin_cfg)
+            known = set(get_catalog().telemetry_domains()) | {"topology"}
+            unknown = {d for d in plugin.domains if d != "*"} - known
+            if unknown:
+                raise ValueError(
+                    f"ConfigValidationError: sources.{name}.domains has {sorted(unknown)}, but the catalog "
+                    f"only serves {sorted(known)} (add the domain to contract/catalog/domains.json first)"
+                )
             self.plugins.append(plugin)
             self._timeouts[name] = float(plugin_cfg.get("timeout_seconds", DEFAULT_PLUGIN_TIMEOUT_SECONDS))
         if not self.plugins:
@@ -72,7 +80,7 @@ class TelemetryService:
         logger.info("Telemetry sources enabled: %s", ", ".join(p.name for p in self.plugins))
 
     def plugins_for(self, domain: str) -> list[SourcePlugin]:
-        return [p for p in self.plugins if domain in p.domains]
+        return [p for p in self.plugins if p.serves(domain)]
 
     async def query(self, domain: str, query: TelemetryQuery) -> ToolResponse:
         plugins = self.plugins_for(domain)

@@ -1,0 +1,129 @@
+{
+  "catalog_version": "1.0",
+  "domains": {
+    "metrics": {
+      "description": "Metric time series (error rate, loss, throughput, tunnel state, TGW drops).",
+      "telemetry_domain": "metrics",
+      "tool": "get_metrics",
+      "agent": {
+        "name": "netcortex-metrics-agent", "port": 8001,
+        "description": "Analyzes metric time-series for anomaly windows and degradation signals.",
+        "skill": {"id": "analyze-metrics", "name": "Analyze Metrics",
+                  "description": "Analyze metrics in a time window and produce an AgentFinding.",
+                  "tags": ["metrics", "anomaly", "rca"]}
+      },
+      "observation": "entity_time",
+      "rank_by": ["error_rate", "packet_loss"],
+      "key_events": {"source": "hits_else_all", "limit": 3},
+      "time_range": "all",
+      "confidence": {"anomaly": {"base": 0.6, "per_hit": 0.08, "max": 0.95}, "clean": 0.25},
+      "summary": {
+        "anomaly": [
+          {"when": {"hit_names_any": ["error_rate", "packet_loss", "throughput_gbps"]},
+           "template": "Metric anomalies detected on {hit_count}/{candidate_count} nodes; worst switch={worst.tags.switch}, error_rate={worst.error_rate:.2f}%, packet_loss={worst.packet_loss:.2f}%, throughput={worst.throughput_gbps:.2f}Gbps; evidence={worst.reasons}"},
+          {"template": "Metric anomalies detected on {hit_count}/{candidate_count} entities; worst {worst.entity_type}={worst.entity_id}; evidence={worst.reasons}"}
+        ],
+        "clean": [{"template": "Metrics within baseline"}]
+      },
+      "metrics_affected": ["error_rate", "packet_loss", "throughput", "latency"]
+    },
+    "log": {
+      "description": "Log events (application, network OS, FRR bgpd).",
+      "telemetry_domain": "logs",
+      "tool": "get_logs",
+      "agent": {
+        "name": "netcortex-log-agent", "port": 8002,
+        "description": "Analyzes log streams for correlated error and timeout patterns.",
+        "skill": {"id": "analyze-logs", "name": "Analyze Logs",
+                  "description": "Analyze logs in a time window and produce an AgentFinding.",
+                  "tags": ["logs", "errors", "rca"]}
+      },
+      "observation": "signal",
+      "entity_field": "service",
+      "key_events": {"source": "all", "limit": 5},
+      "time_range": "all",
+      "confidence": {"anomaly": {"base": 0.78, "max": 0.95}, "clean": 0.2},
+      "summary": {
+        "anomaly": [{"template": "Error patterns in logs: {hit_count} error/fatal events across {entity_count} services; top_service={top_entity}"}],
+        "clean": [{"template": "No log anomaly"}]
+      },
+      "metrics_affected": ["log_error_rate"]
+    },
+    "routing": {
+      "description": "Routing changes and route-table state (paths, BGP, TGW routes).",
+      "telemetry_domain": "routing",
+      "tool": "get_routing_events",
+      "agent": {
+        "name": "netcortex-routing-agent", "port": 8003,
+        "description": "Analyzes routing events and topology changes around incidents.",
+        "skill": {"id": "analyze-routing", "name": "Analyze Routing",
+                  "description": "Analyze routing events in a time window and produce an AgentFinding.",
+                  "tags": ["routing", "topology", "rca"]}
+      },
+      "observation": "signal",
+      "entity_field": "path_id",
+      "key_events": {"source": "all", "limit": 5},
+      "time_range": "all",
+      "confidence": {"anomaly": {"base": 0.8, "max": 0.95}, "clean": 0.15},
+      "summary": {
+        "anomaly": [
+          {"when": {"hit_names_any": ["routing_change"]},
+           "template": "Routing changes found: {hit_count} event(s); first_path={first.path_id}, change={first.change_type}, details={first.details}"},
+          {"template": "Routing anomalies found: {hit_count} event(s); first={first.entity_type}:{first.entity_id} ({first.reasons})"}
+        ],
+        "clean": [{"template": "No routing changes"}]
+      },
+      "metrics_affected": ["routing_path"]
+    },
+    "config": {
+      "description": "Configuration changes (simulated change records, CloudTrail write calls).",
+      "telemetry_domain": "config",
+      "tool": "get_config_changes",
+      "agent": {
+        "name": "netcortex-config-agent", "port": 8004,
+        "description": "Analyzes configuration changes proximate to incident windows.",
+        "skill": {"id": "analyze-config", "name": "Analyze Config",
+                  "description": "Analyze config changes in a time window and produce an AgentFinding.",
+                  "tags": ["config", "changes", "rca"]}
+      },
+      "observation": "signal",
+      "entity_field": "component",
+      "key_events": {"source": "hits", "limit": 5},
+      "time_range": "hits_else_all",
+      "relevance": {
+        "type": "incident_text",
+        "applies_to": ["config_change"],
+        "min_token_length": 4,
+        "stopwords": ["the", "and", "for", "with", "from", "that", "this", "was", "were", "have", "has", "had",
+                      "into", "onto", "about", "after", "before", "during", "high", "low", "drop", "spike", "region",
+                      "incident", "service", "network"],
+        "text_fields": ["entity_id", "attributes.change_type", "attributes.before", "attributes.after"],
+        "symptom_terms": ["throughput", "latency", "packet", "error", "loss"],
+        "symptom_match": {"field": "attributes.change_type", "values": ["policy_update", "bandwidth_limit", "rollback"]}
+      },
+      "derived": [{"signal": "change_count", "count_of": "hits", "per": "entity"}],
+      "confidence": {"anomaly": {"base": 0.75, "derived_z_weight": 0.1, "max": 0.95}, "clean": 0.2},
+      "summary": {
+        "anomaly": [
+          {"when": {"hit_names_any": ["config_change"]},
+           "template": "Incident-relevant config changes found: {hit_count} change(s); latest={latest.change_type} on {latest.component}"},
+          {"template": "Incident-relevant config changes found: {hit_count} change(s); latest={latest.name} on {latest.entity_type}:{latest.entity_id}"}
+        ],
+        "anomaly_suffixes": [
+          {"when": {"derived_hits": true}, "template": "; volume anomaly on {derived.entity_id} z={derived.z:.2f}"}
+        ],
+        "clean": [
+          {"when": {"candidates_present": true}, "template": "Config changes present ({candidate_count}) but not incident-relevant"},
+          {"template": "No incident-relevant config changes"}
+        ]
+      },
+      "metrics_affected": ["config_state"]
+    }
+  },
+  "degradation_map": {
+    "network": ["metrics", "log", "routing", "config"],
+    "config": ["config", "metrics"],
+    "overload": ["metrics", "log"],
+    "unknown": ["metrics", "log", "routing", "config"]
+  }
+}

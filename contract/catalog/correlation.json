@@ -1,0 +1,79 @@
+{
+  "catalog_version": "1.0",
+  "rules": {
+    "metrics.throughput_drop_during_reroute": {
+      "domain": "metrics", "priority": 10,
+      "description": "A throughput drop coinciding with a routing reroute is strong evidence the drop is path-related.",
+      "when": {
+        "self_anomaly": true,
+        "all": [
+          {"key_event": {"scope": "self", "field": "throughput_gbps", "op": "lt", "value": 0.7}},
+          {"any": [
+            {"summary_contains": {"scope": "peers", "domains": ["routing"], "peer_anomaly": true, "text": "reroute"}},
+            {"key_event": {"scope": "peers", "domains": ["routing"], "peer_anomaly": true, "field": "change_type", "op": "eq", "value": "reroute"}}
+          ]}
+        ]
+      },
+      "effect": {
+        "kind": "corroboration",
+        "confidence": {"op": "at_least", "value": 0.92},
+        "note": "Peer corroboration: routing agent reported reroute during throughput drop; metrics confidence elevated to 0.92"
+      }
+    },
+
+    "log.aligned_peer_anomalies": {
+      "domain": "log", "priority": 10,
+      "when": {"self_anomaly": true, "all": [{"peer_anomaly": {}}]},
+      "effect": {"kind": "corroboration", "confidence": {"op": "add", "value": 0.05, "cap": 0.93},
+                 "note": "Peer corroboration: aligned anomalies from [{peer_anomaly_domains}]"}
+    },
+    "log.quiet_while_peers_anomalous": {
+      "domain": "log", "priority": 20,
+      "description": "No log error pattern while other domains see anomalies is useful contradiction evidence.",
+      "when": {"self_anomaly": false, "all": [{"peer_anomaly": {}}]},
+      "effect": {"kind": "contradiction", "confidence": {"op": "at_least", "value": 0.74},
+                 "note": "Peer contradiction: no direct log error pattern while [{peer_anomaly_domains}] reported anomalies"}
+    },
+
+    "routing.reroute_with_throughput_drop": {
+      "domain": "routing", "priority": 10,
+      "when": {
+        "self_anomaly": true,
+        "all": [
+          {"any": [
+            {"summary_contains": {"scope": "self", "text": "reroute"}},
+            {"key_event": {"scope": "self", "field": "change_type", "op": "eq", "value": "reroute"}}
+          ]},
+          {"key_event": {"scope": "peers", "domains": ["metrics"], "field": "throughput_gbps", "op": "lt", "value": 0.7}}
+        ]
+      },
+      "effect": {"kind": "corroboration", "confidence": {"op": "at_least", "value": 0.91},
+                 "note": "Peer corroboration: metrics reported throughput drop during routing reroute"}
+    },
+    "routing.aligned_peer_anomalies": {
+      "domain": "routing", "priority": 20,
+      "when": {"self_anomaly": true, "all": [{"peer_anomaly": {}}]},
+      "effect": {"kind": "corroboration", "confidence": {"op": "add", "value": 0.04, "cap": 0.94},
+                 "note": "Peer corroboration: aligned anomalies from [{peer_anomaly_domains}]"}
+    },
+    "routing.stable_while_peers_anomalous": {
+      "domain": "routing", "priority": 30,
+      "when": {"self_anomaly": false, "all": [{"peer_anomaly": {}}]},
+      "effect": {"kind": "contradiction", "confidence": {"op": "at_least", "value": 0.78},
+                 "note": "Peer contradiction: no routing path change while [{peer_anomaly_domains}] reported anomalies"}
+    },
+
+    "config.aligned_peer_anomalies": {
+      "domain": "config", "priority": 10,
+      "when": {"self_anomaly": true, "all": [{"peer_anomaly": {}}]},
+      "effect": {"kind": "corroboration", "confidence": {"op": "add", "value": 0.04, "cap": 0.95},
+                 "note": "Peer corroboration: aligned anomalies from [{peer_anomaly_domains}]"}
+    },
+    "config.unchanged_while_peers_anomalous": {
+      "domain": "config", "priority": 20,
+      "when": {"self_anomaly": false, "all": [{"peer_anomaly": {}}]},
+      "effect": {"kind": "contradiction", "confidence": {"op": "at_least", "value": 0.86},
+                 "note": "Peer contradiction: anomalies observed in [{peer_anomaly_domains}] while config remains unchanged"}
+    }
+  }
+}

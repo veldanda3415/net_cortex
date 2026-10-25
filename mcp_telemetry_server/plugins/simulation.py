@@ -1,5 +1,10 @@
 """Simulation source: serves simulation/scenarios.py as contract v2 signals.
 
+Field mapping (which scenario fields become which signals, entities and
+attributes) comes from the catalog's sources.json entries with
+`"source": "simulation"`; this module only reads the scenario bundle,
+rebases time and filters by region/window.
+
 Scenario timestamps are stored relative to when the scenarios module was
 imported, so they are rebased onto the query window (the bundle's own
 ``incident_request.reported_at`` maps to ``query.end_time``, ages rounded
@@ -14,93 +19,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from contract import Coverage, Entity, Signal, TelemetryQuery, TopologyEdge
+from contract.catalog_loader import get_catalog
+from mcp_telemetry_server.mapping import map_record
 from mcp_telemetry_server.plugins.base import SourcePlugin, register_plugin
-from models.schemas import ConfigChange, LogEvent, MetricSnapshot, RoutingEvent, ScenarioDataBundle
+from models.schemas import ScenarioDataBundle
 from simulation.scenarios import SCENARIOS
-
-METRIC_UNITS = {"error_rate": "percent", "packet_loss": "percent", "throughput_gbps": "Gbps", "latency_ms": "ms"}
-
-LOG_SEVERITY = {"INFO": "info", "WARN": "warning", "ERROR": "error", "FATAL": "critical"}
-
-# Tag that best identifies the entity a simulated metric row describes; the
-# full tag dict still travels as entity.labels.
-_ENTITY_TAG_PRIORITY = ("tunnel", "interface", "uplink", "lag", "switch", "core", "service", "dst_prefix")
-
-
-def _metric_entity(row: MetricSnapshot) -> Entity:
-    labels = {k: str(v) for k, v in row.tags.items()}
-    for tag in _ENTITY_TAG_PRIORITY:
-        if tag in labels:
-            return Entity(type=tag, id=labels[tag], labels=labels)
-    if labels:
-        tag = sorted(labels)[0]
-        return Entity(type=tag, id=labels[tag], labels=labels)
-    return Entity(type="region", id=row.region, labels=labels)
-
-
-def metric_signals(row: MetricSnapshot, ts: datetime, ref: str) -> list[Signal]:
-    entity = _metric_entity(row)
-    return [
-        Signal(
-            signal_type="metric",
-            timestamp=ts,
-            observed_at=ts,
-            entity=entity,
-            name=name,
-            value=float(getattr(row, name)),
-            unit=unit,
-            domain="metrics",
-            source="simulation",
-            attributes={"region": row.region},
-            evidence_ref=f"{ref}/{name}",
-        )
-        for name, unit in METRIC_UNITS.items()
-    ]
-
-
-def log_signal(row: LogEvent, ts: datetime, ref: str, region: str) -> Signal:
-    return Signal(
-        signal_type="event",
-        timestamp=ts,
-        observed_at=ts,
-        entity=Entity(type="service", id=row.service),
-        name="log_message",
-        severity=LOG_SEVERITY[row.level],
-        domain="logs",
-        source="simulation",
-        attributes={"level": row.level, "message": row.message, "region": region},
-        evidence_ref=ref,
-    )
-
-
-def routing_signal(row: RoutingEvent, ts: datetime, ref: str) -> Signal:
-    return Signal(
-        signal_type="event",
-        timestamp=ts,
-        observed_at=ts,
-        entity=Entity(type="path", id=row.path_id),
-        name="routing_change",
-        severity="warning",
-        domain="routing",
-        source="simulation",
-        attributes={"change_type": row.change_type, "details": row.details, "region": row.region},
-        evidence_ref=ref,
-    )
-
-
-def config_signal(row: ConfigChange, ts: datetime, ref: str, region: str) -> Signal:
-    return Signal(
-        signal_type="event",
-        timestamp=ts,
-        observed_at=ts,
-        entity=Entity(type="component", id=row.component),
-        name="config_change",
-        severity="info",
-        domain="config",
-        source="simulation",
-        attributes={"change_type": row.change_type, "before": row.before, "after": row.after, "region": region},
-        evidence_ref=ref,
-    )
 
 
 def _static_topology(region: str) -> tuple[list[Entity], list[TopologyEdge]]:
@@ -149,7 +72,14 @@ def _static_topology(region: str) -> tuple[list[Entity], list[TopologyEdge]]:
 @register_plugin
 class SimulationPlugin(SourcePlugin):
     name = "simulation"
-    domains = frozenset({"metrics", "logs", "routing", "config", "topology"})
+    domains = frozenset({"*"})  # narrowed per instance to the domains sources.json maps
+
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        super().__init__(config)
+        self._mappings = get_catalog().mappings_for("simulation")
+        mapped = {m.domain for m in self._mappings.values()} | {"topology"}
+        if "domains" not in self.config:
+            self.domains = frozenset(mapped)
 
     def _bundle(self, scenario_id: int | None) -> ScenarioDataBundle:
         sid = scenario_id or 1
@@ -171,26 +101,22 @@ class SimulationPlugin(SourcePlugin):
             age = timedelta(seconds=round((anchor - ts.astimezone(timezone.utc)).total_seconds()))
             return query.end_time - age
 
-        # LogEvent/ConfigChange carry no per-row region, so they are filtered at
-        # bundle granularity (every scenario is single-region today).
-        bundle_region_matches = bundle.incident_request.region == query.region
-
         signals: list[Signal] = []
-        ref_base = f"simulation:scenario/{sid}/{domain}"
-        if domain == "metrics":
-            for idx, row in enumerate(bundle.metrics_data):
-                if row.region == query.region:
-                    signals.extend(metric_signals(row, rebase(row.timestamp), f"{ref_base}/{idx}"))
-        elif domain == "logs" and bundle_region_matches:
-            for idx, row in enumerate(bundle.log_events):
-                signals.append(log_signal(row, rebase(row.timestamp), f"{ref_base}/{idx}", query.region))
-        elif domain == "routing":
-            for idx, row in enumerate(bundle.routing_events):
-                if row.region == query.region:
-                    signals.append(routing_signal(row, rebase(row.timestamp), f"{ref_base}/{idx}"))
-        elif domain == "config" and bundle_region_matches:
-            for idx, row in enumerate(bundle.config_changes):
-                signals.append(config_signal(row, rebase(row.timestamp), f"{ref_base}/{idx}", query.region))
+        for mapping in self._mappings.values():
+            if mapping.domain != domain:
+                continue
+            rows = getattr(bundle, mapping.record, None)
+            if rows is None:
+                raise ValueError(f"sources.json mapping reads unknown scenario record '{mapping.record}'")
+            ref_base = f"simulation:scenario/{sid}/{domain}"
+            for idx, row in enumerate(rows):
+                record = row.model_dump()
+                # Records without a per-row region (logs, config changes) are
+                # filtered at bundle granularity; every scenario is single-region.
+                row_region = record.get(mapping.region_field) if mapping.region_field else bundle.incident_request.region
+                if row_region != query.region:
+                    continue
+                signals.extend(map_record(mapping, record, timestamp=rebase(row.timestamp), evidence_ref=f"{ref_base}/{idx}"))
 
         in_window = [s for s in signals if query.start_time <= s.timestamp <= query.end_time]
         return in_window, self.coverage(lag_seconds=0.0)

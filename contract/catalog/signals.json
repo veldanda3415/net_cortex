@@ -1,0 +1,130 @@
+{
+  "catalog_version": "1.0",
+  "signals": {
+    "error_rate": {
+      "signal_type": "metric", "domain": "metrics", "unit": "percent",
+      "description": "Interface/service error rate in percent of packets or requests.",
+      "rule": {
+        "type": "zscore_baseline", "threshold": 3.0,
+        "baseline_keys": ["switch=label:switch", "interface=label:interface", "uplink=label:uplink", "dst_prefix=label:dst_prefix", "core=label:core", "lag=label:lag", "service=label:service", "region=region"],
+        "fallback": {"type": "threshold", "op": "gt", "value": 2.0, "reason": "legacy-threshold"}
+      }
+    },
+    "packet_loss": {
+      "signal_type": "metric", "domain": "metrics", "unit": "percent",
+      "description": "Packet loss in percent.",
+      "rule": {
+        "type": "zscore_baseline", "threshold": 3.0,
+        "baseline_keys": ["switch=label:switch", "interface=label:interface", "uplink=label:uplink", "dst_prefix=label:dst_prefix", "core=label:core", "lag=label:lag", "service=label:service", "region=region"],
+        "fallback": {"type": "threshold", "op": "gt", "value": 2.0, "reason": "legacy-threshold"}
+      }
+    },
+    "throughput_gbps": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Gbps",
+      "description": "Delivered throughput in Gbps; a drop indicates capacity loss or congestion.",
+      "rule": {
+        "type": "zscore_baseline", "threshold": 3.0,
+        "baseline_keys": ["switch=label:switch", "interface=label:interface", "uplink=label:uplink", "dst_prefix=label:dst_prefix", "core=label:core", "lag=label:lag", "service=label:service", "region=region"],
+        "fallback": {"type": "threshold", "op": "lt", "value": 0.7, "reason": "legacy-threshold"}
+      }
+    },
+    "latency_ms": {
+      "signal_type": "metric", "domain": "metrics", "unit": "ms",
+      "description": "Round-trip or request latency in milliseconds (context only, no rule)."
+    },
+    "TunnelState": {
+      "signal_type": "metric", "domain": "metrics", "unit": "None", "entity_types": ["tunnel"],
+      "description": "AWS/VPN TunnelState: 1 when the IPsec tunnel is up, 0 when down.",
+      "rule": {"type": "state_equals", "value": 0, "reason": "tunnel down (TunnelState=0)"}
+    },
+    "TunnelDataIn": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Bytes", "entity_types": ["tunnel"],
+      "description": "AWS/VPN bytes received through the tunnel; a collapse vs its recent level indicates traffic loss.",
+      "rule": {"type": "rate_change", "direction": "decrease", "factor": 10, "min_reference": 1000}
+    },
+    "TunnelDataOut": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Bytes", "entity_types": ["tunnel"],
+      "description": "AWS/VPN bytes sent through the tunnel; a collapse vs its recent level indicates traffic loss.",
+      "rule": {"type": "rate_change", "direction": "decrease", "factor": 10, "min_reference": 1000}
+    },
+    "BytesIn": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Bytes", "entity_types": ["tgw_attachment"],
+      "description": "AWS/TransitGateway bytes received per attachment (context only)."
+    },
+    "PacketDropCountBlackhole": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Count", "entity_types": ["tgw_attachment", "transit_gateway"],
+      "description": "AWS/TransitGateway packets dropped because they matched a blackhole route.",
+      "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "TGW blackhole drops"}
+    },
+
+    "log_message": {
+      "signal_type": "event", "domain": "log",
+      "description": "Application/network log line; ERROR and FATAL lines are anomalous.",
+      "rule": {"type": "event_presence", "min_severity": "error"}
+    },
+    "frr_log": {
+      "signal_type": "event", "domain": "log", "entity_types": ["bgp_neighbor"],
+      "match_names": ["bgp_hold_timer_expired", "bgp_neighbor_down", "bgp_neighbor_up", "bgpd_log"],
+      "description": "FRR bgpd log line from a customer-gateway router; error severity means a BGP session failed.",
+      "rule": {"type": "event_presence", "names": ["frr_log", "bgp_hold_timer_expired", "bgp_neighbor_down", "bgpd_log"], "min_severity": "error"}
+    },
+
+    "routing_change": {
+      "signal_type": "event", "domain": "routing",
+      "description": "Routing change event (reroute, flap, congestion, BGP update) on a path.",
+      "rule": {"type": "event_presence", "min_severity": "debug"}
+    },
+    "tgw_route": {
+      "signal_type": "state", "domain": "routing", "entity_types": ["tgw_route_table"],
+      "description": "Transit Gateway route state from SearchTransitGatewayRoutes; 'blackhole' means traffic to the CIDR is dropped.",
+      "rule": {"type": "state_equals", "field": "attributes.state", "value": "blackhole", "reason": "TGW route blackhole"}
+    },
+
+    "config_change": {
+      "signal_type": "event", "domain": "config", "entity_types": ["component"],
+      "description": "Configuration change record (policy update, deployment, bandwidth limit, rollback).",
+      "rule": {"type": "event_presence", "min_severity": "debug"}
+    },
+    "change_count": {
+      "signal_type": "metric", "domain": "config", "derived": true,
+      "description": "Number of incident-relevant config changes per component in the window.",
+      "rule": {"type": "zscore_baseline", "threshold": 2.5, "baseline_keys": ["component=entity_id", "region=region"]}
+    },
+    "cloudtrail_network_mutation": {
+      "signal_type": "event", "domain": "config", "entity_types": ["security_group", "network_acl", "route_table", "tgw_route_table", "vpn_connection", "tgw_attachment"],
+      "match_names": [
+        "RevokeSecurityGroupIngress", "RevokeSecurityGroupEgress", "AuthorizeSecurityGroupIngress", "AuthorizeSecurityGroupEgress",
+        "ReplaceRoute", "DeleteRoute", "CreateRoute", "ReplaceRouteTableAssociation",
+        "ReplaceNetworkAclEntry", "DeleteNetworkAclEntry", "CreateNetworkAclEntry",
+        "ModifyVpnTunnelOptions", "ModifyVpnConnection", "DeleteVpnConnection",
+        "ReplaceTransitGatewayRoute", "DeleteTransitGatewayRoute", "CreateTransitGatewayRoute",
+        "DisassociateTransitGatewayRouteTable", "DisableTransitGatewayRouteTablePropagation",
+        "ModifyTransitGatewayVpcAttachment", "DeleteTransitGatewayVpcAttachment"
+      ],
+      "description": "CloudTrail write call that changes network reachability (security groups, NACLs, routes, VPN, TGW).",
+      "rule": {
+        "type": "event_presence", "min_severity": "info",
+        "names": [
+          "RevokeSecurityGroupIngress", "RevokeSecurityGroupEgress", "AuthorizeSecurityGroupIngress", "AuthorizeSecurityGroupEgress",
+          "ReplaceRoute", "DeleteRoute", "CreateRoute", "ReplaceRouteTableAssociation",
+          "ReplaceNetworkAclEntry", "DeleteNetworkAclEntry", "CreateNetworkAclEntry",
+          "ModifyVpnTunnelOptions", "ModifyVpnConnection", "DeleteVpnConnection",
+          "ReplaceTransitGatewayRoute", "DeleteTransitGatewayRoute", "CreateTransitGatewayRoute",
+          "DisassociateTransitGatewayRouteTable", "DisableTransitGatewayRouteTablePropagation",
+          "ModifyTransitGatewayVpcAttachment", "DeleteTransitGatewayVpcAttachment"
+        ]
+      }
+    },
+    "cloudtrail_read_only": {
+      "signal_type": "event", "domain": "config",
+      "match_names": [
+        "DescribeVpnConnections", "DescribeRouteTables", "DescribeSecurityGroups", "DescribeNetworkAcls",
+        "DescribeTransitGateways", "DescribeTransitGatewayRouteTables", "DescribeTransitGatewayAttachments",
+        "DescribeInstances", "DescribeNetworkInterfaces", "DescribeSubnets", "DescribeVpcs",
+        "GetTransitGatewayRouteTableAssociations", "GetTransitGatewayRouteTablePropagations",
+        "SearchTransitGatewayRoutes", "LookupEvents", "GetMetricData"
+      ],
+      "description": "Routine read-only CloudTrail API call (background noise, never anomalous)."
+    }
+  }
+}

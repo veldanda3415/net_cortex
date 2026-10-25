@@ -1,0 +1,5 @@
+{
+  "entity_types": {
+    "dx_connection": {"description": "AWS Direct Connect dedicated or hosted connection"}
+  }
+}

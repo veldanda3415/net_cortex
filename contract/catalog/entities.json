@@ -1,0 +1,43 @@
+{
+  "catalog_version": "1.0",
+  "entity_types": {
+    "region": {"description": "Cloud region or datacenter region"},
+    "switch": {"description": "Datacenter switch (simulation)"},
+    "interface": {"description": "Switch/router interface (simulation)"},
+    "uplink": {"description": "Switch uplink port (simulation)"},
+    "lag": {"description": "Link aggregation group (simulation)"},
+    "core": {"description": "Core router (simulation)"},
+    "service": {"description": "Application or network service emitting logs/metrics"},
+    "dst_prefix": {"description": "Destination IP prefix"},
+    "dscp": {"description": "QoS traffic class"},
+    "src": {"description": "Source subnet"},
+    "packet_size": {"description": "Packet size bucket"},
+    "cpu_core": {"description": "CPU utilization bucket"},
+    "path": {"description": "Routing path or label-switched path"},
+    "component": {"description": "Configurable network component (simulation)"},
+    "tunnel": {"description": "Site-to-Site VPN tunnel (outside IP)"},
+    "vpn_connection": {"description": "AWS Site-to-Site VPN connection"},
+    "customer_gateway": {"description": "AWS customer gateway"},
+    "transit_gateway": {"description": "AWS Transit Gateway"},
+    "tgw_attachment": {"description": "Transit Gateway attachment (vpc, vpn, peering, dx)"},
+    "tgw_route_table": {"description": "Transit Gateway route table"},
+    "vpc": {"description": "VPC"},
+    "subnet": {"description": "VPC subnet"},
+    "route_table": {"description": "VPC route table"},
+    "security_group": {"description": "Security group"},
+    "network_acl": {"description": "Network ACL"},
+    "eni": {"description": "Elastic network interface"},
+    "instance": {"description": "EC2 instance"},
+    "vpc_peering": {"description": "VPC peering connection"},
+    "bgp_neighbor": {"description": "BGP neighbor of a customer-gateway router (FRR)"},
+    "iam_principal": {"description": "Caller recorded by CloudTrail"}
+  },
+  "relationships": {
+    "member_of": {"description": "Tunnel belongs to a VPN connection", "source": ["tunnel"], "target": ["vpn_connection"]},
+    "attached_via": {"description": "Resource attaches to a TGW through an attachment", "source": ["vpn_connection", "vpc"], "target": ["tgw_attachment"]},
+    "associated_with": {"description": "Association (attachment->TGW route table, subnet->route table)", "source": ["tgw_attachment", "subnet"], "target": ["tgw_route_table", "route_table"]},
+    "applies_to": {"description": "Security group applies to an ENI", "source": ["security_group"], "target": ["eni"]},
+    "attached_to": {"description": "ENI attached to an instance", "source": ["eni"], "target": ["instance"]},
+    "peers": {"description": "VPC peering endpoints", "source": ["vpc", "vpc_peering"], "target": ["vpc_peering", "vpc"]}
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "signals": {
+    "nxdomain_count": {
+      "signal_type": "metric", "domain": "dns", "unit": "Count", "entity_types": ["resolver_endpoint"],
+      "description": "NXDOMAIN responses per minute at a resolver; a spike means names stopped resolving.",
+      "rule": {"type": "rate_change", "direction": "increase", "factor": 5, "min_reference": 1}
+    },
+    "dns_query_count": {
+      "signal_type": "metric", "domain": "dns", "unit": "Count", "entity_types": ["resolver_endpoint"],
+      "description": "DNS queries per minute at a resolver (context only)."
+    }
+  }
+}

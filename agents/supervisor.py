@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 
+from contract.catalog_loader import Catalog, get_catalog
 from models.schemas import IncidentRequest
 
 
@@ -32,7 +33,7 @@ def _classify_with_llm(description: str, llm_model: str) -> str | None:
 
     prompt = (
         "Classify incident degradation_type for orchestration.\n"
-        "Valid labels: network, config, overload, unknown.\n"
+        f"Valid labels: {', '.join(get_catalog().domains.degradation_map)}.\n"
         "Return JSON only: {\"degradation_type\": \"<label>\"}.\n\n"
         f"Incident description: {description}"
     )
@@ -55,7 +56,7 @@ def _classify_with_llm(description: str, llm_model: str) -> str | None:
 def classify_degradation(incident: IncidentRequest, llm_model: str, require_llm: bool) -> str:
     fallback = _heuristic_classify(incident)
     llm_value = _classify_with_llm(incident.description, llm_model)
-    allowed = {"network", "config", "overload", "unknown"}
+    allowed = set(get_catalog().domains.degradation_map)
     if llm_value in allowed:
         return llm_value
     if require_llm:
@@ -63,23 +64,14 @@ def classify_degradation(incident: IncidentRequest, llm_model: str, require_llm:
     return fallback
 
 
-# Mapping from degradation type to the minimal sufficient agent set.
-# DESIGN NOTE: network degradation incidents always include all 4 domains because
+# The degradation type -> minimal sufficient domain set mapping lives in the
+# catalog: contract/catalog/domains.json `degradation_map`.
+# DESIGN NOTE: network degradation incidents always include every domain because
 # the incident description only states symptoms, not the cause. Config changes,
 # routing changes, or hardware faults all surface as "high error rate / throughput drop".
 # Safe pruning is only possible when the description explicitly names a domain (e.g.
 # "after the config change" or "CPU overload spike").
-_AGENT_SETS: dict[str, list[str]] = {
-    # Network degradation symptoms: full scan required -- cause could be any domain.
-    "network": ["metrics", "log", "routing", "config"],
-    # Config-driven: user explicitly mentions a config/policy change.
-    "config": ["config", "metrics"],
-    # Overload: CPU/memory spike -- routing/config rarely relevant.
-    "overload": ["metrics", "log"],
-    # Unknown: full scan.
-    "unknown": ["metrics", "log", "routing", "config"],
-}
-
-
-def select_active_agents(degradation_type: str) -> list[str]:
-    return _AGENT_SETS.get(degradation_type, _AGENT_SETS["unknown"])
+def select_active_agents(degradation_type: str, catalog: Catalog | None = None) -> list[str]:
+    """Domains to run for a degradation type, from domains.json `degradation_map`
+    (falls back to the map's `unknown` entry)."""
+    return (catalog or get_catalog()).active_domains(degradation_type)

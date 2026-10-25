@@ -1,0 +1,1043 @@
+{
+ "contract_version": "2.0",
+ "description": "One of two VPN tunnels down (TunnelState=0), BGP hold timer expired on the CGW, TGW route blackholed.",
+ "region": "us-east-1",
+ "recorded_window": {
+  "start": "2026-09-14T09:30:00Z",
+  "end": "2026-09-14T10:00:00Z"
+ },
+ "signals": [
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:35:00Z",
+   "observed_at": "2026-09-14T09:36:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel1",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:35:00Z"
+     ],
+     "Values": [
+      1.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.10@2026-09-14T09:35:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:35:00Z",
+   "observed_at": "2026-09-14T09:36:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 52000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel1",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:35:00Z"
+     ],
+     "Values": [
+      52000.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.10@2026-09-14T09:35:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:40:00Z",
+   "observed_at": "2026-09-14T09:41:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel1",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:40:00Z"
+     ],
+     "Values": [
+      1.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.10@2026-09-14T09:40:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:40:00Z",
+   "observed_at": "2026-09-14T09:41:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 52000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel1",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:40:00Z"
+     ],
+     "Values": [
+      52000.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.10@2026-09-14T09:40:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:45:00Z",
+   "observed_at": "2026-09-14T09:46:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel1",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:45:00Z"
+     ],
+     "Values": [
+      1.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.10@2026-09-14T09:45:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:45:00Z",
+   "observed_at": "2026-09-14T09:46:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 52000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel1",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:45:00Z"
+     ],
+     "Values": [
+      52000.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.10@2026-09-14T09:45:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:50:00Z",
+   "observed_at": "2026-09-14T09:51:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelState",
+   "value": 0.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel1",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:50:00Z"
+     ],
+     "Values": [
+      0.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.10@2026-09-14T09:50:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:50:00Z",
+   "observed_at": "2026-09-14T09:51:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 0.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel1",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:50:00Z"
+     ],
+     "Values": [
+      0.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.10@2026-09-14T09:50:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:55:00Z",
+   "observed_at": "2026-09-14T09:56:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelState",
+   "value": 0.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel1",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:55:00Z"
+     ],
+     "Values": [
+      0.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.10@2026-09-14T09:55:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:55:00Z",
+   "observed_at": "2026-09-14T09:56:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-1",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.10"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 0.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel1",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:55:00Z"
+     ],
+     "Values": [
+      0.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.10@2026-09-14T09:55:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:35:00Z",
+   "observed_at": "2026-09-14T09:36:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel2",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:35:00Z"
+     ],
+     "Values": [
+      1.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.11@2026-09-14T09:35:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:35:00Z",
+   "observed_at": "2026-09-14T09:36:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 52000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel2",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:35:00Z"
+     ],
+     "Values": [
+      52000.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.11@2026-09-14T09:35:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:40:00Z",
+   "observed_at": "2026-09-14T09:41:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel2",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:40:00Z"
+     ],
+     "Values": [
+      1.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.11@2026-09-14T09:40:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:40:00Z",
+   "observed_at": "2026-09-14T09:41:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 52000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel2",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:40:00Z"
+     ],
+     "Values": [
+      52000.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.11@2026-09-14T09:40:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:45:00Z",
+   "observed_at": "2026-09-14T09:46:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel2",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:45:00Z"
+     ],
+     "Values": [
+      1.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.11@2026-09-14T09:45:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:45:00Z",
+   "observed_at": "2026-09-14T09:46:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 52000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel2",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:45:00Z"
+     ],
+     "Values": [
+      52000.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.11@2026-09-14T09:45:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:50:00Z",
+   "observed_at": "2026-09-14T09:51:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel2",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:50:00Z"
+     ],
+     "Values": [
+      1.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.11@2026-09-14T09:50:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:50:00Z",
+   "observed_at": "2026-09-14T09:51:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 52000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel2",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:50:00Z"
+     ],
+     "Values": [
+      52000.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.11@2026-09-14T09:50:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:55:00Z",
+   "observed_at": "2026-09-14T09:56:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "unit": "None",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunnelstate_tunnel2",
+     "Label": "TunnelState",
+     "Timestamps": [
+      "2026-09-14T09:55:00Z"
+     ],
+     "Values": [
+      1.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=203.0.113.11@2026-09-14T09:55:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-09-14T09:55:00Z",
+   "observed_at": "2026-09-14T09:56:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "vpn-0a1b2c3d-tunnel-2",
+    "labels": {
+     "VpnId": "vpn-0a1b2c3d",
+     "TunnelIpAddress": "203.0.113.11"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 52000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period_seconds": 300,
+    "region": "us-east-1",
+    "raw": {
+     "Id": "m_tunneldatain_tunnel2",
+     "Label": "TunnelDataIn",
+     "Timestamps": [
+      "2026-09-14T09:55:00Z"
+     ],
+     "Values": [
+      52000.0
+     ],
+     "StatusCode": "Complete"
+    }
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=203.0.113.11@2026-09-14T09:55:00Z"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:32:00Z",
+   "observed_at": "2026-09-14T09:37:00Z",
+   "entity": {
+    "type": "vpn_connection",
+    "id": "vpn-0a1b2c3d"
+   },
+   "name": "DescribeVpnConnections",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000001",
+     "EventName": "DescribeVpnConnections",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:32:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"DescribeVpnConnections\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {\"vpnConnectionSet\": {}}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000001"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:39:00Z",
+   "observed_at": "2026-09-14T09:44:00Z",
+   "entity": {
+    "type": "route_table",
+    "id": "rtb-0app00001"
+   },
+   "name": "DescribeRouteTables",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000002",
+     "EventName": "DescribeRouteTables",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:39:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"DescribeRouteTables\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {\"routeTableIdSet\": {}}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000002"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:46:00Z",
+   "observed_at": "2026-09-14T09:51:00Z",
+   "entity": {
+    "type": "security_group",
+    "id": "sg-0app00001"
+   },
+   "name": "DescribeSecurityGroups",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000003",
+     "EventName": "DescribeSecurityGroups",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:46:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"DescribeSecurityGroups\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {\"securityGroupIdSet\": {}}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000003"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:53:00Z",
+   "observed_at": "2026-09-14T09:58:00Z",
+   "entity": {
+    "type": "tgw_route_table",
+    "id": "tgw-rtb-0core0001"
+   },
+   "name": "SearchTransitGatewayRoutes",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000004",
+     "EventName": "SearchTransitGatewayRoutes",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:53:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"SearchTransitGatewayRoutes\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {\"transitGatewayRouteTableId\": \"tgw-rtb-0core0001\"}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000004"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:57:00Z",
+   "observed_at": "2026-09-14T10:02:00Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0core0001"
+   },
+   "name": "DescribeTransitGatewayAttachments",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "read_only": true,
+    "region": "us-east-1",
+    "raw": {
+     "EventId": "11111111-aaaa-4bbb-8ccc-000000000005",
+     "EventName": "DescribeTransitGatewayAttachments",
+     "ReadOnly": "true",
+     "EventTime": "2026-09-14T09:57:00Z",
+     "EventSource": "ec2.amazonaws.com",
+     "Username": "netops-automation",
+     "CloudTrailEvent": "{\"eventVersion\": \"1.09\", \"eventName\": \"DescribeTransitGatewayAttachments\", \"awsRegion\": \"us-east-1\", \"requestParameters\": {}, \"userIdentity\": {\"type\": \"AssumedRole\", \"arn\": \"arn:aws:sts::111122223333:assumed-role/netops/automation\"}}"
+    }
+   },
+   "evidence_ref": "11111111-aaaa-4bbb-8ccc-000000000005"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:34:00Z",
+   "observed_at": "2026-09-14T09:34:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.10.1",
+    "labels": {
+     "instance_id": "i-0cgw000001"
+    }
+   },
+   "name": "bgpd_log",
+   "severity": "info",
+   "domain": "logs",
+   "source": "frr_ssm",
+   "attributes": {
+    "level": "INFO",
+    "message": "BGP: 169.254.10.1 rcvd UPDATE w/ attr: nexthop 169.254.10.1, origin i",
+    "region": "us-east-1"
+   },
+   "evidence_ref": "ssm:cmd-0f1e2d3c/i-0cgw000001#line-4400"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:44:00Z",
+   "observed_at": "2026-09-14T09:44:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.10.1",
+    "labels": {
+     "instance_id": "i-0cgw000001"
+    }
+   },
+   "name": "bgpd_log",
+   "severity": "info",
+   "domain": "logs",
+   "source": "frr_ssm",
+   "attributes": {
+    "level": "INFO",
+    "message": "BGP: 169.254.10.1 KEEPALIVE rcvd",
+    "region": "us-east-1"
+   },
+   "evidence_ref": "ssm:cmd-0f1e2d3c/i-0cgw000001#line-4405"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:54:00Z",
+   "observed_at": "2026-09-14T09:54:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.10.1",
+    "labels": {
+     "instance_id": "i-0cgw000001"
+    }
+   },
+   "name": "bgpd_log",
+   "severity": "info",
+   "domain": "logs",
+   "source": "frr_ssm",
+   "attributes": {
+    "level": "INFO",
+    "message": "BGP: 169.254.10.1 KEEPALIVE rcvd",
+    "region": "us-east-1"
+   },
+   "evidence_ref": "ssm:cmd-0f1e2d3c/i-0cgw000001#line-4409"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-09-14T09:49:00Z",
+   "observed_at": "2026-09-14T09:49:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.10.1",
+    "labels": {
+     "instance_id": "i-0cgw000001"
+    }
+   },
+   "name": "bgp_hold_timer_expired",
+   "severity": "error",
+   "domain": "logs",
+   "source": "frr_ssm",
+   "attributes": {
+    "level": "ERROR",
+    "message": "%NOTIFICATION: sent to neighbor 169.254.10.1 4/0 (Hold Timer Expired) 0 bytes",
+    "region": "us-east-1"
+   },
+   "evidence_ref": "ssm:cmd-0f1e2d3c/i-0cgw000001#line-4407"
+  },
+  {
+   "signal_type": "state",
+   "timestamp": "2026-09-14T09:40:00Z",
+   "observed_at": "2026-09-14T09:41:00Z",
+   "entity": {
+    "type": "tgw_route_table",
+    "id": "tgw-rtb-0core0001",
+    "labels": {
+     "cidr": "10.100.0.0/16"
+    }
+   },
+   "name": "tgw_route",
+   "severity": "info",
+   "domain": "routing",
+   "source": "tgw_routes",
+   "attributes": {
+    "state": "active",
+    "destination_cidr": "10.100.0.0/16",
+    "api": "SearchTransitGatewayRoutes",
+    "region": "us-east-1",
+    "raw": {
+     "DestinationCidrBlock": "10.100.0.0/16",
+     "Type": "propagated",
+     "State": "active",
+     "TransitGatewayAttachments": [
+      {
+       "ResourceId": "vpn-0a1b2c3d",
+       "TransitGatewayAttachmentId": "tgw-attach-0vpn0001",
+       "ResourceType": "vpn"
+      }
+     ]
+    }
+   },
+   "evidence_ref": "tgw-rtb-0core0001/10.100.0.0/16@2026-09-14T09:40:00Z"
+  },
+  {
+   "signal_type": "state",
+   "timestamp": "2026-09-14T09:51:00Z",
+   "observed_at": "2026-09-14T09:52:00Z",
+   "entity": {
+    "type": "tgw_route_table",
+    "id": "tgw-rtb-0core0001",
+    "labels": {
+     "cidr": "10.100.0.0/16"
+    }
+   },
+   "name": "tgw_route",
+   "severity": "critical",
+   "domain": "routing",
+   "source": "tgw_routes",
+   "attributes": {
+    "state": "blackhole",
+    "destination_cidr": "10.100.0.0/16",
+    "api": "SearchTransitGatewayRoutes",
+    "region": "us-east-1",
+    "raw": {
+     "DestinationCidrBlock": "10.100.0.0/16",
+     "Type": "propagated",
+     "State": "blackhole",
+     "TransitGatewayAttachments": []
+    }
+   },
+   "evidence_ref": "tgw-rtb-0core0001/10.100.0.0/16@2026-09-14T09:51:00Z"
+  }
+ ]
+}

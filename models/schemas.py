@@ -63,7 +63,9 @@ class ConfigChange(BaseModel):
 
 class AgentFinding(BaseModel):
     agent_id: str
-    domain: Literal["metrics", "log", "routing", "config"]
+    # Catalog domain id (contract/catalog/domains.json). Open string so a new
+    # domain can be added through the catalog alone.
+    domain: str
     anomaly_detected: bool
     summary: str
     key_events: list[dict]
@@ -76,6 +78,11 @@ class AgentFinding(BaseModel):
         default=False,
         description="True when the domain's telemetry fetch failed/degraded rather than "
         "genuinely returning no data, so a downstream 'no anomaly' can't be read as verified-clean.",
+    )
+    unclassified_evidence: list[dict] = Field(
+        default_factory=list,
+        description="Signals the telemetry returned that are not in the detection catalog. Never "
+        "used for detection; passed to the synthesizer as unclassified evidence.",
     )
 
 
@@ -117,6 +124,10 @@ class RCAReport(BaseModel):
         default=False,
         description="True when at least one domain's telemetry fetch failed/degraded, "
         "so a clean report may reflect missing data rather than a verified absence of anomalies.",
+    )
+    unclassified_evidence: list[dict] = Field(
+        default_factory=list,
+        description="Signals not in the detection catalog, collected across domains (capped).",
     )
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

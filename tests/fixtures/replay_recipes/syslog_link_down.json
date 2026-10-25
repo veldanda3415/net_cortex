@@ -1,0 +1,22 @@
+{
+  "contract_version": "2.0",
+  "description": "Synthetic: an access switch logs an interface going down, plus routine config-saved noise.",
+  "region": "us-east",
+  "recorded_window": {"start": "2026-09-14T09:30:00Z", "end": "2026-09-14T10:00:00Z"},
+  "signals": [
+    {
+      "signal_type": "event", "timestamp": "2026-09-14T09:52:00Z", "observed_at": "2026-09-14T09:52:01Z",
+      "name": "LINK-3-UPDOWN", "severity": "error", "domain": "logs", "source": "syslog",
+      "entity": {"type": "switch", "id": "sw-acc-07", "labels": {}},
+      "attributes": {"message": "Interface GigabitEthernet1/0/24, changed state to down"},
+      "evidence_ref": "syslog:sw-acc-07@2026-09-14T09:52:00Z#1"
+    },
+    {
+      "signal_type": "event", "timestamp": "2026-09-14T09:40:00Z", "observed_at": "2026-09-14T09:40:01Z",
+      "name": "SYS-5-CONFIG_I", "severity": "info", "domain": "logs", "source": "syslog",
+      "entity": {"type": "switch", "id": "sw-acc-07", "labels": {}},
+      "attributes": {"message": "Configured from console by admin on vty0"},
+      "evidence_ref": "syslog:sw-acc-07@2026-09-14T09:40:00Z#1"
+    }
+  ]
+}

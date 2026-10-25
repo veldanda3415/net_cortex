@@ -1,8 +1,8 @@
 """Verify the RCA-side telemetry registry against the in-process telemetry server.
 
 Exercises the same path the agents use (registry -> MCP endpoint client ->
-telemetry MCP server -> simulation plugin -> compat translation) with no
-network, plus a two-endpoint config where one endpoint is unreachable.
+telemetry MCP server -> simulation plugin -> catalog-driven detection) with
+no network, plus a two-endpoint config where one endpoint is unreachable.
 """
 
 from __future__ import annotations
@@ -14,7 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from providers.compat import to_config_changes, to_log_events, to_metric_snapshots, to_routing_events
+from contract.catalog_loader import get_catalog
+from detection import analyze_domain
 from providers.factory import create_telemetry_provider
 from providers.query import query_from_request, query_window
 
@@ -24,17 +25,14 @@ async def main() -> None:
     window = {"start_time": start.isoformat(), "end_time": end.isoformat()}
     registry = create_telemetry_provider({})  # default: inproc://local simulation for every domain
 
-    for domain, scenario, convert in (
-        ("metrics", 1, lambda r: to_metric_snapshots(r, "us-east")),
-        ("logs", 1, to_log_events),
-        ("routing", 2, lambda r: to_routing_events(r, "us-east")),
-        ("config", 1, to_config_changes),
-    ):
+    catalog = get_catalog()
+    for domain_id, scenario in (("metrics", 1), ("log", 1), ("routing", 2), ("config", 1)):
+        telemetry_domain = catalog.domain(domain_id).telemetry_domain
         query = query_from_request({"region": "us-east", "scenario_id": scenario, **window})
-        response = await registry.fetch(domain, query)
-        rows = convert(response)
-        print(f"{domain}: {len(response.signals)} signal(s) -> {len(rows)} legacy row(s), "
-              f"coverage={response.status} degraded={response.degraded}")
+        response = await registry.fetch(telemetry_domain, query)
+        finding = analyze_domain(catalog, domain_id, response, region="us-east")
+        print(f"{domain_id}: {len(response.signals)} signal(s), coverage={response.status} "
+              f"degraded={response.degraded} anomaly={finding.anomaly_detected}: {finding.summary[:70]}")
         assert response.status == "ok" and not response.degraded
 
     print("\n--- Two endpoints, one unreachable ---")

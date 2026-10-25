@@ -2,6 +2,8 @@
 
 This guide explains how to build or replace a NetCortex domain agent while preserving compatibility with the orchestration engine.
 
+> Most new domains no longer need a hand-written agent. Add the domain to the detection catalog and the generic agent (`agents/domain_agent.py`) runs it; see "How to add a domain" in `CONTRACT.md`. Write a custom agent only for reasoning the catalog can't express.
+
 ## Purpose
 
 A NetCortex agent should answer one question clearly:
@@ -31,7 +33,7 @@ Implement this 6-step pattern in every domain:
 
 1. Input acquisition
 - Pull telemetry for the region and the incident window via the shared `TelemetryRegistry`. Get it with `create_telemetry_provider(cfg, domains=(...))` from `providers/factory.py`; it calls every endpoint configured under `telemetry.domains.<domain>.endpoints`. Build the query with `providers/query.py::query_from_request(data)`. The window comes from the orchestrator's `start_time`/`end_time`, which are anchored on `incident.reported_at`.
-- Return deterministic data shape. Until agents read contract v2 signals directly, convert with `providers/compat.py`.
+- Return deterministic data shape. The built-in agents analyze contract v2 signals directly with `detection.analyze_domain`, driven by the detection catalog.
 - Propagate `response.degraded` into `AgentFinding.data_degraded` (see "Reporting Degraded Data" below). A fetch failure must not silently look like "no anomaly."
 
 2. Quality checks
@@ -158,7 +160,9 @@ Clamp to [0.05, 0.99].
 
 ## How Peer Collaboration Actually Works
 
-This is the part most likely to mislead a new agent author, so read it before writing `reconsider_finding`.
+This is the part most likely to mislead a new agent author, so read it before changing correlation behavior.
+
+> **Catalog-driven since the detection-catalog change.** The per-agent `reconsider_finding` functions were replaced by rules in `contract/catalog/correlation.json`, which `detection.reconsider` applies. The rules are tried in priority order, the first match wins, and a rule whose marker is already in the summary is skipped. The mechanics below are unchanged. Wherever this section says "`reconsider_finding`", read "your domain's correlation rules". To add or alter corroboration, edit JSON; see the Detection catalog section of `CONTRACT.md`.
 
 There are two distinct things that both look like "peer collaboration" in this codebase, and only one of them does anything:
 
@@ -180,7 +184,7 @@ Practical guidance for a new/replacement agent:
 3. Low-quality input lowers confidence.
 4. Output schema validates as AgentFinding.
 5. `respond-to-peer` returns a valid JSON-RPC ack result.
-6. `reconsider_finding` (called directly, not through the endpoint) flips `revised=true` and increments `revision_count` on first call, and is a no-op on a second call with the same peer findings (idempotency).
+6. Your domain's correlation rules (via `detection.reconsider`, called directly, not through the endpoint) flip `revised=true` and increments `revision_count` on first call, and is a no-op on a second call with the same peer findings (idempotency).
 7. A telemetry failure results in `AgentFinding.data_degraded=True`, not just an empty or no-anomaly finding. To test this, point an endpoint at an unreachable URL or use a source plugin that raises; see `tests/integration/test_provider_connectivity.py`.
 
 ## Baseline-Aware Anomaly Detection

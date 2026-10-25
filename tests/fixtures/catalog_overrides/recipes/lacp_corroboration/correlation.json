@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "metrics.lacp_error_on_lag": {
+      "domain": "metrics", "priority": 20,
+      "description": "A metrics anomaly plus an LACP error in the logs points at a LAG member failure.",
+      "when": {
+        "self_anomaly": true,
+        "all": [{"key_event": {"scope": "peers", "domains": ["log"], "field": "message", "op": "contains", "value": "LACP"}}]
+      },
+      "effect": {
+        "kind": "corroboration",
+        "confidence": {"op": "at_least", "value": 0.9},
+        "note": "Peer corroboration: log agent reported an LACP error; metrics confidence elevated to 0.90"
+      }
+    }
+  }
+}

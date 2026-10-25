@@ -6,13 +6,40 @@ import os
 import time
 from datetime import datetime, timezone
 
+from contract.catalog_loader import Catalog, get_catalog
 from models.schemas import A2AMessage, AgentFinding, RCAReport
 
 
 logger = logging.getLogger("net_cortex.synthesizer")
 
 
-def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], messages: list[A2AMessage]) -> str:
+MAX_UNCLASSIFIED_IN_REPORT = 50
+
+
+def _signal_glossary(findings: list[AgentFinding], catalog: Catalog) -> str:
+    """One line per catalog signal that fired, from signals.json `description`."""
+    lines: dict[str, str] = {}
+    for f in findings:
+        for event in f.key_events:
+            for fired in (event.get("rules_fired") or []) if isinstance(event, dict) else []:
+                found = catalog.signal(str(fired.get("signal", "")))
+                if found and found[0] not in lines:
+                    lines[found[0]] = f"  {found[0]}: {found[1].description}"
+    return "\n".join(lines.values()) or "none"
+
+
+def _unclassified_text(findings: list[AgentFinding]) -> str:
+    rows = [
+        f"  [{f.domain}] {u.get('name')} {u.get('entity')} value={u.get('value')} severity={u.get('severity')} "
+        f"source={u.get('source')} ref={u.get('evidence_ref')}"
+        for f in findings for u in f.unclassified_evidence
+    ]
+    return "\n".join(rows[:30]) or "none"
+
+
+def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], messages: list[A2AMessage],
+                      catalog: Catalog | None = None) -> str:
+    catalog = catalog or get_catalog()
     finding_blocks = []
     for f in findings:
         events_text = json.dumps(f.key_events, indent=2, default=str) if f.key_events else "none"
@@ -37,6 +64,9 @@ def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], m
         f"Incident description: {incident_description}\n\n"
         f"Domain agent findings:\n{findings_text}\n\n"
         f"A2A collaboration highlights:\n{a2a_text}\n\n"
+        f"Signal glossary (what each fired signal means):\n{_signal_glossary(findings, catalog)}\n\n"
+        "Unclassified evidence (signals outside the detection catalog; no rule judged them, "
+        f"weigh them cautiously):\n{_unclassified_text(findings)}\n\n"
         "Return ONLY valid JSON with exactly these keys:\n"
         "  root_cause: one concise sentence naming the specific root cause (include component name, what changed, and magnitude if known)\n"
         "  contributing_factors: list of strings, each citing a specific domain finding with evidence detail\n"
@@ -163,7 +193,9 @@ def synthesize_report(
     total_agents: int | None = None,
     timed_out_agents: list[str] | None = None,
     errored_agents: list[str] | None = None,
+    catalog: Catalog | None = None,
 ) -> RCAReport:
+    catalog = catalog or get_catalog()
     timed_out_agents = list(timed_out_agents or [])
     errored_agents = list(errored_agents or [])
     resolved_total_agents = total_agents if total_agents is not None else len(findings)
@@ -226,13 +258,8 @@ def synthesize_report(
         for f in sorted(anomaly_findings, key=lambda x: x.start_time):
             det_chain.append(f"{f.start_time.strftime('%H:%Mz')}: {f.domain} detected -- {f.summary}")
         det_affected = list({
-            m for f in anomaly_findings for m in (
-                ["error_rate", "packet_loss", "throughput", "latency"]
-                if f.domain == "metrics" else
-                ["routing_path"] if f.domain == "routing" else
-                ["config_state"] if f.domain == "config" else
-                ["log_error_rate"]
-            )
+            m for f in anomaly_findings
+            for m in (catalog.domain(f.domain).metrics_affected if f.domain in catalog.domains.domains else [f"{f.domain}_state"])
         })
         corroborating_names = ", ".join(f.domain for f in anomaly_findings)
         det_summary = (
@@ -250,7 +277,7 @@ def synthesize_report(
     # --- LLM enrichment (optional, overwrites deterministic values if successful) ---
     llm_result: dict | None = None
     if incident_description and anomaly_findings:
-        prompt = _build_llm_prompt(incident_description, findings, messages)
+        prompt = _build_llm_prompt(incident_description, findings, messages, catalog)
         llm_result = _call_gemini(prompt, llm_model)
 
     if require_llm and anomaly_findings and llm_result is None:
@@ -283,5 +310,8 @@ def synthesize_report(
         timed_out_agents=timed_out_agents,
         errored_agents=errored_agents,
         data_degraded=data_degraded,
+        unclassified_evidence=[
+            {"domain": f.domain, **u} for f in findings for u in f.unclassified_evidence
+        ][:MAX_UNCLASSIFIED_IN_REPORT],
         generated_at=datetime.now(timezone.utc),
     )

@@ -38,12 +38,15 @@ from providers.resilience import CircuitBreaker, RetryPolicy, is_transport_error
 
 logger = logging.getLogger("net_cortex.adapter.mcp")
 
+# Tools for the built-in domains; the catalog (domains.json `tool`) is the
+# source of truth at runtime and may route any domain to get_signals.
 DOMAIN_TOOLS: dict[str, str] = {
     "metrics": "get_metrics",
     "logs": "get_logs",
     "routing": "get_routing_events",
     "config": "get_config_changes",
 }
+GENERIC_TOOL = "get_signals"
 
 INPROC_SCHEME = "inproc://"
 
@@ -313,9 +316,11 @@ class MCPEndpointClient:
             if is_trial and not settled:
                 self.breaker.release_trial()
 
-    async def fetch(self, domain: str, query: TelemetryQuery) -> tuple[ToolResponse, int]:
-        tool = DOMAIN_TOOLS[domain]
+    async def fetch(self, domain: str, query: TelemetryQuery, tool: str | None = None) -> tuple[ToolResponse, int]:
+        tool = tool or DOMAIN_TOOLS.get(domain, GENERIC_TOOL)
         arguments = {**query.model_dump(mode="json", exclude_none=True), "contract_version": CONTRACT_VERSION}
+        if tool == GENERIC_TOOL:
+            arguments["domain"] = domain
         return parse_tool_response(await self.call_tool(tool, arguments))
 
     async def aclose(self) -> None:
