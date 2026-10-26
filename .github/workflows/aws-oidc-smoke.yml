@@ -1,0 +1,48 @@
+name: aws-oidc-smoke
+
+# Manual check that GitHub OIDC can assume the netcortex-gha-plan role.
+# Dispatch it from main: the role trusts only `ref:refs/heads/main` and pull requests,
+# so a dispatch from any other branch is rejected by STS (that is expected).
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: aws-oidc-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check role variable is set
+        env:
+          ROLE_ARN: ${{ vars.AWS_PLAN_ROLE_ARN }}
+        run: |
+          if [ -z "$ROLE_ARN" ]; then
+            echo "::error::Repository variable AWS_PLAN_ROLE_ARN is not set (use the plan_role_arn output of infra/bootstrap)."
+            exit 1
+          fi
+
+      - name: Assume plan role via OIDC
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          role-session-name: gha-oidc-smoke-${{ github.run_id }}
+          role-duration-seconds: 900
+          aws-region: us-east-1
+          # Logs are visible to anyone who can read the repo; keep the account ID out of them.
+          mask-aws-account-id: true
+
+      - name: Caller identity
+        run: |
+          aws sts get-caller-identity --output json
+          {
+            echo "### OIDC smoke test passed"
+            echo
+            echo "Assumed role: \`$(aws sts get-caller-identity --query Arn --output text)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
