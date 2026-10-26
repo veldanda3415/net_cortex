@@ -1,0 +1,26 @@
+# Terraform working dirs and local state (state holds secrets; it lives in S3 after migration)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Variable files carry the alert email and other per-account values
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Plan files can embed sensitive values
+*.tfplan
+tfplan
+
+# Per-machine CLI overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# The bootstrap backend block is created from backend.tf.example during migration
+bootstrap/backend.tf
