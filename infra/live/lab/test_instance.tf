@@ -1,12 +1,6 @@
 # Temporary instance for the PR 1 exit test: SSM in, curl out via TGW -> NAT.
 # Off by default; enable with -var enable_test_instance=true and turn off afterwards.
 
-data "aws_ssm_parameter" "ubuntu_arm64" {
-  count = var.enable_test_instance ? 1 : 0
-
-  name = "/aws/service/canonical/ubuntu/server/24.04/stable/current/arm64/hvm/ebs-gp3/ami-id"
-}
-
 data "aws_iam_policy_document" "ec2_assume" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -61,7 +55,7 @@ resource "aws_security_group" "test_instance" {
 resource "aws_instance" "test" {
   count = var.enable_test_instance ? 1 : 0
 
-  ami                    = data.aws_ssm_parameter.ubuntu_arm64[0].insecure_value
+  ami                    = data.aws_ssm_parameter.ubuntu_arm64.insecure_value
   instance_type          = "t4g.nano"
   subnet_id              = module.app_vpc.subnet_ids["private-a"]
   vpc_security_group_ids = [aws_security_group.test_instance[0].id]

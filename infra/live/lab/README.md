@@ -8,9 +8,15 @@ The ephemeral lab root. Bring it up for a session and tear it down afterwards. T
 - centralized egress (spokes → TGW → security VPC → NAT → internet)
 - VPC Flow Logs, kept 3 days
 
+**Stage 1 PR 2 (on-prem and VPN)** adds:
+- an "on-prem" VPC, `172.16.0.0/16`, which is **not** on the TGW
+- a router instance running strongSwan VTIs and FRR BGP (ASN 65010)
+- a Site-to-Site VPN on the TGW: 2 tunnels, IKEv2, BGP, active/standby on tunnel 1
+- PSKs stored in Parameter Store, and tunnel activity and BGP logs in CloudWatch
+
 The flag `enable_inspection` is wired into the TGW route tables, but it's rejected until the firewalls land in PR 5.
 
-Costs about **$0.21/hr** while it's up: 3 TGW attachments, 1 NAT and 1 public IPv4. Flow logs add a little.
+Costs about **$0.33/hr** while it's up: 4 TGW attachments, the VPN, 1 NAT, 2 public IPv4 and the t4g.small router. Logs add a little.
 
 ## One-time setup (before the first apply)
 
@@ -51,3 +57,28 @@ parse @message "* * * * * * * * * * * * * * * * * * * * * * * * * * *" as versio
 ```
 
 You should see `ACCEPT` flows from the test instance to public IPs on 443. Remove the instance afterwards with `make plan && make up` (it's off by default), or just `make down`.
+
+## Exit test: VPN up, BGP established, on-prem route in rt-spoke
+
+The router configures itself at boot, which takes about 5 minutes after `make up` (packages, then tunnels, then BGP).
+
+```bash
+VPN=$(terraform -chdir=live/lab output -raw vpn_connection_id)
+RTR=$(terraform -chdir=live/lab output -raw router_instance_id)
+
+# 1. Both tunnels UP on the AWS side
+aws ec2 describe-vpn-connections --vpn-connection-ids "$VPN" \
+  --query 'VpnConnections[0].VgwTelemetry[].[OutsideIpAddress,Status,StatusMessage,AcceptedRouteCount]' --output table
+
+# 2. Both BGP sessions Established on the router; 10.10/16 and 10.20/16 preferred via tunnel 1
+aws ssm start-session --target "$RTR"
+$ sudo swanctl --list-sas | grep -E 'aws-t|ESTABLISHED|INSTALLED'
+$ sudo vtysh -c 'show bgp summary' -c 'show ip route bgp'
+
+# 3. 172.16.0.0/16 propagated from the VPN into rt-spoke
+RT=$(terraform -chdir=live/lab output -json tgw_route_table_ids | jq -r .spoke)
+aws ec2 search-transit-gateway-routes --transit-gateway-route-table-id "$RT" \
+  --filters Name=route-search.exact-match,Values=172.16.0.0/16 --query 'Routes[].[DestinationCidrBlock,Type,State]'
+```
+
+If the tunnels stay DOWN, check the router's bring-up log with `journalctl -u netcortex-router` and `/var/log/cloud-init-output.log`, and look at `/netcortex-lab/vpn/tunnel-activity` in CloudWatch.
