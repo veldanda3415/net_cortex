@@ -62,7 +62,7 @@ a2a:
 
 simulation:
   region: us-east-1
-  window_minutes: 30
+  window_minutes: 15      # drills run back to back; 30 would pull in the previous fault's revert
 
 baselines:
   provider: simulation
