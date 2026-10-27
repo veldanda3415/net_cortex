@@ -1,0 +1,22 @@
+{
+  "_comment": "What a correct NetCortex RCA shows for each fault, scored by score.py. Names are the signals in rules_fired (catalog keys, CloudWatch metric names, or CloudTrail eventNames). cause: evidence that points at the culprit. symptoms: downstream effects. negative: the fault has no impact, so a clean report is correct.",
+  "bgp-neighbor-shutdown":   {"cause": ["bgp_neighbor_down", "BgpPeerState"], "symptoms": ["vpn_bgp_down", "vpn_bgp_status_down", "SuccessRate"]},
+  "tunnel-down":             {"cause": ["TunnelState", "vpn_tunnel_ike_down", "vpn_ipsec_down", "ike_negotiation_failed"], "symptoms": ["BgpPeerState", "vpn_bgp_down", "bgp_hold_timer_expired", "bgp_neighbor_down", "TunnelDataIn", "TunnelDataOut"]},
+  "asn-mismatch":            {"cause": ["bgp_open_error"], "symptoms": ["BgpPeerState", "bgp_neighbor_down", "vpn_bgp_down", "vpn_bgp_status_down"]},
+  "bad-route-map":           {"cause": ["PrefixesSent"], "symptoms": ["tgw_route_uninstalled", "PacketDropCountNoRoute", "SuccessRate"]},
+  "prefix-limit":            {"cause": ["vpn_bgp_status_down"], "symptoms": ["BgpPeerState", "vpn_bgp_down", "bgp_neighbor_down", "tgw_route_uninstalled", "PacketDropCountNoRoute", "SuccessRate"]},
+  "ike-proposal-mismatch":   {"cause": ["ModifyVpnTunnelOptions", "ike_negotiation_failed"], "symptoms": ["TunnelState", "vpn_tunnel_ike_down", "vpn_ipsec_down", "BgpPeerState", "vpn_bgp_down"]},
+  "mss-clamp-removed":       {"negative": true},
+  "loss-latency":            {"cause": [], "symptoms": ["SuccessRate", "BgpPeerState", "bgp_hold_timer_expired"], "no_config_culprit": true},
+  "tgw-blackhole":           {"cause": ["CreateTransitGatewayRoute", "tgw_route", "tgw_route_blackholed"], "symptoms": ["PacketDropCountBlackhole", "SuccessRate"]},
+  "tgw-propagation-removed": {"cause": ["DisableTransitGatewayRouteTablePropagation"], "symptoms": ["tgw_route_uninstalled", "PacketDropCountNoRoute", "SuccessRate"]},
+  "sg-rule-removed":         {"cause": ["ModifySecurityGroupRules"], "symptoms": ["flow_rejects", "SuccessRate"]},
+  "nlb-healthcheck-blocked": {"cause": ["ModifySecurityGroupRules"], "symptoms": ["UnHealthyHostCount", "flow_rejects"]},
+  "nacl-deny":               {"cause": ["CreateNetworkAclEntry", "ReplaceNetworkAclEntry"], "symptoms": ["flow_rejects", "SuccessRate"]},
+  "nat-route-removed":       {"cause": ["DeleteRoute"], "symptoms": ["PacketDropCountNoRoute"]},
+  "peering-route-removed":   {"cause": ["DeleteRoute"], "symptoms": ["SuccessRate"]},
+  "phz-record-deleted":      {"cause": ["ChangeResourceRecordSets"], "symptoms": ["dns_nxdomain", "SuccessRate"]},
+  "appliance-mode-off":      {"cause": ["ModifyTransitGatewayVpcAttachment"], "symptoms": ["fw_invalid_drop", "SuccessRate"]},
+  "firewall-stopped":        {"cause": ["StopInstances"], "symptoms": ["SuccessRate"]},
+  "app-cpu-overload":        {"cause": ["CPUUtilization"], "symptoms": ["SuccessRate"]}
+}

@@ -48,6 +48,36 @@ The expected evidence for each fault is in the comment at the top of its `inject
 - Hold-timer mismatch. BGP negotiates the lower value, so the session still comes up.
 - DPD/lifetime mismatch. IKEv2 doesn't negotiate lifetimes; each side rekeys on its own timer, so a mismatch doesn't break anything either. `tunnel-down` and `ike-proposal-mismatch` cover tunnel failures.
 
+## Scoring NetCortex
+
+With NetCortex running against the lab, `drill.sh` also scores its RCA. Every lab alarm that goes into ALARM reaches an SQS queue through EventBridge. The alarm bridge turns each burst of alarms into one `POST /incidents`. The drill then holds the fault until the RCA arrives, and scores it against this fault's events in the faults log, using `expect.json` and `score.py`.
+
+```bash
+# once: a profile for the read-only NetCortex role (it is denied the faults log group)
+aws configure set profile.netcortex-lab.role_arn "$(terraform -chdir=live/lab output -raw netcortex_role_arn)"
+aws configure set profile.netcortex-lab.source_profile aws-veldanda-admin
+aws configure set profile.netcortex-lab.region us-east-1
+
+# three terminals, from the repo root
+python -m mcp_telemetry_server --config config/telemetry.aws-lab.yaml --port 9001
+python app/main.py serve --config config/config.aws-lab.yaml
+python app/main.py alarm-bridge --profile netcortex-lab \
+  --queue-url "$(terraform -chdir=infra/live/lab output -raw alarm_queue_url)"
+
+# then, from infra/
+faults/drill.sh tgw-blackhole     # the output line gains a `netcortex` key
+```
+
+- **Verdicts.** `netcortex.verdict` is one of these:
+  - `cause`: the RCA's evidence includes a signal that points at the culprit.
+  - `symptom`: it saw only the impact.
+  - `miss`: it saw neither.
+  - `clean` or `false_positive`: for the negative control, `mss-clamp-removed`.
+  - `stale`: the RCA's window ended before the injection.
+- **No alarm.** If no alarm fires (`loss-latency`, `app-cpu-overload`, `mss-clamp-removed`), the drill files a manual incident that says nothing about the fault, so those are scored too.
+- **Without NetCortex.** If NetCortex isn't reachable, the drill works as before: alarms only, `netcortex: null`.
+- **Gaps between drills.** RCA windows are 30 minutes, so leave a gap between drills. Otherwise the previous fault's CloudTrail revert calls show up as config changes.
+
 ## Notes
 
 - The faults change Terraform-managed resources in place and revert them to the same values and IDs, so a reverted lab plans clean. Revert, or `make down`, before the next `make plan`.
