@@ -45,3 +45,21 @@ variable "enable_test_instance" {
   type        = bool
   default     = false
 }
+
+variable "onprem_asn" {
+  description = "BGP ASN of the on-prem router / customer gateway."
+  type        = number
+  default     = 65010
+}
+
+variable "tunnel_inside_cidrs" {
+  description = "VPN tunnel inside /30s (outside the AWS-reserved 169.254.0-5.0/30 and 169.254.169.252/30)."
+  type        = list(string)
+  default     = ["169.254.100.0/30", "169.254.100.4/30"]
+}
+
+variable "router_instance_type" {
+  description = "On-prem router instance type."
+  type        = string
+  default     = "t4g.small"
+}

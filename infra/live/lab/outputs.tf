@@ -36,3 +36,28 @@ output "test_instance_id" {
   description = "Temporary test instance ID (null when enable_test_instance = false)."
   value       = one(aws_instance.test[*].id)
 }
+
+output "router_instance_id" {
+  description = "On-prem router instance ID (SSM target)."
+  value       = module.onprem_router.instance_id
+}
+
+output "router_public_ip" {
+  description = "On-prem router Elastic IP (the customer gateway address)."
+  value       = aws_eip.router.public_ip
+}
+
+output "vpn_connection_id" {
+  description = "Site-to-Site VPN connection ID."
+  value       = module.vpn.vpn_connection_id
+}
+
+output "vpn_tunnel_outside_ips" {
+  description = "AWS tunnel endpoint IPs, tunnel 1/2 order."
+  value       = module.vpn.tunnel_outside_ips
+}
+
+output "vpn_log_groups" {
+  description = "VPN tunnel activity and BGP log groups."
+  value       = module.vpn.log_group_names
+}
