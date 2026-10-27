@@ -1,0 +1,13 @@
+[Unit]
+Description=NetCortex lab traffic agent (synthetic flows -> CloudWatch metrics)
+Wants=network-online.target
+After=network-online.target netcortex-workload.service
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/netcortex-traffic /etc/netcortex/workload.json
+Restart=always
+RestartSec=10
+DynamicUser=yes
+
+[Install]
+WantedBy=multi-user.target

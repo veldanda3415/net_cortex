@@ -1,0 +1,13 @@
+[Unit]
+Description=NetCortex lab workload bring-up (packages, nginx, iperf3, traffic agent)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/netcortex-workload-up
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

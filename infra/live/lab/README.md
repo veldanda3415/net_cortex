@@ -14,9 +14,24 @@ The ephemeral lab root. Bring it up for a session and tear it down afterwards. T
 - a Site-to-Site VPN on the TGW: 2 tunnels, IKEv2, BGP, active/standby on tunnel 1
 - PSKs stored in Parameter Store, and tunnel activity and BGP logs in CloudWatch
 
+**Stage 1 PR 3 (workloads and traffic)** adds:
+- two nginx servers (`app-a`, `app-b`) behind an internal NLB, plus an iperf3 server on `app-a`
+- `svc` in the shared VPC and `client` on the on-prem LAN, which generate steady traffic
+- the private zone `lab.internal` (`app` → NLB) and Resolver query logs for app and shared
+- one CloudWatch dashboard, `netcortex-lab`, showing every flow, the NLB targets and the tunnels
+
+| Flow | From → to | What it shows |
+|---|---|---|
+| `onprem-to-nlb` | client → NLB, every 2s | the main on-prem path over the VPN |
+| `onprem-to-nlb-large` | client → NLB `/large.bin` (256 KiB), every 10s | MTU/MSS problems (small requests OK, large hang) |
+| `onprem-iperf-app-a` | client → app-a, UDP 2 Mbps for 10s each minute | loss and jitter |
+| `svc-to-app` | svc → `app.lab.internal`, every 5s | east-west traffic that depends on DNS |
+
+Each flow publishes `Requests`, `Failures`, `SuccessRate` and latency or throughput to `NetCortexLab/Traffic` (dimension `Flow`) once a minute. Failures are also logged with their reason: `journalctl -u netcortex-traffic`.
+
 The flag `enable_inspection` is wired into the TGW route tables, but it's rejected until the firewalls land in PR 5.
 
-Costs about **$0.33/hr** while it's up: 4 TGW attachments, the VPN, 1 NAT, 2 public IPv4 and the t4g.small router. Logs add a little.
+Costs about **$0.38/hr** while it's up: 4 TGW attachments, the VPN, 1 NAT, the NLB, 2 public IPv4, the t4g.small router and 4 t4g.nano workloads. Logs and custom metrics add a little. The private zone is free if deleted within 12 hours, so always `make down` the same day.
 
 ## One-time setup (before the first apply)
 
@@ -82,3 +97,29 @@ aws ec2 search-transit-gateway-routes --transit-gateway-route-table-id "$RT" \
 ```
 
 If the tunnels stay DOWN, check the router's bring-up log with `journalctl -u netcortex-router` and `/var/log/cloud-init-output.log`, and look at `/netcortex-lab/vpn/tunnel-activity` in CloudWatch.
+
+## Exit test: all flows green
+
+Workloads install their packages at boot; `client` waits for the router, so allow about 10 minutes after `make up`.
+
+```bash
+terraform -chdir=live/lab output -raw dashboard_url
+```
+
+On the dashboard, every line in **Flow success rate** should sit at 100, **NLB targets** should show 2 healthy and 0 unhealthy, iperf3 should show about 2 Mbps with ~0% loss, and both tunnels should show 1.
+
+From the CLI, the same check for the last 5 minutes:
+
+```bash
+for f in onprem-to-nlb onprem-to-nlb-large onprem-iperf-app-a svc-to-app; do
+  printf '%-22s ' "$f"
+  aws cloudwatch get-metric-statistics --namespace NetCortexLab/Traffic --metric-name SuccessRate \
+    --dimensions Name=Flow,Value=$f --statistics Minimum --period 300 \
+    --start-time "$(date -u -d '-5 min' +%FT%TZ)" --end-time "$(date -u +%FT%TZ)" \
+    --query 'Datapoints[0].Minimum' --output text
+done
+```
+
+The DNS flow also shows up in the Resolver query logs (`/netcortex-lab/dns/resolver-queries`) as `app.lab.internal` with `NOERROR`.
+
+If a flow stays red, look on that instance with `aws ssm start-session --target <id>` (IDs in the `workload_instance_ids` output), then `journalctl -u netcortex-workload` for bring-up and `journalctl -u netcortex-traffic` for per-request failures.
