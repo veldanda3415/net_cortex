@@ -39,16 +39,23 @@ require_peering() { [ "$(t .enable_peering)" = true ] || skip "needs enable_peer
 
 # log_fault <result> <detail>: result is injected | reverted | already | skipped.
 log_fault() {
-  local group stream now msg
+  local group stream now at msg resp
   group=$(t .log_group)
   stream=$FAULT
-  now=$(date -u +%s%3N)
+  # Milliseconds by arithmetic: some date implementations (uutils) ignore the width
+  # in %3N and print nanoseconds, which CloudWatch rejects as too new.
+  now=$(($(date -u +%s%N) / 1000000))
+  at="$(date -u -d "@$((now / 1000))" +%FT%T).$(printf %03d $((now % 1000)))Z"
   msg=$(jq -cn --arg fault "$FAULT" --arg action "$ACTION" --arg result "$1" \
-    --arg detail "$2" --arg at "$(date -u +%FT%T.%3NZ)" --arg by "$(whoami)" \
+    --arg detail "$2" --arg at "$at" --arg by "$(whoami)" \
     '{fault: $fault, action: $action, result: $result, detail: $detail, at: $at, by: $by}')
   aws logs create-log-stream --log-group-name "$group" --log-stream-name "$stream" 2>/dev/null || true
-  aws logs put-log-events --log-group-name "$group" --log-stream-name "$stream" \
-    --log-events "$(jq -cn --argjson ts "$now" --arg m "$msg" '[{timestamp: $ts, message: $m}]')" >/dev/null
+  resp=$(aws logs put-log-events --log-group-name "$group" --log-stream-name "$stream" \
+    --log-events "$(jq -cn --argjson ts "$now" --arg m "$msg" '[{timestamp: $ts, message: $m}]')")
+  # PutLogEvents succeeds even when it rejects every event; the answer key must not go missing.
+  if jq -e '.rejectedLogEventsInfo' <<<"$resp" >/dev/null; then
+    die "faults log rejected the event: $(jq -c .rejectedLogEventsInfo <<<"$resp")"
+  fi
   echo "$msg"
 }
 
