@@ -63,3 +63,15 @@ variable "router_instance_type" {
   type        = string
   default     = "t4g.small"
 }
+
+variable "dns_zone_name" {
+  description = "Private hosted zone for the lab (app.<zone> aliases the NLB)."
+  type        = string
+  default     = "lab.internal"
+}
+
+variable "dns_query_log_retention_days" {
+  description = "Retention for Route 53 Resolver query logs in CloudWatch Logs."
+  type        = number
+  default     = 3
+}

@@ -61,3 +61,28 @@ output "vpn_log_groups" {
   description = "VPN tunnel activity and BGP log groups."
   value       = module.vpn.log_group_names
 }
+
+output "nlb_dns_name" {
+  description = "Internal NLB DNS name (on-prem uses this; the VPCs use app.<dns_zone_name>)."
+  value       = aws_lb.app.dns_name
+}
+
+output "workload_instance_ids" {
+  description = "Workload instance IDs (SSM targets) keyed by name."
+  value = {
+    app-a  = module.app["a"].instance_id
+    app-b  = module.app["b"].instance_id
+    svc    = module.svc.instance_id
+    client = module.client.instance_id
+  }
+}
+
+output "dns_query_log_group" {
+  description = "Route 53 Resolver query log group (app and shared VPCs)."
+  value       = module.dns.query_log_group_name
+}
+
+output "dashboard_url" {
+  description = "CloudWatch dashboard with every flow, the NLB targets and the VPN tunnels."
+  value       = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#dashboards/dashboard/${aws_cloudwatch_dashboard.lab.dashboard_name}"
+}
