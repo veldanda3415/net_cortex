@@ -1,0 +1,142 @@
+# Telemetry MCP server sources for the AWS lab (infra/live/lab).
+#
+#   python -m mcp_telemetry_server --config config/telemetry.aws-lab.yaml --port 9001
+#
+# Credentials: the read-only role from `terraform output netcortex_role_arn`,
+# through a profile in ~/.aws/config (the role denies the faults log group):
+#
+#   [profile netcortex-lab]
+#   role_arn       = <netcortex_role_arn>
+#   source_profile = aws-veldanda-admin
+#   region         = us-east-1
+#
+# Only names and log groups here are lab-specific. Another AWS account changes this
+# file, not the plugins; another cloud adds its own plugins next to these.
+
+x-aws: &aws
+  enabled: true
+  profile: netcortex-lab
+  region: us-east-1
+  timeout_seconds: 15
+
+sources:
+  cloudwatch:
+    <<: *aws
+    period_seconds: 60
+    metrics:
+      - {namespace: AWS/VPN, names: [TunnelState], stat: Minimum, dimensions: [TunnelIpAddress], entity: {type: tunnel, id: TunnelIpAddress}}
+      - {namespace: AWS/VPN, names: [TunnelDataIn, TunnelDataOut], stat: Sum, dimensions: [TunnelIpAddress], entity: {type: tunnel, id: TunnelIpAddress}}
+      - {namespace: AWS/TransitGateway, names: [PacketDropCountBlackhole, PacketDropCountNoRoute], stat: Sum, dimensions: [TransitGateway], entity: {type: transit_gateway, id: TransitGateway}}
+      - {namespace: AWS/NATGateway, names: [ErrorPortAllocation, PacketsDropCount], stat: Sum, dimensions: [NatGatewayId], entity: {type: nat_gateway, id: NatGatewayId}}
+      - {namespace: AWS/NetworkELB, names: [UnHealthyHostCount], stat: Maximum, dimensions: [LoadBalancer, TargetGroup], entity: {type: target_group, id: TargetGroup}}
+      - {namespace: AWS/EC2, names: [CPUUtilization], stat: Maximum, dimensions: [InstanceId], entity: {type: instance, id: InstanceId}}
+      - {namespace: NetCortexLab/Router, names: [BgpPeerState, PrefixesSent], stat: Minimum, dimensions: [Neighbor], entity: {type: bgp_neighbor, id: Neighbor}}
+      - {namespace: NetCortexLab/Traffic, names: [SuccessRate], stat: Minimum, dimensions: [Flow], entity: {type: flow, id: Flow}}
+
+  cloudwatch_logs:
+    <<: *aws
+    # The answer key for evals. The plugin refuses to start if a query names it, and
+    # the IAM role denies it as well.
+    deny_log_groups: [/netcortex-lab/faults]
+    max_events: 2000
+    queries:
+      - id: frr
+        log_group: /netcortex-lab/router/frr
+        filter_pattern: '?ADJCHANGE ?NOTIFICATION'
+        entity: {type: bgp_neighbor}
+        classify:
+          - {name: bgp_hold_timer_expired, pattern: 'NOTIFICATION: (?:sent to|received from) neighbor (?P<id>[0-9.]+) 4/0'}
+          - {name: bgp_open_error, pattern: 'NOTIFICATION: (?:sent to|received from) neighbor (?P<id>[0-9.]+) 2/'}
+          - {name: bgp_neighbor_down, pattern: 'ADJCHANGE: neighbor (?P<id>[0-9.]+)\S* .*\bDown\b'}
+      - id: charon
+        log_group: /netcortex-lab/router/charon
+        filter_pattern: '?NO_PROPOSAL_CHOSEN ?"giving up after" ?AUTHENTICATION_FAILED'
+        entity: {type: ike_connection}
+        classify:
+          - {name: ike_negotiation_failed, pattern: '<(?P<id>[A-Za-z0-9_.-]+)\|\d+>.*(NO_PROPOSAL_CHOSEN|giving up after|AUTHENTICATION_FAILED)'}
+          - {name: ike_negotiation_failed, pattern: 'NO_PROPOSAL_CHOSEN|giving up after|AUTHENTICATION_FAILED'}
+      - id: vpn-tunnel
+        log_group: /netcortex-lab/vpn/tunnel-activity
+        format: json
+        filter_pattern: '{ ($.ike_phase1_state = "down") || ($.ike_phase2_state = "down") }'
+        timestamp_field: event_timestamp
+        entity: {type: tunnel, pattern: '(?P<id>\d+\.\d+\.\d+\.\d+)'}   # outside IP in the stream name
+        classify:
+          - {name: vpn_tunnel_ike_down, field: ike_phase1_state, equals: down}
+          - {name: vpn_tunnel_ike_down, field: ike_phase2_state, equals: down}
+        aggregate: count_per_minute
+        attributes: {details: details}
+      - id: vpn-bgp
+        log_group: /netcortex-lab/vpn/bgp
+        format: json
+        filter_pattern: '{ ($.type = "BGPStatus") && ($.status = "DOWN") }'
+        timestamp_field: timestamp
+        entity: {type: tunnel, field: resource_id, pattern: '_(?P<id>[0-9.]+)$'}
+        classify:
+          - {name: vpn_bgp_status_down, field: status, equals: DOWN}
+        attributes: {details: message.details}
+      - id: flow-app
+        log_group: /netcortex-lab/vpc-flow/app
+        format: fields
+        fields: &flow_fields [version, account-id, interface-id, srcaddr, dstaddr, srcport, dstport, protocol, packets, bytes,
+                              start, end, action, log-status, vpc-id, subnet-id, instance-id, tcp-flags, type,
+                              pkt-srcaddr, pkt-dstaddr, region, az-id, pkt-src-aws-service, pkt-dst-aws-service,
+                              flow-direction, traffic-path]
+        filter_pattern: REJECT
+        timestamp_field: end
+        entity: {type: eni, field: interface-id}
+        classify:
+          - {name: flow_rejects, field: action, equals: REJECT, severity: warning}
+        aggregate: count_per_minute
+        attributes: {vpc: vpc-id, src: srcaddr, dst: dstaddr, dstport: dstport}
+      - id: flow-shared
+        log_group: /netcortex-lab/vpc-flow/shared
+        format: fields
+        fields: *flow_fields
+        filter_pattern: REJECT
+        timestamp_field: end
+        entity: {type: eni, field: interface-id}
+        classify:
+          - {name: flow_rejects, field: action, equals: REJECT, severity: warning}
+        aggregate: count_per_minute
+        attributes: {vpc: vpc-id, src: srcaddr, dst: dstaddr, dstport: dstport}
+      - id: dns
+        log_group: /netcortex-lab/dns/resolver-queries
+        format: json
+        filter_pattern: '{ $.rcode = "NXDOMAIN" }'
+        timestamp_field: query_timestamp
+        entity: {type: dns_name, field: query_name}
+        classify:
+          - {name: dns_nxdomain, field: rcode, equals: NXDOMAIN, severity: warning}
+        aggregate: count_per_minute
+      - id: firewall
+        log_group: /netcortex-lab/firewall/drops
+        optional: true                       # exists only with enable_inspection
+        filter_pattern: NETCORTEX-FW-INVALID
+        entity: {type: instance}             # stream = instance id
+        classify:
+          - {name: fw_invalid_drop, pattern: NETCORTEX-FW-INVALID, severity: warning}
+        aggregate: count_per_minute
+      - id: network-manager
+        log_group: /netcortex-lab/networkmanager/events
+        domain: routing
+        format: json
+        timestamp_field: time
+        entity: {type: tgw_route_table, field: detail.transitGatewayRouteTableArns.0, pattern: '(?P<id>tgw-rtb-[0-9a-f]+)'}
+        classify:
+          - {name: tgw_route_blackholed, field: detail.routes.0.routeState, equals: blackhole, severity: warning}
+          - {name: tgw_route_uninstalled, field: detail.changeType, equals: TGW-ROUTE-UNINSTALLED, severity: warning}
+          - {name: vpn_ipsec_down, field: detail.changeType, equals: VPN-CONNECTION-IPSEC-DOWN,
+             entity: {type: tunnel, field: detail.outsideIpAddress}}
+          - {name: vpn_bgp_down, field: detail.changeType, equals: VPN-CONNECTION-BGP-DOWN,
+             entity: {type: tunnel, field: detail.outsideIpAddress}}
+
+  cloudtrail:
+    <<: *aws
+    event_sources: [ec2.amazonaws.com, elasticloadbalancing.amazonaws.com, route53.amazonaws.com]
+    max_events: 500
+
+  tgw_routes:
+    <<: *aws
+    required: false          # a snapshot; skipped for windows that ended long ago
+    states: [blackhole]

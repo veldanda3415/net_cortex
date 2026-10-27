@@ -157,13 +157,10 @@ def test_legacy_providers_config_still_accepted():
     assert parsed["logs"][0].url == "inproc://local"
 
 
-def test_inproc_server_refuses_cloud_plugins(monkeypatch):
-    from mcp_telemetry_server.plugins.aws import CloudWatchPlugin
-
-    # Pretend the skeleton is implemented so the credentials guard is what trips.
-    monkeypatch.setattr(CloudWatchPlugin, "implemented", True)
+@pytest.mark.parametrize("name", ["cloudwatch", "cloudwatch_logs", "cloudtrail", "tgw_routes"])
+def test_inproc_server_refuses_cloud_plugins(name):
     with pytest.raises(ValueError, match="telemetry pod"):
-        TelemetryService({"cloudwatch": {"enabled": True}}, allow_cloud_sources=False)
+        TelemetryService({name: {"enabled": True}}, allow_cloud_sources=False)
 
 
 # ---------------------------------------------------------------------------

@@ -56,6 +56,46 @@
       "description": "AWS/TransitGateway packets dropped because they matched a blackhole route.",
       "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "TGW blackhole drops"}
     },
+    "PacketDropCountNoRoute": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Count", "entity_types": ["tgw_attachment", "transit_gateway"],
+      "description": "AWS/TransitGateway packets dropped because no route matched the destination.",
+      "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "TGW no-route drops"}
+    },
+    "BgpPeerState": {
+      "signal_type": "metric", "domain": "metrics", "unit": "None", "entity_types": ["bgp_neighbor"],
+      "description": "Customer-gateway router BGP session to an AWS neighbor: 1 when Established, 0 otherwise.",
+      "rule": {"type": "state_equals", "value": 0, "reason": "BGP session not Established (BgpPeerState=0)"}
+    },
+    "PrefixesSent": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Count", "entity_types": ["bgp_neighbor"],
+      "description": "Prefixes the customer-gateway router advertises to an AWS BGP neighbor; 0 means AWS learns no on-prem routes from it.",
+      "rule": {"type": "state_equals", "value": 0, "reason": "router advertises no prefixes (PrefixesSent=0)"}
+    },
+    "UnHealthyHostCount": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Count", "entity_types": ["target_group"],
+      "description": "AWS/NetworkELB targets failing health checks in a target group.",
+      "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "load balancer targets unhealthy"}
+    },
+    "SuccessRate": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Percent", "entity_types": ["flow"],
+      "description": "Synthetic probe success rate for one client-to-service flow (100 when healthy).",
+      "rule": {"type": "threshold", "op": "lt", "value": 95, "reason": "synthetic flow failing (SuccessRate<95%)"}
+    },
+    "CPUUtilization": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Percent", "entity_types": ["instance"],
+      "description": "AWS/EC2 instance CPU utilization.",
+      "rule": {"type": "threshold", "op": "gt", "value": 90, "reason": "instance CPU saturated (>90%)"}
+    },
+    "ErrorPortAllocation": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Count", "entity_types": ["nat_gateway"],
+      "description": "AWS/NATGateway connections that failed because no source port was free.",
+      "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "NAT gateway port allocation errors"}
+    },
+    "PacketsDropCount": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Count", "entity_types": ["nat_gateway"],
+      "description": "AWS/NATGateway packets dropped by the NAT gateway.",
+      "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "NAT gateway dropping packets"}
+    },
 
     "log_message": {
       "signal_type": "event", "domain": "log",
@@ -64,9 +104,39 @@
     },
     "frr_log": {
       "signal_type": "event", "domain": "log", "entity_types": ["bgp_neighbor"],
-      "match_names": ["bgp_hold_timer_expired", "bgp_neighbor_down", "bgp_neighbor_up", "bgpd_log"],
+      "match_names": ["bgp_hold_timer_expired", "bgp_neighbor_down", "bgp_neighbor_up", "bgp_open_error", "bgpd_log"],
       "description": "FRR bgpd log line from a customer-gateway router; error severity means a BGP session failed.",
-      "rule": {"type": "event_presence", "names": ["frr_log", "bgp_hold_timer_expired", "bgp_neighbor_down", "bgpd_log"], "min_severity": "error"}
+      "rule": {"type": "event_presence", "names": ["frr_log", "bgp_hold_timer_expired", "bgp_neighbor_down", "bgp_open_error", "bgpd_log"], "min_severity": "error"}
+    },
+    "ike_negotiation_failed": {
+      "signal_type": "event", "domain": "log", "entity_types": ["ike_connection"],
+      "description": "Customer-gateway IKE daemon (strongSwan charon) failed to negotiate a tunnel: no proposal chosen, retransmits exhausted or authentication failed.",
+      "rule": {"type": "event_presence", "min_severity": "error"}
+    },
+    "vpn_tunnel_ike_down": {
+      "signal_type": "metric", "domain": "log", "unit": "Count", "entity_types": ["tunnel"],
+      "description": "AWS Site-to-Site VPN tunnel activity log lines per minute reporting IKE phase 1 or phase 2 down.",
+      "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "AWS VPN reports IKE down"}
+    },
+    "vpn_bgp_status_down": {
+      "signal_type": "event", "domain": "log", "entity_types": ["tunnel"],
+      "description": "AWS Site-to-Site VPN BGP log: the AWS-side BGP session went DOWN (details say why, e.g. hold timer or prefix limit).",
+      "rule": {"type": "event_presence", "min_severity": "error"}
+    },
+    "flow_rejects": {
+      "signal_type": "metric", "domain": "log", "unit": "Count", "entity_types": ["eni"],
+      "description": "VPC Flow Log REJECT records per minute on one network interface (security group or network ACL denials).",
+      "rule": {"type": "threshold", "op": "gt", "value": 10, "reason": "flow log REJECT spike (>10/min)"}
+    },
+    "dns_nxdomain": {
+      "signal_type": "metric", "domain": "log", "unit": "Count", "entity_types": ["dns_name"],
+      "description": "Route 53 Resolver NXDOMAIN answers per minute for one query name.",
+      "rule": {"type": "threshold", "op": "gt", "value": 5, "reason": "NXDOMAIN spike (>5/min)"}
+    },
+    "fw_invalid_drop": {
+      "signal_type": "metric", "domain": "log", "unit": "Count", "entity_types": ["instance"],
+      "description": "Firewall drops per minute of packets conntrack marks INVALID, typical of asymmetric routing through stateful firewalls.",
+      "rule": {"type": "threshold", "op": "gt", "value": 5, "reason": "firewall INVALID-state drops (>5/min)"}
     },
 
     "routing_change": {
@@ -78,6 +148,26 @@
       "signal_type": "state", "domain": "routing", "entity_types": ["tgw_route_table"],
       "description": "Transit Gateway route state from SearchTransitGatewayRoutes; 'blackhole' means traffic to the CIDR is dropped.",
       "rule": {"type": "state_equals", "field": "attributes.state", "value": "blackhole", "reason": "TGW route blackhole"}
+    },
+    "tgw_route_uninstalled": {
+      "signal_type": "event", "domain": "routing", "entity_types": ["tgw_route_table"],
+      "description": "Network Manager TGW-ROUTE-UNINSTALLED: a route disappeared from a Transit Gateway route table.",
+      "rule": {"type": "event_presence", "min_severity": "warning"}
+    },
+    "tgw_route_blackholed": {
+      "signal_type": "event", "domain": "routing", "entity_types": ["tgw_route_table"],
+      "description": "Network Manager routing update that leaves a Transit Gateway route in blackhole state.",
+      "rule": {"type": "event_presence", "min_severity": "warning"}
+    },
+    "vpn_ipsec_down": {
+      "signal_type": "event", "domain": "routing", "entity_types": ["tunnel"],
+      "description": "Network Manager VPN-CONNECTION-IPSEC-DOWN: IPsec on one VPN tunnel went down.",
+      "rule": {"type": "event_presence", "min_severity": "error"}
+    },
+    "vpn_bgp_down": {
+      "signal_type": "event", "domain": "routing", "entity_types": ["tunnel"],
+      "description": "Network Manager VPN-CONNECTION-BGP-DOWN: BGP on one VPN tunnel went down.",
+      "rule": {"type": "event_presence", "min_severity": "error"}
     },
 
     "config_change": {
@@ -91,7 +181,7 @@
       "rule": {"type": "zscore_baseline", "threshold": 2.5, "baseline_keys": ["component=entity_id", "region=region"]}
     },
     "cloudtrail_network_mutation": {
-      "signal_type": "event", "domain": "config", "entity_types": ["security_group", "network_acl", "route_table", "tgw_route_table", "vpn_connection", "tgw_attachment"],
+      "signal_type": "event", "domain": "config", "entity_types": ["security_group", "network_acl", "route_table", "tgw_route_table", "vpn_connection", "tgw_attachment", "instance", "hosted_zone", "target_group"],
       "match_names": [
         "RevokeSecurityGroupIngress", "RevokeSecurityGroupEgress", "AuthorizeSecurityGroupIngress", "AuthorizeSecurityGroupEgress",
         "ReplaceRoute", "DeleteRoute", "CreateRoute", "ReplaceRouteTableAssociation",
@@ -99,9 +189,13 @@
         "ModifyVpnTunnelOptions", "ModifyVpnConnection", "DeleteVpnConnection",
         "ReplaceTransitGatewayRoute", "DeleteTransitGatewayRoute", "CreateTransitGatewayRoute",
         "DisassociateTransitGatewayRouteTable", "DisableTransitGatewayRouteTablePropagation",
-        "ModifyTransitGatewayVpcAttachment", "DeleteTransitGatewayVpcAttachment"
+        "ModifyTransitGatewayVpcAttachment", "DeleteTransitGatewayVpcAttachment",
+        "ModifySecurityGroupRules", "EnableTransitGatewayRouteTablePropagation", "AssociateTransitGatewayRouteTable",
+        "DeleteVpcPeeringConnection", "ModifyNetworkInterfaceAttribute", "ModifyInstanceAttribute",
+        "StopInstances", "TerminateInstances", "ChangeResourceRecordSets",
+        "DeregisterTargets", "ModifyTargetGroup", "ModifyListener", "DeleteListener"
       ],
-      "description": "CloudTrail write call that changes network reachability (security groups, NACLs, routes, VPN, TGW).",
+      "description": "CloudTrail write call that changes network reachability (security groups, NACLs, routes, VPN, TGW, DNS records, load balancers, or stops a network appliance instance).",
       "rule": {
         "type": "event_presence", "min_severity": "info",
         "names": [
@@ -111,7 +205,11 @@
           "ModifyVpnTunnelOptions", "ModifyVpnConnection", "DeleteVpnConnection",
           "ReplaceTransitGatewayRoute", "DeleteTransitGatewayRoute", "CreateTransitGatewayRoute",
           "DisassociateTransitGatewayRouteTable", "DisableTransitGatewayRouteTablePropagation",
-          "ModifyTransitGatewayVpcAttachment", "DeleteTransitGatewayVpcAttachment"
+          "ModifyTransitGatewayVpcAttachment", "DeleteTransitGatewayVpcAttachment",
+          "ModifySecurityGroupRules", "EnableTransitGatewayRouteTablePropagation", "AssociateTransitGatewayRouteTable",
+          "DeleteVpcPeeringConnection", "ModifyNetworkInterfaceAttribute", "ModifyInstanceAttribute",
+          "StopInstances", "TerminateInstances", "ChangeResourceRecordSets",
+          "DeregisterTargets", "ModifyTargetGroup", "ModifyListener", "DeleteListener"
         ]
       }
     },

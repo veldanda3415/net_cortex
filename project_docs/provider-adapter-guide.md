@@ -76,15 +76,25 @@ Timeouts are applied for you. Each plugin call is wrapped in `sources.<name>.tim
 |---|---|---|
 | `simulation` | metrics, logs, routing, config, topology | Implemented. Serves `simulation/scenarios.py`, rebased so each scenario's incident time lands on `end_time`. Ages are rounded to whole seconds. LogEvent/ConfigChange rows have no region, so they are filtered at bundle level. |
 | `replay` | metrics, logs, routing, config, topology | Implemented. Reads recorded v2 fixtures (`fixtures_dir` or `fixtures`) and shifts every timestamp by `query.end_time − recorded_window.end`. Used for CI, and later for replaying recorded AWS sessions offline. See `tests/fixtures/replay/`. |
-| `cloudwatch` | metrics | Skeleton |
-| `cloudtrail` | config | Skeleton |
-| `tgw_routes` | routing, topology | Skeleton |
-| `flow_logs` | logs, metrics | Skeleton |
-| `frr_ssm` | logs, routing | Skeleton |
+| `cloudwatch` | metrics | Implemented (`plugins/aws/`). CloudWatch metrics listed in config, by namespace, metric names, statistic and exact dimension set. |
+| `cloudwatch_logs` | logs, routing | Implemented. One FilterLogEvents query per configured log group. `classify` rules give each error class its own signal name, either per line or as a per-minute count. Flow logs, VPN logs, FRR/charon, Resolver queries and Network Manager events all go through it. `deny_log_groups` refuses a log group at startup. |
+| `cloudtrail` | config | Implemented. LookupEvents write calls from an `event_sources` allow-list, with the changed resource as the entity. |
+| `tgw_routes` | routing | Implemented. Current TGW blackhole routes, only for windows that end near now (it's a snapshot). |
+| `frr_ssm` | logs, routing | Skeleton. The lab ships FRR logs to CloudWatch instead. |
 | `prometheus` | metrics | Skeleton (moved here from `providers/adapters/`) |
 | `elk`, `splunk` | logs | Skeleton (moved here from `providers/adapters/`) |
 
-Skeletons (`SkeletonPlugin`) raise `NotImplementedError` and contain no boto3. Their docstrings list the API calls and IAM actions the real implementation will need, so the telemetry pod's IAM policy can be reviewed up front. Enabling a skeleton fails server startup with a clear error rather than serving guaranteed-failed coverage.
+Skeletons (`SkeletonPlugin`) raise `NotImplementedError`. Their docstrings list the API calls the real implementation will need, so a reviewer can check the IAM or API permissions up front. Enabling a skeleton fails server startup with a clear error rather than serving guaranteed-failed coverage.
+
+The AWS plugins import boto3 only when one is enabled, and every call they make is a read. [`config/telemetry.aws-lab.yaml`](../config/telemetry.aws-lab.yaml) configures them for the lab in `infra/live/lab`. Pointing them at another AWS account means editing that file, not the code.
+
+### Adding another cloud or on-prem backend
+
+Nothing above the plugins is AWS-specific. Agents, detection, the orchestrator and the synthesizer only see contract v2 signals and the catalog. Adding Azure, GCP or an on-prem stack takes three pieces:
+
+1. **Source plugins.** Put them in a package such as `plugins/azure/` (Azure Monitor metrics, Log Analytics, Activity Log) or `plugins/gcp/` (Cloud Monitoring, Cloud Logging, Cloud Audit Logs), or extend the Prometheus/ELK/Splunk skeletons for on-prem. Import the SDK lazily, as `plugins/aws/base.py` does.
+2. **Catalog entries.** Give the backend's native names meaning: a `signals.json` entry with a rule, or `match_names` on an existing signal (for example, an Azure Activity Log `Microsoft.Network/networkSecurityGroups/securityRules/write` alongside the CloudTrail mutations). Add new resource kinds to `entities.json`. These can live in a `$NETCORTEX_CATALOG_DIR` override per environment.
+3. **An alert adapter.** This maps the backend's alert schema onto the `/incidents` payload, as `ingestion/cloudwatch_alarms.py` does for CloudWatch alarm events. If NetCortex can't be reached from that cloud, add a pull bridge like `ingestion/sqs_alarm_bridge.py` (for example, a Pub/Sub or Service Bus subscriber).
 
 ### Configuring sources (telemetry server)
 
