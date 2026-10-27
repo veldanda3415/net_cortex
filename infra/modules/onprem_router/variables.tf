@@ -86,3 +86,15 @@ variable "mss" {
   type        = number
   default     = 1359
 }
+
+variable "metric_namespace" {
+  description = "CloudWatch namespace for the router's BGP metrics."
+  type        = string
+  default     = "NetCortexLab/Router"
+}
+
+variable "log_retention_days" {
+  description = "Retention for the router's FRR and charon log groups."
+  type        = number
+  default     = 3
+}

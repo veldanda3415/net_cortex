@@ -8,3 +8,9 @@ variable "retention_days" {
   type        = number
   default     = 3
 }
+
+variable "transit_gateways" {
+  description = "Transit gateway IDs keyed by short name; each gets its own TGW flow log."
+  type        = map(string)
+  default     = {}
+}

@@ -86,3 +86,23 @@ output "dashboard_url" {
   description = "CloudWatch dashboard with every flow, the NLB targets and the VPN tunnels."
   value       = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#dashboards/dashboard/${aws_cloudwatch_dashboard.lab.dashboard_name}"
 }
+
+output "tgw_flow_log_groups" {
+  description = "TGW Flow Log groups keyed by TGW name."
+  value       = module.flowlogs.tgw_log_group_names
+}
+
+output "router_log_groups" {
+  description = "Router FRR and charon log groups."
+  value       = module.onprem_router.log_group_names
+}
+
+output "network_manager_events_log_group" {
+  description = "Network Manager events, forwarded from us-west-2."
+  value       = aws_cloudwatch_log_group.network_manager_events.name
+}
+
+output "global_network_id" {
+  description = "Network Manager global network ID (us-west-2)."
+  value       = aws_networkmanager_global_network.lab.id
+}

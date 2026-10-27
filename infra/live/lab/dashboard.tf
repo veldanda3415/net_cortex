@@ -80,6 +80,30 @@ locals {
         yAxis = { left = { min = 0, max = 1 } }
       }
     },
+    {
+      type = "metric", x = 0, y = 12, width = 12, height = 6
+      properties = {
+        title  = "Router BGP (state 1 = Established; prefixes received)"
+        region = var.region
+        view   = "timeSeries"
+        stat   = "Minimum"
+        period = 60
+        metrics = flatten([
+          for n in local.bgp_neighbors : [
+            [module.onprem_router.metric_namespace, "BgpPeerState", "Neighbor", n, { label = "${n} state" }],
+            [module.onprem_router.metric_namespace, "PrefixesReceived", "Neighbor", n, { label = "${n} prefixes", yAxis = "right" }],
+          ]
+        ])
+        yAxis = { left = { min = 0, max = 1 }, right = { min = 0 } }
+      }
+    },
+    {
+      type = "alarm", x = 12, y = 12, width = 12, height = 6
+      properties = {
+        title  = "Baseline alarms (all OK = healthy lab)"
+        alarms = [for a in aws_cloudwatch_metric_alarm.baseline : a.arn]
+      }
+    },
   ]
 }
 

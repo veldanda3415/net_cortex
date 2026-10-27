@@ -7,5 +7,6 @@ module "flowlogs" {
     security = module.security_vpc.vpc_id
     onprem   = module.onprem_vpc.vpc_id
   }
-  retention_days = var.flow_log_retention_days
+  transit_gateways = { core = module.tgw.id }
+  retention_days   = var.flow_log_retention_days
 }

@@ -29,6 +29,15 @@ The ephemeral lab root. Bring it up for a session and tear it down afterwards. T
 
 Each flow publishes `Requests`, `Failures`, `SuccessRate` and latency or throughput to `NetCortexLab/Traffic` (dimension `Flow`) once a minute. Failures are also logged with their reason: `journalctl -u netcortex-traffic`.
 
+**Stage 1 PR 4 (telemetry)** adds the rest of the telemetry from spec §4:
+- TGW Flow Logs (`/netcortex-lab/tgw-flow/core`), which record why the TGW dropped a flow: no route, blackhole, MTU or TTL
+- router BGP metrics every minute (`NetCortexLab/Router`: `BgpPeerState`, `PrefixesReceived`, `PrefixesSent` per neighbor)
+- router FRR and strongSwan (charon) logs, shipped by the CloudWatch agent (`/netcortex-lab/router/{frr,charon}`)
+- Network Manager: the TGW registered in a global network. Its events (VPN/BGP up and down, routes installed and removed) arrive in us-west-2, get forwarded to us-east-1 and are written to `/netcortex-lab/networkmanager/events`
+- 13 baseline alarms with no actions, shown on the dashboard. All OK means the lab is healthy.
+
+The firewall logs (iptables drops, conntrack) come with the firewalls in PR 5.
+
 The flag `enable_inspection` is wired into the TGW route tables, but it's rejected until the firewalls land in PR 5.
 
 Costs about **$0.38/hr** while it's up: 4 TGW attachments, the VPN, 1 NAT, the NLB, 2 public IPv4, the t4g.small router and 4 t4g.nano workloads. Logs and custom metrics add a little. The private zone is free if deleted within 12 hours, so always `make down` the same day.
@@ -123,3 +132,23 @@ done
 The DNS flow also shows up in the Resolver query logs (`/netcortex-lab/dns/resolver-queries`) as `app.lab.internal` with `NOERROR`.
 
 If a flow stays red, look on that instance with `aws ssm start-session --target <id>` (IDs in the `workload_instance_ids` output), then `journalctl -u netcortex-workload` for bring-up and `journalctl -u netcortex-traffic` for per-request failures.
+
+## Exit test: every telemetry source has data
+
+About 10 minutes after `make up`, each of these should return something:
+
+```bash
+since=$(( ($(date +%s) - 900) * 1000 ))
+for lg in /netcortex-lab/tgw-flow/core /netcortex-lab/router/frr /netcortex-lab/router/charon \
+          /netcortex-lab/networkmanager/events /netcortex-lab/vpn/bgp /netcortex-lab/dns/resolver-queries; do
+  printf '%-40s %s events\n' "$lg" \
+    "$(aws logs filter-log-events --log-group-name "$lg" --start-time $since --max-items 50 --query 'length(events)')"
+done
+
+aws cloudwatch list-metrics --namespace NetCortexLab/Router --query 'Metrics[].[MetricName,Dimensions[0].Value]' --output table
+aws cloudwatch describe-alarms --alarm-name-prefix netcortex-lab- --query 'MetricAlarms[].[AlarmName,StateValue]' --output table
+```
+
+All alarms should be `OK`. The two VPN alarms and the two BGP alarms start as `ALARM` and clear once the router is up.
+
+The Network Manager log only fills when something changes. Bring-up itself (attachments created, tunnels and BGP coming up) is enough, provided the TGW is registered before the router finishes. If the log is empty, restart the BGP session on the router (`sudo vtysh -c 'clear bgp *'`), and the up/down events should appear within a couple of minutes.
