@@ -50,6 +50,8 @@ The firewalls also source-NAT internet-bound traffic. With one NAT and a firewal
 
 Costs about **$0.39/hr** while it's up: 4 TGW attachments, the VPN, 1 NAT, the NLB, 2 public IPv4, the t4g.small router and 5 t4g.nano workloads (including the partner). Inspection adds 2 more t4g.nano (~$0.01/hr). Logs and custom metrics add a little. The private zone is free if deleted within 12 hours, so always `make down` the same day.
 
+**Stage 1 PR 6 (faults)** adds the `/netcortex-lab/faults` log group (eval ground truth that NetCortex must never read) and a `fault_targets` output. Together they drive the fault scripts in [`infra/faults/`](../../faults/README.md).
+
 ## One-time setup (before the first apply)
 
 1. Apply `infra/bootstrap` again to create the reaper's `netcortex-gha-apply` role.
