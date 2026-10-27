@@ -8,6 +8,7 @@ It creates:
 | Resource | Details |
 |---|---|
 | S3 state bucket `netcortex-tfstate-<account_id>` | Versioning, SSE-S3, all public access blocked, deny non-TLS, noncurrent versions expire after 30 days, `prevent_destroy` |
+| Account S3 Block Public Access | All four settings on for the whole account, so a future lab bucket can't be made public by mistake |
 | AWS Budget `netcortex-monthly` | $50/month; email at 50/80/100% actual and 100% forecast |
 | IAM OIDC provider | `token.actions.githubusercontent.com`, audience `sts.amazonaws.com` |
 | IAM role `netcortex-gha-plan` | Trusted by `veldanda3415/net_cortex` pull requests and `main` only; `ReadOnlyAccess` plus read/write on the state bucket; 1-hour max session |
@@ -46,10 +47,12 @@ The first apply keeps state in `infra/bootstrap/terraform.tfstate` on your machi
 
 ## Migrate state into the bucket
 
+Read the bucket name **before** creating `backend.tf`. Once that file exists, `terraform output` refuses to run until the backend is initialized. The substitution would then come back empty, and init would fail with "The value cannot be empty".
+
 ```bash
+B=$(terraform output -raw state_bucket_name); echo "$B"
 cp backend.tf.example backend.tf
-terraform init -migrate-state \
-  -backend-config="bucket=$(terraform output -raw state_bucket_name)"
+terraform init -migrate-state -backend-config="bucket=$B"
 # answer "yes" to copy the existing state to the new backend
 
 terraform plan          # must report "No changes."
@@ -92,6 +95,8 @@ B=$(terraform output -raw state_bucket_name)
 aws s3api get-bucket-versioning --bucket "$B"                    # Status: Enabled
 aws s3api get-bucket-encryption --bucket "$B"                    # AES256
 aws s3api get-public-access-block --bucket "$B"                  # all four true
+aws s3control get-public-access-block \
+  --account-id "$(aws sts get-caller-identity --query Account --output text)"   # all four true
 aws s3api get-bucket-policy --bucket "$B" --query Policy --output text   # DenyNonTLS
 aws s3api get-bucket-lifecycle-configuration --bucket "$B"       # NoncurrentDays: 30
 aws budgets describe-notifications-for-budget \

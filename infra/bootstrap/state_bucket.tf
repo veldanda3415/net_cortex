@@ -107,3 +107,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "tfstate" {
 
   depends_on = [aws_s3_bucket_versioning.tfstate]
 }
+
+# Account-wide guardrail: no bucket in this account (lab roots included) can be made public.
+resource "aws_s3_account_public_access_block" "account" {
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
