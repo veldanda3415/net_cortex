@@ -12,8 +12,7 @@ It creates:
 | AWS Budget `netcortex-monthly` | $50/month; email at 50/80/100% actual and 100% forecast |
 | IAM OIDC provider | `token.actions.githubusercontent.com`, audience `sts.amazonaws.com` |
 | IAM role `netcortex-gha-plan` | Trusted by `veldanda3415/net_cortex` pull requests and `main` only; `ReadOnlyAccess` plus read/write on the state bucket; 1-hour max session |
-
-The apply role and the nightly reaper come in Stage 1 PR 1, not here.
+| IAM role `netcortex-gha-apply` | Used by the nightly reaper. Trusted only by the `lab-reaper` GitHub environment, which is limited to `main`. Can tear down lab services and `netcortex-lab-*` IAM, but can't create IAM or change account guardrails |
 
 This root is applied by a human only (spec D9). CI never applies it.
 
