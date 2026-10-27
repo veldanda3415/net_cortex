@@ -21,6 +21,8 @@ locals {
     aws_asn        = var.aws_asn
     mtu            = var.mtu
     mss            = var.mss
+    vpn_mode       = var.vpn_mode
+    cloud_cidr     = var.cloud_cidr
 
     metric_namespace = var.metric_namespace
     log_groups       = { for k, lg in aws_cloudwatch_log_group.router : k => lg.name }

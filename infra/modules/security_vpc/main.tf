@@ -34,8 +34,8 @@ resource "aws_nat_gateway" "a" {
   tags = { Name = "netcortex-lab-nat-a" }
 }
 
-# Appliance mode keeps both directions of a flow in the same AZ once firewalls
-# exist (spec D4); turning it off is one of the catalogued faults.
+# Appliance mode keeps both directions of a flow in the same AZ, so each flow
+# sees one stateful firewall (spec D4); turning it off is a catalogued fault.
 resource "aws_ec2_transit_gateway_vpc_attachment" "this" {
   transit_gateway_id                              = var.transit_gateway_id
   vpc_id                                          = module.vpc.vpc_id
@@ -66,14 +66,36 @@ resource "aws_route" "public_return" {
   depends_on = [aws_ec2_transit_gateway_vpc_attachment.this]
 }
 
-# --- TGW subnets: inspection off sends everything straight to the NAT ---
-# Inspection on (0/0 -> same-AZ firewall ENI, fw subnets -> NAT) lands with the
-# firewalls in Stage 1 PR 5; until then the root refuses enable_inspection = true.
+# --- TGW subnets: to the same-AZ firewall with inspection on, else straight to NAT ---
 
 resource "aws_route" "tgw_default" {
   for_each = module.vpc.route_table_ids_by_role["tgw"]
 
   route_table_id         = each.value
   destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = length(var.firewall_eni_ids) == 0 ? aws_nat_gateway.a.id : null
+  network_interface_id   = length(var.firewall_eni_ids) == 0 ? null : var.firewall_eni_ids[trimprefix(each.key, "tgw-")]
+}
+
+# --- firewall subnets: internet via NAT, lab ranges back into the TGW ---
+
+resource "aws_route" "fw_default" {
+  for_each = module.vpc.route_table_ids_by_role["fw"]
+
+  route_table_id         = each.value
+  destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.a.id
+}
+
+resource "aws_route" "fw_return" {
+  for_each = {
+    for pair in setproduct(keys(module.vpc.route_table_ids_by_role["fw"]), var.return_cidrs) :
+    "${pair[0]}/${pair[1]}" => { rt = module.vpc.route_table_ids_by_role["fw"][pair[0]], cidr = pair[1] }
+  }
+
+  route_table_id         = each.value.rt
+  destination_cidr_block = each.value.cidr
+  transit_gateway_id     = var.transit_gateway_id
+
+  depends_on = [aws_ec2_transit_gateway_vpc_attachment.this]
 }

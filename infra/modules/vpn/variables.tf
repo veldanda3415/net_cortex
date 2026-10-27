@@ -28,3 +28,9 @@ variable "log_retention_days" {
   type        = number
   default     = 3
 }
+
+variable "static_routes_only" {
+  description = "Static VPN (no BGP). Changing it replaces the VPN connection."
+  type        = bool
+  default     = false
+}

@@ -24,3 +24,9 @@ variable "return_cidrs" {
   type        = list(string)
   default     = ["10.0.0.0/8", "172.16.0.0/16"]
 }
+
+variable "firewall_eni_ids" {
+  description = "Firewall ENI per AZ letter (a, b). Empty = inspection off: the TGW subnets go straight to the NAT."
+  type        = map(string)
+  default     = {}
+}

@@ -34,6 +34,7 @@ module "security_vpc" {
 
   az_names           = local.az_names
   transit_gateway_id = module.tgw.id
+  firewall_eni_ids   = var.enable_inspection ? module.firewall[0].network_interface_ids : {}
 }
 
 locals {

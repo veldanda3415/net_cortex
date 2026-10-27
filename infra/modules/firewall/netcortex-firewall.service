@@ -1,0 +1,13 @@
+[Unit]
+Description=NetCortex inspection firewall (forwarding, iptables, drop logs, metrics)
+Wants=network-online.target
+After=network-online.target snapd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/netcortex-firewall-up
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

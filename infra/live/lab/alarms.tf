@@ -57,7 +57,8 @@ locals {
     },
     {
       # Missing data breaches: no metric at all means the router or its timer is gone.
-      for n in local.bgp_neighbors : "bgp-${n}-down" => {
+      # A static VPN has no BGP to watch.
+      for n in(var.vpn_mode == "static" ? [] : local.bgp_neighbors) : "bgp-${n}-down" => {
         description = "The router's BGP session to ${n} is not Established."
         namespace   = module.onprem_router.metric_namespace
         metric      = "BgpPeerState"
@@ -79,6 +80,19 @@ locals {
         comparison  = "LessThanThreshold"
         threshold   = 100
         missing     = "missing"
+      }
+    },
+    {
+      # Missing data breaches: with inspection on, a silent firewall is a dead one.
+      for az in(var.enable_inspection ? ["a", "b"] : []) : "fw-${az}-silent" => {
+        description = "Firewall fw-${az} stopped reporting (instance down or telemetry broken)."
+        namespace   = module.firewall[0].metric_namespace
+        metric      = "ConntrackCount"
+        dimensions  = { Firewall = "fw-${az}" }
+        statistic   = "SampleCount"
+        comparison  = "LessThanThreshold"
+        threshold   = 1
+        missing     = "breaching"
       }
     },
   )

@@ -48,7 +48,7 @@ resource "aws_vpn_connection" "onprem" {
   transit_gateway_id  = var.transit_gateway_id
   customer_gateway_id = aws_customer_gateway.onprem.id
   type                = "ipsec.1"
-  static_routes_only  = false
+  static_routes_only  = var.static_routes_only
 
   # --- tunnel 1 ---
   tunnel1_inside_cidr                  = local.tunnels["1"].inside_cidr

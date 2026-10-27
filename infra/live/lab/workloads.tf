@@ -4,12 +4,23 @@
 #   onprem-to-nlb-large  client -> NLB /large.bin (256 KiB), every 10s (MTU/MSS canary)
 #   onprem-iperf-app-a   client -> app-a, UDP 2 Mbps for 10s every minute (loss/jitter)
 #   svc-to-app           svc -> app.lab.internal -> NLB, every 5s (east-west, DNS-dependent)
+# With enable_peering:
+#   app-to-partner       app-a -> partner over peering, every 10s
+#   onprem-to-partner    client -> partner, every 30s, expected BLOCKED (peering is not transitive)
 
 locals {
   traffic_namespace = "NetCortexLab/Traffic"
   shared_cidr       = module.shared_vpc.cidr_block
   app_cidr          = module.app_vpc.cidr_block
   nlb_url           = "http://${aws_lb.app.dns_name}"
+  partner_url       = var.enable_peering ? "http://${aws_instance.partner[0].private_ip}/" : null
+
+  # Flow names, for the dashboard and alarms.
+  http_flows = concat(
+    ["onprem-to-nlb", "onprem-to-nlb-large", "svc-to-app"],
+    var.enable_peering ? ["app-to-partner", "onprem-to-partner"] : [],
+  )
+  iperf_flow = "onprem-iperf-app-a"
 }
 
 # --- IAM: SSM plus PutMetricData to the traffic namespace only ---
@@ -192,6 +203,10 @@ module "app" {
   instance_profile_name = aws_iam_instance_profile.workload.name
   web                   = true
   iperf_server          = each.key == "a"
+  metric_namespace      = local.traffic_namespace
+  flows = each.key == "a" && var.enable_peering ? [
+    { name = "app-to-partner", kind = "http", target = local.partner_url, interval = 10 },
+  ] : []
 
   # Package install needs the egress path (TGW -> NAT) in place.
   depends_on = [
@@ -232,11 +247,16 @@ module "client" {
   security_group_ids    = [aws_security_group.traffic_source["client"].id]
   instance_profile_name = aws_iam_instance_profile.workload.name
   metric_namespace      = local.traffic_namespace
-  flows = [
-    { name = "onprem-to-nlb", kind = "http", target = "${local.nlb_url}/", interval = 2 },
-    { name = "onprem-to-nlb-large", kind = "http", target = "${local.nlb_url}/large.bin", interval = 10, timeout = 10 },
-    { name = "onprem-iperf-app-a", kind = "iperf", target = module.app["a"].private_ip, interval = 60, bitrate_mbps = 2, duration = 10 },
-  ]
+  flows = concat(
+    [
+      { name = "onprem-to-nlb", kind = "http", target = "${local.nlb_url}/", interval = 2 },
+      { name = "onprem-to-nlb-large", kind = "http", target = "${local.nlb_url}/large.bin", interval = 10, timeout = 10 },
+      { name = "onprem-iperf-app-a", kind = "iperf", target = module.app["a"].private_ip, interval = 60, bitrate_mbps = 2, duration = 10 },
+    ],
+    var.enable_peering ? [
+      { name = "onprem-to-partner", kind = "http", target = local.partner_url, interval = 30, timeout = 3, expect = "blocked" },
+    ] : [],
+  )
 
   # Egress is via the router's MASQUERADE; workload-up retries until it is ready.
   depends_on = [aws_route.onprem_lan_default]
