@@ -86,12 +86,12 @@ locals {
         view   = "timeSeries"
         stat   = "Minimum"
         period = 60
-        metrics = flatten([
+        metrics = concat([
           for n in local.bgp_neighbors : [
             [module.onprem_router.metric_namespace, "BgpPeerState", "Neighbor", n, { label = "${n} state" }],
             [module.onprem_router.metric_namespace, "PrefixesReceived", "Neighbor", n, { label = "${n} prefixes", yAxis = "right" }],
           ]
-        ])
+        ]...)
         yAxis = { left = { min = 0, max = 1 }, right = { min = 0 } }
       }
     },
@@ -103,12 +103,12 @@ locals {
         view   = "timeSeries"
         stat   = "Maximum"
         period = 60
-        metrics = flatten([
+        metrics = concat([
           for az in ["a", "b"] : [
             ["NetCortexLab/Firewall", "ConntrackCount", "Firewall", "fw-${az}", { label = "fw-${az} conntrack" }],
             ["NetCortexLab/Firewall", "ForwardDrops", "Firewall", "fw-${az}", { label = "fw-${az} drops", yAxis = "right", stat = "Sum" }],
           ]
-        ])
+        ]...)
         yAxis = { left = { min = 0 }, right = { min = 0 } }
       }
     },
