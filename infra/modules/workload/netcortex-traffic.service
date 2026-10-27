@@ -1,7 +1,9 @@
 [Unit]
 Description=NetCortex lab traffic agent (synthetic flows -> CloudWatch metrics)
+# Not ordered after netcortex-workload: that unit starts this one from inside its
+# own ExecStart, so such an ordering deadlocks the first boot.
 Wants=network-online.target
-After=network-online.target netcortex-workload.service
+After=network-online.target
 
 [Service]
 ExecStart=/usr/bin/python3 /usr/local/bin/netcortex-traffic /etc/netcortex/workload.json

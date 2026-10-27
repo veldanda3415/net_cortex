@@ -191,6 +191,13 @@ resource "aws_instance" "router" {
 
   tags = { Name = "netcortex-lab-onprem-router" }
 
+  # The check is set on the WAN ENI (off). The instance attribute can't be set
+  # alongside primary_network_interface and defaults to true, so every plan
+  # would try to turn it back on.
+  lifecycle {
+    ignore_changes = [source_dest_check]
+  }
+
   depends_on = [aws_eip_association.wan, aws_iam_role_policy.psk]
 }
 
