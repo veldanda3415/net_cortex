@@ -320,6 +320,34 @@ def serve(config: str = typer.Option("config/config.yaml")):
     asyncio.run(_serve())
 
 
+@app.command(name="alarm-bridge")
+def alarm_bridge(
+    queue_url: str = typer.Option(..., help="SQS queue EventBridge sends CloudWatch alarm changes to"),
+    webhook_url: str = typer.Option("http://127.0.0.1:8000/incidents", help="NetCortex `serve` webhook"),
+    region: str = typer.Option("us-east-1"),
+    profile: str = typer.Option(None, help="AWS profile (default: the standard credential chain)"),
+    quiet_seconds: float = typer.Option(60.0, help="A burst of alarms ends after this long with no new alarm"),
+    max_group_seconds: float = typer.Option(180.0, help="...or this long after its first alarm"),
+    out_dir: str = typer.Option("output/alarm_bridge", help="Where each incident and its RCA report are saved"),
+    token_env: str = typer.Option("NETCORTEX_WEBHOOK_TOKEN", help="Env var with the webhook bearer token, if auth is on"),
+):
+    """Forward CloudWatch alarms from SQS to POST /incidents, one incident per burst."""
+    import boto3
+
+    from ingestion.sqs_alarm_bridge import SqsAlarmBridge
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    session = boto3.Session(profile_name=profile) if profile else boto3.Session()
+    bridge = SqsAlarmBridge(
+        queue_url, webhook_url, sqs_client=session.client("sqs", region_name=region), out_dir=Path(out_dir),
+        quiet_seconds=quiet_seconds, max_group_seconds=max_group_seconds, token=os.environ.get(token_env) or None,
+    )
+    try:
+        asyncio.run(bridge.run())
+    except KeyboardInterrupt:
+        pass
+
+
 @app.command()
 def eval(
     all_scenarios: bool = typer.Option(False, "--all-scenarios", help="Run evaluation across all bundled scenarios"),
