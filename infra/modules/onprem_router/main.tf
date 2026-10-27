@@ -21,6 +21,11 @@ locals {
     aws_asn        = var.aws_asn
     mtu            = var.mtu
     mss            = var.mss
+    vpn_mode       = var.vpn_mode
+    cloud_cidr     = var.cloud_cidr
+
+    metric_namespace = var.metric_namespace
+    log_groups       = { for k, lg in aws_cloudwatch_log_group.router : k => lg.name }
     tunnels = [
       for i, t in var.tunnels : {
         outside_ip      = t.outside_ip
@@ -42,9 +47,15 @@ locals {
       { path = "/etc/netcortex/router.json", permissions = "0644", content = jsonencode(local.router_config) },
       { path = "/usr/local/sbin/netcortex-router-up", permissions = "0755", content = file("${path.module}/router-up.sh") },
       { path = "/etc/systemd/system/netcortex-router.service", permissions = "0644", content = file("${path.module}/netcortex-router.service") },
+      { path = "/usr/local/sbin/netcortex-router-telemetry", permissions = "0755", content = file("${path.module}/router-telemetry.sh") },
+      { path = "/usr/local/sbin/netcortex-bgp-metrics", permissions = "0755", content = file("${path.module}/bgp-metrics.sh") },
+      { path = "/etc/systemd/system/netcortex-router-telemetry.service", permissions = "0644", content = file("${path.module}/netcortex-router-telemetry.service") },
+      { path = "/etc/systemd/system/netcortex-bgp-metrics.service", permissions = "0644", content = file("${path.module}/netcortex-bgp-metrics.service") },
+      { path = "/etc/systemd/system/netcortex-bgp-metrics.timer", permissions = "0644", content = file("${path.module}/netcortex-bgp-metrics.timer") },
     ]
     runcmd = [
       ["systemctl", "daemon-reload"],
+      ["systemctl", "enable", "--now", "--no-block", "netcortex-router-telemetry.service"],
       ["systemctl", "enable", "--now", "netcortex-router.service"],
     ]
   })}"
@@ -160,6 +171,39 @@ resource "aws_iam_role_policy" "psk" {
   policy = data.aws_iam_policy_document.psk.json
 }
 
+# --- telemetry: FRR/charon logs via the CloudWatch agent, BGP metrics via the timer ---
+
+resource "aws_cloudwatch_log_group" "router" {
+  for_each = toset(["frr", "charon"])
+
+  name              = "/netcortex-lab/router/${each.key}"
+  retention_in_days = var.log_retention_days
+}
+
+data "aws_iam_policy_document" "telemetry" {
+  statement {
+    actions   = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
+    resources = flatten([for lg in aws_cloudwatch_log_group.router : [lg.arn, "${lg.arn}:*"]])
+  }
+
+  statement {
+    actions   = ["cloudwatch:PutMetricData"]
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "cloudwatch:namespace"
+      values   = [var.metric_namespace]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "telemetry" {
+  name   = "router-telemetry"
+  role   = aws_iam_role.router.id
+  policy = data.aws_iam_policy_document.telemetry.json
+}
+
 resource "aws_iam_instance_profile" "router" {
   name = "netcortex-lab-onprem-router"
   role = aws_iam_role.router.name
@@ -198,7 +242,7 @@ resource "aws_instance" "router" {
     ignore_changes = [source_dest_check]
   }
 
-  depends_on = [aws_eip_association.wan, aws_iam_role_policy.psk]
+  depends_on = [aws_eip_association.wan, aws_iam_role_policy.psk, aws_iam_role_policy.telemetry]
 }
 
 resource "aws_network_interface_attachment" "lan" {

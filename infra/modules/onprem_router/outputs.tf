@@ -17,3 +17,13 @@ output "wan_private_ip" {
   description = "Router WAN private IP (VTI local address)."
   value       = aws_network_interface.wan.private_ip
 }
+
+output "log_group_names" {
+  description = "Router log groups (frr, charon)."
+  value       = { for k, lg in aws_cloudwatch_log_group.router : k => lg.name }
+}
+
+output "metric_namespace" {
+  description = "CloudWatch namespace of the router's BGP metrics."
+  value       = var.metric_namespace
+}

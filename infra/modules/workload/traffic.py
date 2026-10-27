@@ -7,6 +7,9 @@ to CloudWatch (dimension Flow=<name>):
   http  : Requests, Failures, SuccessRate (%), LatencyMs (statistic set, successes only)
   iperf : Requests, Failures, SuccessRate (%), ThroughputMbps, LossPercent, JitterMs
 
+A flow with expect = "blocked" succeeds when the target is NOT reachable (e.g.
+the partner VPC from on-prem: peering is not transitive), so 100% stays healthy.
+
 Every failure is also logged to the journal with its reason, which is what an
 operator sees first when a fault is injected.
 """
@@ -62,18 +65,24 @@ def log(msg):
 
 def http_flow(flow, window):
     timeout = flow["timeout"]
+    expect_reachable = flow.get("expect", "success") == "success"
     while True:
         start = time.monotonic()
         try:
             with urllib.request.urlopen(flow["target"], timeout=timeout) as resp:
                 resp.read()
-                ok = resp.status == 200
+                reached = resp.status == 200
                 reason = f"HTTP {resp.status}"
-        except Exception as exc:  # timeouts, resets, DNS failures: all count as failures
-            ok, reason = False, f"{type(exc).__name__}: {exc}"
+        except Exception as exc:  # timeouts, resets, DNS failures: all count as unreachable
+            reached, reason = False, f"{type(exc).__name__}: {exc}"
         elapsed = time.monotonic() - start
-        if ok:
+        if not expect_reachable:
+            reason = "reachable, but expected to be blocked" if reached else reason
+        ok = reached == expect_reachable
+        if ok and reached:
             window.record(flow["name"], True, LatencyMs=elapsed * 1000)
+        elif ok:
+            window.record(flow["name"], True)
         else:
             window.record(flow["name"], False)
             log(f"FAIL flow={flow['name']} target={flow['target']} after={elapsed:.1f}s reason={reason}")

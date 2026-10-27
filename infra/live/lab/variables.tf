@@ -24,14 +24,9 @@ variable "az_ids" {
 }
 
 variable "enable_inspection" {
-  description = "Route spoke and on-prem traffic through the security VPC firewalls (spec D3)."
+  description = "Build the security VPC firewalls and route spoke and on-prem traffic through them (spec D3)."
   type        = bool
   default     = false
-
-  validation {
-    condition     = !var.enable_inspection
-    error_message = "Inspection firewalls are not built yet (Stage 1 PR 5); enable_inspection must stay false."
-  }
 }
 
 variable "flow_log_retention_days" {
@@ -74,4 +69,25 @@ variable "dns_query_log_retention_days" {
   description = "Retention for Route 53 Resolver query logs in CloudWatch Logs."
   type        = number
   default     = 3
+}
+
+variable "enable_peering" {
+  description = "Build the partner VPC, peered with app only (the non-transitivity check)."
+  type        = bool
+  default     = true
+}
+
+variable "vpn_mode" {
+  description = <<-EOT
+    bgp_active_standby: tunnel 1 preferred both ways (AS-path prepend out, local-pref in on tunnel 2).
+    bgp_ecmp: both tunnels equal, traffic spread across both.
+    static: no BGP; static routes on both sides. Recreates the VPN (~5-10 min, new tunnel IPs).
+  EOT
+  type        = string
+  default     = "bgp_active_standby"
+
+  validation {
+    condition     = contains(["bgp_active_standby", "bgp_ecmp", "static"], var.vpn_mode)
+    error_message = "vpn_mode must be bgp_active_standby, bgp_ecmp or static."
+  }
 }

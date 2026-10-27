@@ -1,0 +1,13 @@
+[Unit]
+Description=NetCortex on-prem router telemetry (FRR/charon logs, BGP metrics)
+Wants=network-online.target
+After=network-online.target snapd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/netcortex-router-telemetry
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

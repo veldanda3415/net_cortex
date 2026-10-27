@@ -51,6 +51,7 @@ variable "flows" {
     Synthetic flows this instance generates. Each is reported to CloudWatch under its name (dimension Flow).
     kind = "http": GET target (a URL) every interval seconds.
     kind = "iperf": UDP iperf3 to target (a host) at bitrate_mbps for duration seconds, every interval seconds.
+    expect = "blocked" (http only): success means the target was NOT reachable.
   EOT
   type = list(object({
     name         = string
@@ -60,12 +61,18 @@ variable "flows" {
     timeout      = optional(number, 5)
     bitrate_mbps = optional(number, 2)
     duration     = optional(number, 10)
+    expect       = optional(string, "success")
   }))
   default = []
 
   validation {
     condition     = alltrue([for f in var.flows : contains(["http", "iperf"], f.kind)])
     error_message = "flow kind must be http or iperf."
+  }
+
+  validation {
+    condition     = alltrue([for f in var.flows : contains(["success", "blocked"], f.expect) && (f.expect == "success" || f.kind == "http")])
+    error_message = "flow expect must be success or blocked, and blocked is only supported for http flows."
   }
 }
 

@@ -29,9 +29,26 @@ The ephemeral lab root. Bring it up for a session and tear it down afterwards. T
 
 Each flow publishes `Requests`, `Failures`, `SuccessRate` and latency or throughput to `NetCortexLab/Traffic` (dimension `Flow`) once a minute. Failures are also logged with their reason: `journalctl -u netcortex-traffic`.
 
-The flag `enable_inspection` is wired into the TGW route tables, but it's rejected until the firewalls land in PR 5.
+**Stage 1 PR 4 (telemetry)** adds the rest of the telemetry from spec §4:
+- TGW Flow Logs (`/netcortex-lab/tgw-flow/core`), which record why the TGW dropped a flow: no route, blackhole, MTU or TTL
+- router BGP metrics every minute (`NetCortexLab/Router`: `BgpPeerState`, `PrefixesReceived`, `PrefixesSent` per neighbor)
+- router FRR and strongSwan (charon) logs, shipped by the CloudWatch agent (`/netcortex-lab/router/{frr,charon}`)
+- Network Manager: the TGW registered in a global network. Its events (VPN/BGP up and down, routes installed and removed) arrive in us-west-2, get forwarded to us-east-1 and are written to `/netcortex-lab/networkmanager/events`
+- 13 baseline alarms with no actions, shown on the dashboard. All OK means the lab is healthy.
 
-Costs about **$0.38/hr** while it's up: 4 TGW attachments, the VPN, 1 NAT, the NLB, 2 public IPv4, the t4g.small router and 4 t4g.nano workloads. Logs and custom metrics add a little. The private zone is free if deleted within 12 hours, so always `make down` the same day.
+The firewall logs (iptables drops, conntrack) come with the inspection firewalls below.
+
+**Stage 1 PR 5 (add-ons)** adds three toggles:
+
+| Flag | Default | What it does |
+|---|---|---|
+| `enable_peering` | `true` | Partner VPC `10.40.0.0/16`, peered with app only. app-a calls it every 10s (`app-to-partner`). The client checks every 30s that it *cannot* reach it (`onprem-to-partner`, healthy = blocked), because peering is not transitive. |
+| `enable_inspection` | `false` | Two Linux firewalls (fw-a, fw-b) in the security VPC. All spoke, on-prem and egress traffic goes through the firewall in the same AZ. They allow established flows and the lab's own flows, and log and drop everything else to `/netcortex-lab/firewall/drops`. Metrics: `NetCortexLab/Firewall` `ConntrackCount` and `ForwardDrops`. |
+| `vpn_mode` | `bgp_active_standby` | `bgp_ecmp` makes both tunnels equal. `static` removes BGP (static routes on both sides) and **recreates the VPN** (~5-10 min, new tunnel IPs), so only use it in a dedicated session. |
+
+The firewalls also source-NAT internet-bound traffic. With one NAT and a firewall in each AZ, that's what keeps the return path on the same stateful firewall. Without it, the firewall would see only half of each connection.
+
+Costs about **$0.39/hr** while it's up: 4 TGW attachments, the VPN, 1 NAT, the NLB, 2 public IPv4, the t4g.small router and 5 t4g.nano workloads (including the partner). Inspection adds 2 more t4g.nano (~$0.01/hr). Logs and custom metrics add a little. The private zone is free if deleted within 12 hours, so always `make down` the same day.
 
 ## One-time setup (before the first apply)
 
@@ -123,3 +140,40 @@ done
 The DNS flow also shows up in the Resolver query logs (`/netcortex-lab/dns/resolver-queries`) as `app.lab.internal` with `NOERROR`.
 
 If a flow stays red, look on that instance with `aws ssm start-session --target <id>` (IDs in the `workload_instance_ids` output), then `journalctl -u netcortex-workload` for bring-up and `journalctl -u netcortex-traffic` for per-request failures.
+
+## Exit test: every telemetry source has data
+
+About 10 minutes after `make up`, each of these should return something:
+
+```bash
+since=$(( ($(date +%s) - 900) * 1000 ))
+for lg in /netcortex-lab/tgw-flow/core /netcortex-lab/router/frr /netcortex-lab/router/charon \
+          /netcortex-lab/networkmanager/events /netcortex-lab/vpn/bgp /netcortex-lab/dns/resolver-queries; do
+  printf '%-40s %s events\n' "$lg" \
+    "$(aws logs filter-log-events --log-group-name "$lg" --start-time $since --max-items 50 --query 'length(events)')"
+done
+
+aws cloudwatch list-metrics --namespace NetCortexLab/Router --query 'Metrics[].[MetricName,Dimensions[0].Value]' --output table
+aws cloudwatch describe-alarms --alarm-name-prefix netcortex-lab- --query 'MetricAlarms[].[AlarmName,StateValue]' --output table
+```
+
+All alarms should be `OK`. The two VPN alarms and the two BGP alarms start as `ALARM` and clear once the router is up.
+
+The Network Manager log only fills when something changes. Bring-up itself (attachments created, tunnels and BGP coming up) is enough, provided the TGW is registered before the router finishes. If the log is empty, restart the BGP session on the router (`sudo vtysh -c 'clear bgp *'`), and the up/down events should appear within a couple of minutes.
+
+## Exit test: each toggle applies and reverts cleanly
+
+Start from a healthy default lab, with all alarms OK. For each toggle, apply it, wait for the dashboard to go green again, then revert it and check again:
+
+```bash
+make plan TF_ARGS="-var enable_inspection=true" && make up   # ~10 min for the firewalls to boot
+make plan && make up                                         # back to defaults
+
+make plan TF_ARGS="-var vpn_mode=bgp_ecmp" && make up        # router is replaced, ~5 min for BGP
+make plan && make up
+```
+
+What to check:
+- **Inspection on:** every flow stays at 100%, and both firewalls show conntrack entries. `onprem-to-partner` is now dropped *by the firewall* (look for `NETCORTEX-FW-DROP ... DST=10.40.` in the drop log), not by the router.
+- **ECMP:** on the router, `show ip route 10.10.0.0/16` lists two next hops. On the AWS side, both tunnels carry traffic (`TunnelDataIn` on both).
+- **Reverted:** the plan back to defaults is clean, and a second `make plan` afterwards shows **no changes**.

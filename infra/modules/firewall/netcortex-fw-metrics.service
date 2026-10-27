@@ -1,0 +1,6 @@
+[Unit]
+Description=Publish NetCortex firewall metrics to CloudWatch
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/netcortex-fw-metrics

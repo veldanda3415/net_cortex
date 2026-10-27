@@ -86,3 +86,27 @@ variable "mss" {
   type        = number
   default     = 1359
 }
+
+variable "metric_namespace" {
+  description = "CloudWatch namespace for the router's BGP metrics."
+  type        = string
+  default     = "NetCortexLab/Router"
+}
+
+variable "log_retention_days" {
+  description = "Retention for the router's FRR and charon log groups."
+  type        = number
+  default     = 3
+}
+
+variable "vpn_mode" {
+  description = "bgp_active_standby, bgp_ecmp or static (see the lab root's vpn_mode)."
+  type        = string
+  default     = "bgp_active_standby"
+}
+
+variable "cloud_cidr" {
+  description = "Cloud summary routed into the tunnels in static mode."
+  type        = string
+  default     = "10.0.0.0/8"
+}

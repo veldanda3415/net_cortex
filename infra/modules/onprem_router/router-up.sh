@@ -22,6 +22,8 @@ AWS_ASN=$(j .aws_asn)
 MTU=$(j .mtu)
 MSS=$(j .mss)
 N_TUNNELS=$(jq '.tunnels | length' "$CFG")
+VPN_MODE=$(j .vpn_mode)
+CLOUD_CIDR=$(j .cloud_cidr)
 
 WAN_IF=$(ip -o route show default | awk '{print $5; exit}')
 
@@ -43,6 +45,8 @@ net.ipv4.conf.all.rp_filter = 0
 net.ipv4.conf.default.rp_filter = 0
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.all.send_redirects = 0
+# bgp_ecmp: hash on ports too, or the few lab src/dst pairs land on one tunnel
+net.ipv4.fib_multipath_hash_policy = 1
 SYSCTL
 sysctl --system >/dev/null
 
@@ -149,55 +153,71 @@ iptables -t mangle -C FORWARD -j NETCORTEX-MSS 2>/dev/null || iptables -t mangle
 iptables -t nat -C POSTROUTING -s "$LAN_CIDR" -o "$WAN_IF" -j MASQUERADE 2>/dev/null \
   || iptables -t nat -A POSTROUTING -s "$LAN_CIDR" -o "$WAN_IF" -j MASQUERADE
 
-# --- FRR bgpd: two eBGP neighbors over the VTIs, advertise the on-prem summary ---
+# --- FRR: BGP over the VTIs (bgp_* modes), or static routes (static mode) ---
+# bgp_active_standby: tunnel 2 is prepended outbound and gets lower local-pref inbound.
+# bgp_ecmp: both tunnels equal; FRR installs both paths (maximum-paths 2).
+# static: no BGP. 10/8 via tunnel 1, tunnel 2 as a higher-distance backup that is
+#   only used if vti1 goes down (an IPsec SA dropping does not do that: the classic
+#   static-VPN black hole).
 sed -i 's/^bgpd=no/bgpd=yes/' /etc/frr/daemons
 {
   echo "frr defaults traditional"
   echo "hostname onprem-router"
   echo "log syslog informational"
   echo "!"
-  echo "ip route $ONPREM_CIDR blackhole"
-  echo "!"
-  echo "ip prefix-list ONPREM seq 5 permit $ONPREM_CIDR"
-  echo "!"
-  for i in $(seq 0 $((N_TUNNELS - 1))); do
-    n=$((i + 1))
-    prepend=$(j ".tunnels[$i].as_path_prepend")
-    lp=$(j ".tunnels[$i].local_pref")
-    echo "route-map AWS-OUT-T$n permit 10"
-    echo " match ip address prefix-list ONPREM"
-    if [ "$prepend" -gt 0 ]; then
-      path=""
-      for _ in $(seq 1 "$prepend"); do path="$path $ONPREM_ASN"; done
-      echo " set as-path prepend$path"
+  if [ "$VPN_MODE" = "static" ]; then
+    for i in $(seq 0 $((N_TUNNELS - 1))); do
+      n=$((i + 1))
+      echo "ip route $CLOUD_CIDR vti$n $((n * 10))"
+    done
+    echo "!"
+  else
+    echo "ip route $ONPREM_CIDR blackhole"
+    echo "!"
+    echo "ip prefix-list ONPREM seq 5 permit $ONPREM_CIDR"
+    echo "!"
+    for i in $(seq 0 $((N_TUNNELS - 1))); do
+      n=$((i + 1))
+      prepend=$(j ".tunnels[$i].as_path_prepend")
+      lp=$(j ".tunnels[$i].local_pref")
+      echo "route-map AWS-OUT-T$n permit 10"
+      echo " match ip address prefix-list ONPREM"
+      if [ "$prepend" -gt 0 ]; then
+        path=""
+        for _ in $(seq 1 "$prepend"); do path="$path $ONPREM_ASN"; done
+        echo " set as-path prepend$path"
+      fi
+      echo "!"
+      echo "route-map AWS-IN-T$n permit 10"
+      echo " set local-preference $lp"
+      echo "!"
+    done
+    echo "router bgp $ONPREM_ASN"
+    echo " bgp router-id $LOCAL_IP"
+    echo " no bgp ebgp-requires-policy"
+    for i in $(seq 0 $((N_TUNNELS - 1))); do
+      peer=$(j ".tunnels[$i].inside_remote")
+      echo " neighbor $peer remote-as $AWS_ASN"
+      echo " neighbor $peer timers 10 30"
+    done
+    echo " !"
+    echo " address-family ipv4 unicast"
+    echo "  network $ONPREM_CIDR"
+    if [ "$VPN_MODE" = "bgp_ecmp" ]; then
+      echo "  maximum-paths $N_TUNNELS"
     fi
+    for i in $(seq 0 $((N_TUNNELS - 1))); do
+      n=$((i + 1))
+      peer=$(j ".tunnels[$i].inside_remote")
+      echo "  neighbor $peer route-map AWS-IN-T$n in"
+      echo "  neighbor $peer route-map AWS-OUT-T$n out"
+    done
+    echo " exit-address-family"
     echo "!"
-    echo "route-map AWS-IN-T$n permit 10"
-    echo " set local-preference $lp"
-    echo "!"
-  done
-  echo "router bgp $ONPREM_ASN"
-  echo " bgp router-id $LOCAL_IP"
-  echo " no bgp ebgp-requires-policy"
-  for i in $(seq 0 $((N_TUNNELS - 1))); do
-    peer=$(j ".tunnels[$i].inside_remote")
-    echo " neighbor $peer remote-as $AWS_ASN"
-    echo " neighbor $peer timers 10 30"
-  done
-  echo " !"
-  echo " address-family ipv4 unicast"
-  echo "  network $ONPREM_CIDR"
-  for i in $(seq 0 $((N_TUNNELS - 1))); do
-    n=$((i + 1))
-    peer=$(j ".tunnels[$i].inside_remote")
-    echo "  neighbor $peer route-map AWS-IN-T$n in"
-    echo "  neighbor $peer route-map AWS-OUT-T$n out"
-  done
-  echo " exit-address-family"
-  echo "!"
+  fi
 } > /etc/frr/frr.conf
 chown frr:frr /etc/frr/frr.conf
 chmod 640 /etc/frr/frr.conf
 systemctl restart frr
 
-echo "netcortex router up: wan=$WAN_IF lan=$LAN_IF tunnels=$N_TUNNELS"
+echo "netcortex router up: wan=$WAN_IF lan=$LAN_IF tunnels=$N_TUNNELS mode=$VPN_MODE"

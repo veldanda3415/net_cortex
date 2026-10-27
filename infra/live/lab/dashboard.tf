@@ -3,8 +3,6 @@
 
 locals {
   traffic_ns = local.traffic_namespace
-  http_flows = ["onprem-to-nlb", "onprem-to-nlb-large", "svc-to-app"]
-  iperf_flow = "onprem-iperf-app-a"
 
   dashboard_widgets = [
     {
@@ -30,7 +28,7 @@ locals {
         view    = "timeSeries"
         stat    = "Average"
         period  = 60
-        metrics = [for f in local.http_flows : [local.traffic_ns, "LatencyMs", "Flow", f]]
+        metrics = [for f in local.http_flows : [local.traffic_ns, "LatencyMs", "Flow", f] if f != "onprem-to-partner"]
         yAxis   = { left = { min = 0 } }
       }
     },
@@ -78,6 +76,47 @@ locals {
           ["AWS/VPN", "TunnelState", "TunnelIpAddress", ip, { label = "tunnel ${i + 1}" }]
         ]
         yAxis = { left = { min = 0, max = 1 } }
+      }
+    },
+    {
+      type = "metric", x = 0, y = 12, width = 12, height = 6
+      properties = {
+        title  = "Router BGP (state 1 = Established; prefixes received)"
+        region = var.region
+        view   = "timeSeries"
+        stat   = "Minimum"
+        period = 60
+        metrics = concat([
+          for n in local.bgp_neighbors : [
+            [module.onprem_router.metric_namespace, "BgpPeerState", "Neighbor", n, { label = "${n} state" }],
+            [module.onprem_router.metric_namespace, "PrefixesReceived", "Neighbor", n, { label = "${n} prefixes", yAxis = "right" }],
+          ]
+        ]...)
+        yAxis = { left = { min = 0, max = 1 }, right = { min = 0 } }
+      }
+    },
+    {
+      type = "metric", x = 0, y = 18, width = 24, height = 6
+      properties = {
+        title  = "Inspection firewalls (tracked flows; dropped packets per minute)"
+        region = var.region
+        view   = "timeSeries"
+        stat   = "Maximum"
+        period = 60
+        metrics = concat([
+          for az in ["a", "b"] : [
+            ["NetCortexLab/Firewall", "ConntrackCount", "Firewall", "fw-${az}", { label = "fw-${az} conntrack" }],
+            ["NetCortexLab/Firewall", "ForwardDrops", "Firewall", "fw-${az}", { label = "fw-${az} drops", yAxis = "right", stat = "Sum" }],
+          ]
+        ]...)
+        yAxis = { left = { min = 0 }, right = { min = 0 } }
+      }
+    },
+    {
+      type = "alarm", x = 12, y = 12, width = 12, height = 6
+      properties = {
+        title  = "Baseline alarms (all OK = healthy lab)"
+        alarms = [for a in aws_cloudwatch_metric_alarm.baseline : a.arn]
       }
     },
   ]

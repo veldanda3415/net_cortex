@@ -1,0 +1,6 @@
+[Unit]
+Description=Publish NetCortex router BGP metrics to CloudWatch
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/netcortex-bgp-metrics

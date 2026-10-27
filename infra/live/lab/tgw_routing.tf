@@ -10,6 +10,9 @@ locals {
   spoke_attachment_ids = { for k, a in aws_ec2_transit_gateway_vpc_attachment.spoke : k => a.id }
 
   vpn_attachment_id = module.vpn.transit_gateway_attachment_id
+
+  # With a static VPN there is nothing to propagate: on-prem is a static route instead.
+  vpn_static = var.vpn_mode == "static"
 }
 
 # --- associations ---
@@ -47,7 +50,7 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "spoke_from_spokes" {
 }
 
 resource "aws_ec2_transit_gateway_route_table_propagation" "spoke_from_vpn" {
-  count = var.enable_inspection ? 0 : 1
+  count = !var.enable_inspection && !local.vpn_static ? 1 : 0
 
   transit_gateway_attachment_id  = local.vpn_attachment_id
   transit_gateway_route_table_id = local.rt["spoke"]
@@ -80,6 +83,18 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "security_from_spokes
 }
 
 resource "aws_ec2_transit_gateway_route_table_propagation" "security_from_vpn" {
+  count = local.vpn_static ? 0 : 1
+
   transit_gateway_attachment_id  = local.vpn_attachment_id
   transit_gateway_route_table_id = local.rt["security"]
+}
+
+# --- vpn_mode = static: on-prem as a static route wherever BGP would have put it ---
+
+resource "aws_ec2_transit_gateway_route" "onprem_static" {
+  for_each = local.vpn_static ? toset(var.enable_inspection ? ["security"] : ["spoke", "security"]) : toset([])
+
+  destination_cidr_block         = local.onprem_cidr
+  transit_gateway_attachment_id  = local.vpn_attachment_id
+  transit_gateway_route_table_id = local.rt[each.key]
 }

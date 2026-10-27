@@ -27,3 +27,8 @@ output "route_table_ids" {
   description = "Route table IDs keyed by subnet name."
   value       = module.vpc.route_table_ids
 }
+
+output "fw_subnet_ids" {
+  description = "Firewall subnet IDs keyed by AZ letter."
+  value       = { for k, id in module.vpc.subnet_ids : trimprefix(k, "fw-") => id if startswith(k, "fw-") }
+}

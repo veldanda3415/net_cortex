@@ -62,15 +62,17 @@ module "onprem_router" {
   onprem_asn        = var.onprem_asn
   aws_asn           = 64512
 
-  # bgp_active_standby (spec §3 default): tunnel 1 preferred both ways.
-  # Tunnel 2 is prepended outbound and gets lower local-pref inbound.
+  # bgp_active_standby (spec §3 default): tunnel 1 preferred both ways, so
+  # tunnel 2 is prepended outbound and gets lower local-pref inbound.
+  # bgp_ecmp: both tunnels equal. static: these are unused.
+  vpn_mode = var.vpn_mode
   tunnels = [
     for i in range(2) : {
       outside_ip      = module.vpn.tunnel_outside_ips[i]
       inside_cidr     = var.tunnel_inside_cidrs[i]
       psk_parameter   = module.vpn.psk_parameter_names[i]
-      as_path_prepend = i == 0 ? 0 : 3
-      local_pref      = i == 0 ? 200 : 100
+      as_path_prepend = var.vpn_mode == "bgp_active_standby" && i == 1 ? 3 : 0
+      local_pref      = var.vpn_mode == "bgp_active_standby" && i == 1 ? 100 : 200
     }
   ]
   psk_parameter_arns = module.vpn.psk_parameter_arns
