@@ -46,7 +46,7 @@ Then look at the flows in CloudWatch → Logs Insights, log group `/netcortex-la
 ```
 parse @message "* * * * * * * * * * * * * * * * * * * * * * * * * * *" as version, account, eni, src, dst, srcport, dstport, proto, packets, bytes, start, end, action, status, vpc, subnet, instance, tcpflags, type, pktsrc, pktdst, region, azid, pktsrcsvc, pktdstsvc, direction, path
 | filter dstport = 443 and direction = "egress"
-| stats count() as flows, sum(bytes) as bytes by pktdst, action, path
+| stats count() as flows, sum(bytes) as total_bytes by pktdst, action, path
 | sort flows desc
 ```
 
