@@ -25,16 +25,16 @@ faults/drill.sh tgw-blackhole
 | `tunnel-down` | Router drops all traffic to tunnel 1's endpoint, so only tunnel 2 is left | |
 | `asn-mismatch` | Router expects AS 64999 on tunnel 1 (`WRONG_ASN`) | BGP |
 | `bad-route-map` | Router stops advertising 172.16/16 on both tunnels; sessions stay up | BGP |
-| `prefix-limit` | Router advertises 1,001 extra /24s (`COUNT`), past the TGW's 1,000-route limit. An experiment. | BGP |
+| `prefix-limit` | Router advertises 1,001 extra /24s (`COUNT`), past the TGW's 1,000-route limit. AWS drops BGP on both tunnels: a full on-prem outage | BGP |
 | `ike-proposal-mismatch` | AWS side of tunnel 1 accepts only DH group 21; the router offers 20. Takes a few minutes each way. | |
-| `mss-clamp-removed` | Router's TCP MSS clamp flushed; large responses hang | |
+| `mss-clamp-removed` | Router's TCP MSS clamp flushed. A no-op on AWS: the VPN side rewrites MSS to 1350 anyway (seen in a capture), so it's a negative control | |
 | `loss-latency` | `tc netem` on both tunnels, 150ms and 5% loss (`DELAY`, `LOSS`); no config change anywhere | |
 | `tgw-blackhole` | Blackhole route in rt-onprem for app private-a (app-a and one NLB node) | |
 | `tgw-propagation-removed` | App stops propagating into rt-onprem | inspection off |
-| `sg-rule-removed` | App web SG loses HTTP from on-prem; health checks stay green | |
-| `nlb-healthcheck-blocked` | App web SG loses HTTP from the app VPC (the NLB's health checks) | |
+| `sg-rule-removed` | App web SG's HTTP-from-on-prem rule narrowed to TEST-NET (same rule ID, so no Terraform drift after revert); health checks stay green | |
+| `nlb-healthcheck-blocked` | App web SG's HTTP-from-the-app-VPC rule (the NLB's health checks) narrowed to TEST-NET. Both targets go unhealthy, the NLB fails open, and clients keep working | |
 | `nacl-deny` | App NACL rule 50 denies on-prem both ways | |
-| `nat-route-removed` | Security VPC loses 0/0 → NAT; spoke egress, SSM and metrics go dark | inspection off |
+| `nat-route-removed` | Security VPC loses 0/0 → NAT. Spoke egress, SSM and the traffic metrics go dark, so no alarm fires | inspection off |
 | `peering-route-removed` | App loses its route to the partner VPC | peering |
 | `phz-record-deleted` | `app.lab.internal` deleted; svc gets NXDOMAIN | |
 | `appliance-mode-off` | Appliance mode off on the security attachment | inspection |
@@ -50,6 +50,7 @@ The expected evidence for each fault is in the comment at the top of its `inject
 
 ## Notes
 
-- The faults change Terraform-managed resources. Always revert, or `make down`, before the next `make plan`, or the plan will show the drift.
+- The faults change Terraform-managed resources in place and revert them to the same values and IDs, so a reverted lab plans clean. Revert, or `make down`, before the next `make plan`.
 - One fault at a time. Two overlapping faults make the answer key ambiguous.
-- `drill.sh` measures the lab's CloudWatch alarms, which evaluate two of three one-minute periods. That is the floor for detection from metrics. Logs and CloudTrail evidence can show up sooner or later than that.
+- `drill.sh` keeps watching for 3 minutes after the revert (`COOLDOWN`), because some metrics, the NLB's especially, land minutes late. An alarm that fires then still belongs to that fault.
+- `drill.sh` measures the lab's CloudWatch alarms, which evaluate two of three one-minute periods. That makes about 2.5 minutes the floor for detection from metrics. Logs and CloudTrail evidence can show up sooner or later than that.

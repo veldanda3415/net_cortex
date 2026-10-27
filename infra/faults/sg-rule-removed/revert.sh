@@ -1,4 +1,4 @@
 #!/bin/bash
 source "$(dirname "$0")/../lib.sh"
 . "$FAULTS_DIR/sg.sh"
-restore_rule "$(t .onprem_cidr)" 80 "HTTP from on-prem clients"
+set_rule_source "HTTP from on-prem clients" 80 "$(t .onprem_cidr)"

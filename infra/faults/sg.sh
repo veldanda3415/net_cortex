@@ -1,25 +1,26 @@
 # Security group rule helpers for the app web servers. Source after lib.sh.
+#
+# A fault narrows an existing rule's source to TEST-NET (192.0.2.0/24) instead of
+# revoking it. The rule keeps its ID, so after revert Terraform sees no drift; a
+# revoke-and-reauthorize would leave a new ID and break the next apply.
 SG=$(t .app_web_sg_id)
+NOWHERE=192.0.2.0/24
 
-# rule_id <cidr> <port>: the inbound TCP rule for that source and port, if any.
-rule_id() {
+# rule_field <description> <field>: the inbound rule Terraform created with that description.
+rule_field() {
   aws ec2 describe-security-group-rules --filters "Name=group-id,Values=$SG" \
-    --query "SecurityGroupRules[?!IsEgress && CidrIpv4=='$1' && IpProtocol=='tcp' && FromPort==\`$2\`] | [0].SecurityGroupRuleId" \
-    --output text
+    --query "SecurityGroupRules[?!IsEgress && Description=='$1'] | [0].$2" --output text
 }
 
-# revoke_rule <cidr> <port> / restore_rule <cidr> <port> <description>
-revoke_rule() {
-  local id
-  id=$(rule_id "$1" "$2")
-  if [ "$id" = None ]; then report already "no tcp/$2 from $1 on $SG"; exit 0; fi
-  aws ec2 revoke-security-group-ingress --group-id "$SG" --security-group-rule-ids "$id" >/dev/null
-  report changed "revoked $id (tcp/$2 from $1) on $SG"
-}
-restore_rule() {
-  if [ "$(rule_id "$1" "$2")" != None ]; then report already "tcp/$2 from $1 already on $SG"; exit 0; fi
-  aws ec2 authorize-security-group-ingress --group-id "$SG" \
-    --ip-permissions "$(jq -cn --arg c "$1" --argjson p "$2" --arg d "$3" \
-      '[{IpProtocol: "tcp", FromPort: $p, ToPort: $p, IpRanges: [{CidrIp: $c, Description: $d}]}]')" >/dev/null
-  report changed "restored tcp/$2 from $1 on $SG"
+# set_rule_source <description> <port> <cidr>
+set_rule_source() {
+  local id cidr
+  id=$(rule_field "$1" SecurityGroupRuleId)
+  [ "$id" != None ] || die "no rule \"$1\" on $SG"
+  cidr=$(rule_field "$1" CidrIpv4)
+  if [ "$cidr" = "$3" ]; then report already "$id ($1) already allows tcp/$2 from $3"; exit 0; fi
+  aws ec2 modify-security-group-rules --group-id "$SG" --security-group-rules "$(jq -cn \
+    --arg id "$id" --arg c "$3" --argjson p "$2" --arg d "$1" \
+    '[{SecurityGroupRuleId: $id, SecurityGroupRule: {IpProtocol: "tcp", FromPort: $p, ToPort: $p, CidrIpv4: $c, Description: $d}}]')" >/dev/null
+  report changed "$id ($1) now allows tcp/$2 from $3, was $cidr"
 }
