@@ -44,12 +44,13 @@ iptables -A NETCORTEX-FW -s "$ONPREM" -d "$APP" -p tcp --dport 5201 -j ACCEPT
 iptables -A NETCORTEX-FW -s "$ONPREM" -d "$APP" -p udp --dport 5201 -j ACCEPT
 iptables -A NETCORTEX-FW -s "$SHARED" -d "$APP" -p tcp --dport 80 -j ACCEPT
 iptables -A NETCORTEX-FW -p icmp --icmp-type echo-request -j ACCEPT
-# Internet egress for lab hosts (packages, SSM, metrics).
+# Internet egress for lab hosts (packages, SSM, metrics, NTP).
 iptables -A NETCORTEX-FW -s "$CLOUD" -j NETCORTEX-EGRESS
 iptables -A NETCORTEX-FW -s "$ONPREM" -j NETCORTEX-EGRESS
 iptables -A NETCORTEX-EGRESS -d "$CLOUD" -j RETURN
 iptables -A NETCORTEX-EGRESS -d "$ONPREM" -j RETURN
 iptables -A NETCORTEX-EGRESS -p tcp -m multiport --dports 80,443 -j ACCEPT
+iptables -A NETCORTEX-EGRESS -p udp --dport 123 -j ACCEPT
 
 # --- nat: internet-bound flows leave with this firewall's address, so replies
 # from the single NAT come back through the same (stateful) firewall ---
