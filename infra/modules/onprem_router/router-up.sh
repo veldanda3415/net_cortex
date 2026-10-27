@@ -45,6 +45,8 @@ net.ipv4.conf.all.rp_filter = 0
 net.ipv4.conf.default.rp_filter = 0
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.all.send_redirects = 0
+# bgp_ecmp: hash on ports too, or the few lab src/dst pairs land on one tunnel
+net.ipv4.fib_multipath_hash_policy = 1
 SYSCTL
 sysctl --system >/dev/null
 
