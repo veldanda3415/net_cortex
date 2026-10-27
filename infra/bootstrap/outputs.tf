@@ -12,3 +12,8 @@ output "github_oidc_provider_arn" {
   description = "IAM OIDC provider for token.actions.githubusercontent.com."
   value       = aws_iam_openid_connect_provider.github.arn
 }
+
+output "apply_role_arn" {
+  description = "IAM role the nightly reaper assumes (set as repo variable AWS_APPLY_ROLE_ARN)."
+  value       = aws_iam_role.gha_apply.arn
+}

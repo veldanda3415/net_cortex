@@ -37,3 +37,15 @@ variable "noncurrent_version_expiration_days" {
   type        = number
   default     = 30
 }
+
+variable "reaper_environment" {
+  description = "GitHub environment the nightly reaper job runs in; the only identity the apply role trusts."
+  type        = string
+  default     = "lab-reaper"
+}
+
+variable "lab_regions" {
+  description = "Regions the apply role may act in (us-west-2 hosts Network Manager events)."
+  type        = list(string)
+  default     = ["us-east-1", "us-west-2"]
+}
