@@ -107,7 +107,9 @@ sources:
         timestamp_field: query_timestamp
         entity: {type: dns_name, field: query_name}
         classify:
-          - {name: dns_nxdomain, field: rcode, equals: NXDOMAIN, severity: warning}
+          # Only the lab's private zone: healthy hosts NXDOMAIN their own *.ec2.internal names
+          # and Ubuntu's SRV lookups several times a minute.
+          - {name: dns_nxdomain, field: query_name, pattern: '\.lab\.internal\.$', severity: warning}
         aggregate: count_per_minute
       - id: firewall
         log_group: /netcortex-lab/firewall/drops

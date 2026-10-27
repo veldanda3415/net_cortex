@@ -43,3 +43,5 @@ config/.env
 # Local Copilot steering files
 .github/copilot-instructions.md
 .github/instructions/
+# Claude Code personal settings
+.claude/settings.local.json
