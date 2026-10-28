@@ -56,6 +56,7 @@ data "aws_iam_policy_document" "gha_apply" {
       "route53resolver:*",
       "networkmanager:*",
       "events:*",
+      "sqs:*", # the NetCortex alarm queue; without it the reaper strands the queue and its rule
     ]
     resources = ["*"]
 
