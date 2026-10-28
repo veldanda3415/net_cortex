@@ -4,7 +4,7 @@
   "tunnel-down":             {"cause": ["TunnelState", "vpn_tunnel_ike_down", "vpn_ipsec_down", "ike_negotiation_failed"], "symptoms": ["BgpPeerState", "vpn_bgp_down", "vpn_bgp_status_down", "bgp_hold_timer_expired", "bgp_neighbor_down", "TunnelDataIn", "TunnelDataOut"]},
   "asn-mismatch":            {"cause": ["bgp_open_error"], "symptoms": ["BgpPeerState", "bgp_neighbor_down", "vpn_bgp_down", "vpn_bgp_status_down"]},
   "bad-route-map":           {"cause": ["PrefixesSent"], "symptoms": ["tgw_route_uninstalled", "PacketDropCountNoRoute", "SuccessRate"]},
-  "prefix-limit":            {"cause": ["vpn_bgp_status_down"], "symptoms": ["BgpPeerState", "vpn_bgp_down", "bgp_neighbor_down", "tgw_route_uninstalled", "PacketDropCountNoRoute", "SuccessRate"]},
+  "prefix-limit":            {"cause": ["vpn_bgp_prefix_limit", "vpn_bgp_status_down"], "symptoms": ["BgpPeerState", "vpn_bgp_down", "bgp_neighbor_down", "tgw_route_uninstalled", "PacketDropCountNoRoute", "SuccessRate"]},
   "ike-proposal-mismatch":   {"cause": ["ModifyVpnTunnelOptions", "ike_negotiation_failed"], "symptoms": ["TunnelState", "vpn_tunnel_ike_down", "vpn_ipsec_down", "BgpPeerState", "vpn_bgp_down"]},
   "mss-clamp-removed":       {"negative": true},
   "loss-latency":            {"cause": [], "symptoms": ["LatencyMs", "LossPercent", "SuccessRate", "BgpPeerState", "bgp_hold_timer_expired"], "no_config_culprit": true},

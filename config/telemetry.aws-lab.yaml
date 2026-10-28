@@ -78,6 +78,8 @@ sources:
         timestamp_field: timestamp
         entity: {type: tunnel, field: resource_id, pattern: '_(?P<id>[0-9.]+)$'}
         classify:
+          # The specific reason first: AWS drops BGP when the router exceeds its prefix limit.
+          - {name: vpn_bgp_prefix_limit, field: message.details, pattern: 'maximum prefix limit'}
           - {name: vpn_bgp_status_down, field: status, equals: DOWN}
         attributes: {details: message.details}
       - id: flow-app

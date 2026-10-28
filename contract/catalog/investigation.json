@@ -24,6 +24,7 @@
     "flow": ["metrics"]
   },
   "signal_roles": {
+    "vpn_bgp_prefix_limit": "cause",
     "CPUUtilization": "cause",
     "ChangeResourceRecordSets": "cause",
     "CreateNetworkAclEntry": "cause",

@@ -150,6 +150,11 @@
       "description": "AWS Site-to-Site VPN tunnel activity log lines per minute reporting IKE phase 1 or phase 2 down.",
       "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "AWS VPN reports IKE down"}
     },
+    "vpn_bgp_prefix_limit": {
+      "signal_type": "event", "domain": "log", "entity_types": ["tunnel"],
+      "description": "AWS Site-to-Site VPN BGP log: AWS dropped the session because the customer gateway advertised more prefixes than the limit (1,000 for a TGW VPN).",
+      "rule": {"type": "event_presence", "min_severity": "error"}
+    },
     "vpn_bgp_status_down": {
       "signal_type": "event", "domain": "log", "entity_types": ["tunnel"],
       "description": "AWS Site-to-Site VPN BGP log: the AWS-side BGP session went DOWN (details say why, e.g. hold timer or prefix limit).",
