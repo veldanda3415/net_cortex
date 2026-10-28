@@ -344,6 +344,13 @@ class NetCortexEngine:
                             rid = request.get("request_id")
                             if rid and rid not in asked and rid not in requests and self._registered(str(request.get("target"))):
                                 requests[rid] = request
+                # One budget per round across all agents, nearest entities first:
+                # every question is a read against the telemetry backends.
+                budget = self.catalog.investigation.walk.max_requests_per_round
+                if len(requests) > budget:
+                    keep = sorted(requests.values(), key=lambda r: (r.get("hops", 0), str(r.get("target")),
+                                                                  str(r.get("entity", {}).get("id"))))[:budget]
+                    requests = {r["request_id"]: r for r in keep}
                 asked.update(requests)
 
                 # 2. route questions, then deliver each answer to its asker

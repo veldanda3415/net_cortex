@@ -296,7 +296,7 @@ class CorrelationFile(_M):
 class WalkSpec(_M):
     max_hops: int = Field(default=3, ge=1, le=6, description="Topology hops from an anchor entity")
     lookback_minutes: int = Field(default=15, ge=0, description="A question's window starts this long before the first symptom")
-    max_requests_per_round: int = Field(default=12, ge=1, description="Cap on validation requests per collaboration round")
+    max_requests_per_round: int = Field(default=12, ge=1, description="Cap on validation requests per collaboration round, across all agents (nearest first)")
 
 
 class RankWeights(_M):

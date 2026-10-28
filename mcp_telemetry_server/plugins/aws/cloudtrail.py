@@ -21,7 +21,9 @@ Reads: cloudtrail:LookupEvents (2 requests/second per account and region).
 
 from __future__ import annotations
 
+import asyncio
 import json
+import time
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -33,6 +35,7 @@ from mcp_telemetry_server.plugins.base import register_plugin
 DEFAULT_EVENT_SOURCES = ["ec2.amazonaws.com", "elasticloadbalancing.amazonaws.com", "route53.amazonaws.com"]
 MAX_REQUEST_CHARS = 1000
 PAGE_SIZE = 50  # LookupEvents maximum
+LOOKUP_CACHE_SECONDS = 60.0
 
 # Request parameters that identify the resource a call changed, in priority
 # order, matched case-insensitively at any depth (newer EC2 APIs wrap their
@@ -116,6 +119,35 @@ class CloudTrailPlugin(AwsPlugin):
         except ValueError as exc:
             raise ValueError(f"ConfigValidationError: sources.cloudtrail: {exc}") from None
         self._sources = set(self._cfg.event_sources)
+        # LookupEvents allows 2 requests/s per account. Collaboration asks the
+        # config domain many scoped questions over the same window, and the
+        # entity filter is applied after the plugin, so identical windows are
+        # read once (coalesced while in flight, then cached briefly) and reads
+        # go out one at a time.
+        self._lookups: dict[tuple, tuple[float, asyncio.Future]] = {}
+        self._one_at_a_time: asyncio.Lock | None = None
+
+    async def _lookup(self, region: str, params: dict[str, Any], max_pages: int) -> tuple[list[dict[str, Any]], bool]:
+        key = (region, params["StartTime"], params["EndTime"])
+        now = time.monotonic()
+        self._lookups = {k: v for k, v in self._lookups.items() if now - v[0] < LOOKUP_CACHE_SECONDS}
+        cached = self._lookups.get(key)
+        if cached is not None:
+            return await asyncio.shield(cached[1])
+        if self._one_at_a_time is None:
+            self._one_at_a_time = asyncio.Lock()
+        future: asyncio.Future = asyncio.get_running_loop().create_future()
+        self._lookups[key] = (now, future)
+        try:
+            async with self._one_at_a_time:
+                result = await self.paginate("cloudtrail", region, "lookup_events", max_pages=max_pages, **params)
+        except BaseException as exc:
+            self._lookups.pop(key, None)
+            future.set_exception(exc)
+            future.exception()  # retrieved: waiters re-raise it, nobody else has to
+            raise
+        future.set_result(result)
+        return result
 
     async def fetch(self, query: TelemetryQuery, *, domain: str) -> tuple[list[Signal], Coverage]:
         region = self.region_for(query)
@@ -123,7 +155,7 @@ class CloudTrailPlugin(AwsPlugin):
         if not self._cfg.include_read_only:
             params["LookupAttributes"] = [{"AttributeKey": "ReadOnly", "AttributeValue": "false"}]
         max_pages = -(-self._cfg.max_events // PAGE_SIZE)
-        pages, truncated = await self.paginate("cloudtrail", region, "lookup_events", max_pages=max_pages, **params)
+        pages, truncated = await self._lookup(region, params, max_pages)
         observed = now_utc()
 
         signals: list[Signal] = []

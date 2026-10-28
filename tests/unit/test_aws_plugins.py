@@ -297,3 +297,30 @@ def test_aws_plugins_reject_non_aws_regions():
 def test_aws_lab_sources_config_loads():
     service = TelemetryService(load_sources_config("config/telemetry.aws-lab.yaml"))
     assert {p.name for p in service.plugins} == {"cloudwatch", "cloudwatch_logs", "cloudtrail", "tgw_routes", "aws_topology"}
+
+
+def test_cloudtrail_reads_a_shared_window_once():
+    import asyncio
+    from datetime import datetime, timedelta, timezone
+
+    from contract import TelemetryQuery
+    from mcp_telemetry_server.plugins.aws.cloudtrail import CloudTrailPlugin
+
+    calls = []
+
+    class _Plugin(CloudTrailPlugin):
+        async def paginate(self, service, region, operation, *, max_pages, **params):
+            calls.append(params["StartTime"])
+            await asyncio.sleep(0.01)
+            return [{"Events": []}], False
+
+    end = datetime(2026, 10, 28, 10, 0, tzinfo=timezone.utc)
+    plugin = _Plugin({"region": "us-east-1"})
+    same = TelemetryQuery(region="us-east-1", start_time=end - timedelta(minutes=30), end_time=end)
+    other = same.model_copy(update={"start_time": end - timedelta(minutes=20)})
+
+    async def run():
+        return await asyncio.gather(*(plugin.fetch(q, domain="config") for q in [same] * 6 + [other]))
+
+    results = asyncio.run(run())
+    assert len(results) == 7 and len(calls) == 2  # six questions over one window: one LookupEvents read
