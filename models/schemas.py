@@ -128,6 +128,7 @@ class RankedCause(BaseModel):
     score: float
     features: dict[str, float]
     chain: list[str] = Field(default_factory=list, description="Topology path cause -> ... -> alarm entity")
+    aliases: list[str] = Field(default_factory=list, description="Other names of the entity (labels), e.g. a tunnel's outside IP")
     via_validation: bool = False
 
 

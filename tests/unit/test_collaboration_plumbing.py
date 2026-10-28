@@ -82,9 +82,25 @@ def test_llm_root_cause_without_citations_falls_back(monkeypatch):
         "root_cause": "Someone deleted a DNS record.", "ranked_cause_ids": ["C2", "C9"]})
     report = rca_synthesizer.synthesize_report("inc", _anomalous(), [], incident_description="flow down",
                                                ranked_causes=_ranked(), alarm_entities=[{"type": "flow", "id": "f"}])
-    # No citation: the rules-only sentence, naming what ranks first after the reorder.
-    assert report.root_cause.startswith("Config domain: x on route_table rtb-1")
-    assert [c.id for c in report.ranked_causes] == ["C2", "C1"]  # the reorder is still a permutation of known ids
+    assert report.root_cause.startswith("Config domain: x on hosted_zone Z1")  # deterministic: no citation
+    # C2 scores 0.5 against the top's 0.9: the LLM cannot promote it.
+    assert [c.id for c in report.ranked_causes] == ["C1", "C2"]
+
+
+def test_llm_may_only_break_near_ties(monkeypatch):
+    tied = [_ranked()[0], _ranked()[1].model_copy(update={"score": 0.88})]
+    monkeypatch.setattr(rca_synthesizer, "_call_gemini", lambda prompt, model: {
+        "root_cause": "Route rtb-1 was replaced [E1].", "ranked_cause_ids": ["C2", "C1"]})
+    report = rca_synthesizer.synthesize_report("inc", _anomalous(), [], incident_description="flow down", ranked_causes=tied)
+    assert [c.id for c in report.ranked_causes] == ["C2", "C1"]
+    assert report.root_cause == "Route rtb-1 was replaced [E1]."
+
+
+def test_llm_root_cause_must_name_the_top_cause(monkeypatch):
+    monkeypatch.setattr(rca_synthesizer, "_call_gemini", lambda prompt, model: {
+        "root_cause": "A tunnel went down [E1].", "ranked_cause_ids": ["C1"]})
+    report = rca_synthesizer.synthesize_report("inc", _anomalous(), [], incident_description="flow down", ranked_causes=_ranked())
+    assert report.root_cause.startswith("Config domain: x on hosted_zone Z1")
 
 
 def test_llm_root_cause_with_known_citation_is_kept(monkeypatch):

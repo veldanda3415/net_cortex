@@ -447,6 +447,7 @@ def rank_causes(findings: list[AgentFinding], topology: TopologyResponse | dict 
             id=f"C{len(ranked) + 1}", entity_type=node[0], entity_id=node[1], domain=domain, signals=signals,
             evidence_refs=list(dict.fromkeys(refs))[:10], first_seen=first_seen, score=round(score, 3),
             features=features, chain=chain, via_validation=any(r.get("via") == "validation" for r in rows),
+            aliases=graph.aliases(node)[1:],
         ))
     ranked.sort(key=lambda c: (-c.score, c.first_seen, c.entity_type, c.entity_id))
     return [c.model_copy(update={"id": f"C{i + 1}"}) for i, c in enumerate(ranked)]

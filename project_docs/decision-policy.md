@@ -139,8 +139,8 @@ Simulation coverage note:
 LLM is used to re-rank the code's candidate causes and to write the narrative.
 
 - The prompt lists the rule-fired evidence as numbered items (`E1`, `E2`, ...) and the ranked candidates (`C1`, ...).
-- The LLM may return `ranked_cause_ids`. A permutation of known ids is accepted; unknown ids are dropped; an answer naming none keeps the code's order.
-- Its `root_cause` must cite known evidence ids inline (`[E3]`). An uncited root cause, or one citing an unknown id, is replaced by the deterministic one.
+- The LLM may return `ranked_cause_ids`, but it only breaks near-ties: it can reorder candidates whose rules score is within 0.05 of the top (`RERANK_MARGIN`). A candidate the rules score clearly lower cannot be promoted. On the live ASN-mismatch drill, Gemini moved the tunnel above the BGP neighbor that logged "Bad Peer AS"; the rules had it right.
+- Its `root_cause` must cite known evidence ids inline (`[E3]`) and name the final top cause (its entity id, an alias such as a tunnel's outside IP, or one of its signals). Otherwise the deterministic root cause, which always names the top cause, is used.
 
 LLM must not:
 

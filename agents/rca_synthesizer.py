@@ -107,8 +107,9 @@ def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], m
         "A cause upstream of the alarm in the topology that fired first usually explains the downstream symptoms. "
         "If the incident status is recovered or flapping, say so in root_cause.\n\n"
         "Return ONLY valid JSON with exactly these keys:\n"
-        + ("  ranked_cause_ids: the candidate cause ids (e.g. [\"C2\", \"C1\"]) in your order, most likely first\n" if ranked else "")
-        + "  root_cause: one concise sentence naming the specific root cause (include component name, what changed, and magnitude if known), with [E<n>] citations\n"
+        + ("  ranked_cause_ids: the candidate cause ids in your order, most likely first. Only candidates scored within "
+           f"{RERANK_MARGIN} of the top can move above it.\n" if ranked else "")
+        + "  root_cause: one concise sentence naming the specific root cause (the top candidate's entity id and what changed, magnitude if known), with [E<n>] citations\n"
         "  contributing_factors: list of strings, each citing a specific domain finding with evidence detail\n"
         "  causal_chain: ordered list of strings showing the sequence of events from trigger to user impact\n"
         "  metrics_affected: list of metric names that were measurably impacted\n"
@@ -235,18 +236,32 @@ def _cited_ok(text: str, evidence: dict[str, str]) -> bool:
     return bool(cited) and all(c in evidence for c in cited)
 
 
+# The rules rank; the LLM may only break near-ties. A candidate whose rules
+# score is more than this below the top cannot be promoted over it.
+RERANK_MARGIN = 0.05
+
+
 def _rerank(ranked: list[RankedCause], llm_result: dict | None) -> list[RankedCause]:
-    """The LLM's order, if it is a permutation of known ids (extras ignored,
-    omissions appended in code order); otherwise the code's order."""
+    """The LLM's order among the near-tied leaders (rules score within
+    RERANK_MARGIN of the top), if it names known ids; everything else keeps
+    the rules order."""
     ids = llm_result.get("ranked_cause_ids") if llm_result else None
     if not ranked or not isinstance(ids, list):
         return ranked
-    by_id = {c.id: c for c in ranked}
+    tied = [c for c in ranked if c.score >= ranked[0].score - RERANK_MARGIN]
+    by_id = {c.id: c for c in tied}
     chosen = [by_id[i] for i in dict.fromkeys(str(x) for x in ids) if i in by_id]
     if not chosen:
-        logger.warning("LLM ranked_cause_ids named no known cause; keeping the deterministic order")
+        if any(str(x) in {c.id for c in ranked} for x in ids):
+            logger.info("LLM ranked a cause first that the rules score well below the top; keeping the rules order")
         return ranked
     return chosen + [c for c in ranked if c not in chosen]
+
+
+def _names(text: str, cause: RankedCause) -> bool:
+    """Does the sentence name this cause: its entity (any alias) or one of its signals?"""
+    low = text.lower()
+    return any(n and n.lower() in low for n in [cause.entity_id, *cause.aliases, *cause.signals])
 
 
 def _status_note(status: str) -> str:
@@ -380,6 +395,10 @@ def synthesize_report(
         det_root = _deterministic_from_cause(ranked_causes[0], findings, alarm_entities or []) + _status_note(status)
     if llm_result and isinstance(llm_result.get("root_cause"), str) and not _cited_ok(llm_result["root_cause"], evidence):
         logger.warning("LLM root_cause cites no known rule-fired evidence; using the deterministic root cause")
+        llm_result = {k: v for k, v in llm_result.items() if k != "root_cause"}
+    if llm_result and ranked_causes and isinstance(llm_result.get("root_cause"), str) \
+            and not _names(llm_result["root_cause"], ranked_causes[0]):
+        logger.warning("LLM root_cause does not name the top-ranked cause; using the deterministic root cause")
         llm_result = {k: v for k, v in llm_result.items() if k != "root_cause"}
 
     if require_llm and anomaly_findings and llm_result is None:
