@@ -64,6 +64,10 @@ UNIT
   systemctl enable --now netcortex-iperf3.service
 fi
 
+# --- memory: these hosts have 512 MB and no swap. fwupd-refresh (firmware updates,
+# useless here) needs ~150 MB hourly and got the on-prem client OOM-killed. ---
+systemctl mask --now fwupd.service fwupd-refresh.service fwupd-refresh.timer 2>/dev/null || true
+
 # --- CloudWatch agent: memory and swap (CWAgent mem_used_percent, swap_used_percent) ---
 # EC2 publishes CPU but not memory; NetCortex judges these against signals.json.
 if ! systemctl is-active --quiet amazon-cloudwatch-agent; then
