@@ -40,6 +40,9 @@ sources:
 
   cloudwatch_logs:
     <<: *aws
+    # Eight log groups, two of them busy flow logs: 15 s timed out a quiet healthy check.
+    # Stays under the RCA side's 25 s endpoint timeout.
+    timeout_seconds: 22
     # The answer key for evals. The plugin refuses to start if a query names it, and
     # the IAM role denies it as well.
     deny_log_groups: [/netcortex-lab/faults]
