@@ -18,6 +18,8 @@ endpoints; adding a second source for a domain is a config change:
             timeout_seconds: 8
             auth: none              # none | bearer_env (+ token_env) | oidc (not yet)
             required: true
+    topology:                       # optional; defaults to the first domain's endpoints
+      endpoints: [...]
 
 A fetch fans out to every endpoint of the domain concurrently, merges their
 signals (deduplicated on (source, evidence_ref)) and returns one coverage
@@ -29,9 +31,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import time
 from typing import Any
 
-from contract import Coverage, Signal, TelemetryQuery, ToolResponse
+from contract import CONTRACT_VERSION, Coverage, Entity, Signal, TelemetryQuery, ToolResponse, TopologyEdge, TopologyResponse
 from contract.catalog_loader import Catalog, get_catalog
 from providers.adapters.mcp_adapter import INPROC_SCHEME, EndpointConfig, MCPEndpointClient
 from providers.base import TelemetryProvider
@@ -39,6 +43,8 @@ from providers.inproc import DEFAULT_INPROC_URL, ensure_inproc_server
 from providers.resilience import RetryPolicy
 
 logger = logging.getLogger("net_cortex.providers.factory")
+
+RECORD_DIR_ENV = "NETCORTEX_RECORD_DIR"
 
 _LEGACY_DOMAIN_KEYS = {"metrics": "metrics", "logs": "logs", "routing": "routing", "config": "config"}
 
@@ -137,10 +143,19 @@ def _endpoint_coverage(client: MCPEndpointClient, response: ToolResponse, skippe
     )
 
 
+TOPOLOGY_TTL_SECONDS = 60.0
+
+
 class TelemetryRegistry(TelemetryProvider):
-    def __init__(self, endpoints: dict[str, list[MCPEndpointClient]], tools: dict[str, str] | None = None) -> None:
+    def __init__(self, endpoints: dict[str, list[MCPEndpointClient]], tools: dict[str, str] | None = None,
+                 topology_endpoints: list[MCPEndpointClient] | None = None) -> None:
         self._endpoints = endpoints
         self._tools = tools or {}
+        if topology_endpoints is None:
+            topology_endpoints = next(iter(endpoints.values()), [])
+        self._topology_endpoints = topology_endpoints
+        self._topology_cache: dict[tuple[str, int | None], tuple[float, TopologyResponse]] = {}
+        self.recorder = None  # set by create_telemetry_provider when recording is on
 
     def endpoints(self, domain: str) -> list[MCPEndpointClient]:
         return list(self._endpoints.get(domain, []))
@@ -174,7 +189,57 @@ class TelemetryRegistry(TelemetryProvider):
                         continue
                     seen.add(key)
                 signals.append(signal)
-        return ToolResponse(window=query.window, baseline_window=baseline_window, coverage=coverage, signals=signals)
+        response = ToolResponse(window=query.window, baseline_window=baseline_window, coverage=coverage, signals=signals)
+        if self.recorder is not None:
+            self.recorder.record(query, response)
+        return response
+
+    async def topology(self, region: str, scenario_id: int | None = None) -> TopologyResponse:
+        """Entities and relationships from every topology endpoint, merged.
+        Never raises: a failed endpoint becomes a failed coverage entry, and
+        an empty graph just means collaboration has nothing to walk."""
+        key = (region, scenario_id)
+        cached = self._topology_cache.get(key)
+        if cached is not None and time.monotonic() - cached[0] < TOPOLOGY_TTL_SECONDS:
+            return cached[1]
+        args: dict = {"region": region, "contract_version": CONTRACT_VERSION}
+        if scenario_id is not None:
+            args["scenario_id"] = scenario_id
+        clients = self._topology_endpoints
+        results = await asyncio.gather(*(c.call_tool("get_topology", args) for c in clients), return_exceptions=True)
+        entities: dict[tuple[str, str], Entity] = {}
+        edges: dict[tuple, TopologyEdge] = {}
+        coverage: list[Coverage] = []
+        for client, result in zip(clients, results):
+            if isinstance(result, BaseException):
+                if isinstance(result, asyncio.CancelledError):
+                    raise result
+                logger.warning("Topology fetch failed endpoint=%s error=%s", client.name, result)
+                coverage.append(Coverage(source=client.name, status="failed", error=f"{type(result).__name__}: {result}"[:500],
+                                         required=False))
+                continue
+            try:
+                response = TopologyResponse.model_validate(result)
+            except Exception as exc:  # malformed payload: same treatment as a failed endpoint
+                coverage.append(Coverage(source=client.name, status="failed", error=f"malformed topology: {exc}"[:500],
+                                         required=False))
+                continue
+            statuses = {c.status for c in response.coverage} or {"ok"}
+            status = "ok" if statuses == {"ok"} else ("failed" if statuses == {"failed"} else "partial")
+            coverage.append(Coverage(source=client.name, status=status, required=False))
+            for entity in response.entities:
+                known = entities.get((entity.type, entity.id))
+                entities[(entity.type, entity.id)] = (
+                    entity if known is None else known.model_copy(update={"labels": {**entity.labels, **known.labels}})
+                )
+            for edge in response.relationships:
+                edges[(edge.type, edge.source.type, edge.source.id, edge.target.type, edge.target.id)] = edge
+        merged = TopologyResponse(region=region, entities=list(entities.values()), relationships=list(edges.values()),
+                                  coverage=coverage)
+        self._topology_cache[key] = (time.monotonic(), merged)
+        if self.recorder is not None:
+            self.recorder.record_topology(merged)
+        return merged
 
     async def aclose(self) -> None:
         for clients in self._endpoints.values():
@@ -207,4 +272,24 @@ def create_telemetry_provider(cfg: dict[str, Any], domains: tuple[str, ...] | No
                             domain, ep.name, ep.url, ep.timeout_seconds, ep.required)
             clients.append(shared[key])
         endpoints[domain] = clients
-    return TelemetryRegistry(endpoints, {d: tools[d] for d in endpoints})
+    topology_cfg = (telemetry_section(cfg).get("topology") or {}).get("endpoints")
+    topology_clients = None
+    if topology_cfg:
+        defaults = telemetry_section(cfg).get("defaults", {}) or {}
+        topology_clients = []
+        for raw in topology_cfg:
+            ep = _endpoint_config(raw, defaults)
+            key = (ep.name, ep.url)
+            if key not in shared:
+                if ep.url.startswith(INPROC_SCHEME):
+                    ensure_inproc_server(ep.url, inproc_sources)
+                shared[key] = MCPEndpointClient(ep)
+            topology_clients.append(shared[key])
+    registry = TelemetryRegistry(endpoints, {d: tools[d] for d in endpoints}, topology_clients)
+    record_dir = telemetry_section(cfg).get("record_dir") or os.environ.get(RECORD_DIR_ENV)
+    if record_dir:
+        from providers.recorder import TelemetryRecorder
+
+        registry.recorder = TelemetryRecorder(record_dir)
+        logger.info("Recording telemetry responses as replay fixtures under %s", record_dir)
+    return registry

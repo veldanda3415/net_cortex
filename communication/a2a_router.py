@@ -70,6 +70,7 @@ class A2ARouter:
                 ),
             ),
         )
+        response_data: dict[str, Any] | None = None
         try:
             resp = await self._post_task(endpoint, req.model_dump())
         except Exception as exc:
@@ -90,6 +91,10 @@ class A2ARouter:
                 )
                 status = "failed"
             else:
+                artifacts = resp.get("result", {}).get("artifacts") or []
+                parts = artifacts[0].get("parts", []) if artifacts else []
+                if parts and isinstance(parts[0].get("data"), dict):
+                    response_data = parts[0]["data"]
                 normalized = str(status_block["state"]).lower()
                 if normalized in {"completed", "queued", "working", "submitted"}:
                     status = normalized
@@ -102,7 +107,7 @@ class A2ARouter:
             sender_agent=sender,
             target_agent=target,
             message_type=message_type,
-            payload={"status": status, **payload},
+            payload={"status": status, **payload, **({"response": response_data} if response_data is not None else {})},
             round_number=round_number,
             timestamp=datetime.now(timezone.utc),
         )

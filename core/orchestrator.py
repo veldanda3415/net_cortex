@@ -11,6 +11,7 @@ from agents.supervisor import classify_degradation, select_active_agents
 from communication.router_base import RouterBase
 from contract.catalog_loader import Catalog, get_catalog
 from detection import reconsider
+from detection.investigate import incident_status, rank_causes
 from models.schemas import A2AMessage, AgentFinding, IncidentRequest, RCAReport
 from providers.query import query_window
 
@@ -94,15 +95,59 @@ def validate_config(cfg: dict[str, Any]) -> None:
         raise ValueError("ConfigValidationError: baselines.legacy_fallback must be a boolean")
 
 
+def _slim(message: A2AMessage) -> A2AMessage:
+    """What the message log keeps: full findings travel in finding_publish /
+    finding_update / validation_response, but the log records only who, what
+    and the outcome, so the report doesn't repeat every finding N times."""
+    payload = dict(message.payload)
+    payload.pop("context", None)
+    finding = payload.pop("finding", None)
+    if isinstance(finding, dict):
+        payload.setdefault("summary", finding.get("summary"))
+    response = payload.get("response")
+    if isinstance(response, dict):
+        slim = {k: v for k, v in response.items() if k not in ("finding", "key_events", "evidence", "entity_status",
+                                                                 "unclassified_evidence")}
+        if "finding" in response and isinstance(response["finding"], dict):
+            slim["evidence"] = response["finding"].get("evidence", [])[:5]
+        if "agent_id" in response:  # a finding_update reply is a whole AgentFinding
+            slim = {"summary": response.get("summary"), "anomaly_detected": response.get("anomaly_detected"),
+                    "confidence": response.get("confidence"), "revision_count": response.get("revision_count")}
+        payload["response"] = slim
+    return message.model_copy(update={"payload": payload})
+
+
 class NetCortexEngine:
-    def __init__(self, cfg: dict[str, Any], router: RouterBase, catalog: Catalog | None = None):
+    def __init__(self, cfg: dict[str, Any], router: RouterBase, catalog: Catalog | None = None,
+                 topology_provider: Any | None = None):
         self.cfg = cfg
         self.router = router
         self.last_result_state: dict[str, Any] | None = None
         validate_config(cfg)
         # Loading the catalog here makes an invalid one fail engine startup.
         self.catalog = catalog or get_catalog()
+        self._topology_provider = topology_provider
         self.graph = self._build_graph().compile()
+
+    async def _topology(self, incident: IncidentRequest) -> Any | None:
+        """Topology for ranking causes; None (no ranking) when unavailable."""
+        try:
+            if self._topology_provider is None:
+                from providers.factory import create_telemetry_provider
+
+                first = next(iter(self.catalog.telemetry_domains()))
+                self._topology_provider = create_telemetry_provider(self.cfg, domains=(first,), catalog=self.catalog)
+            return await self._topology_provider.topology(incident.region, incident.scenario_id)
+        except Exception:
+            logger.exception("Topology unavailable incident=%s; causes are not ranked", incident.incident_id)
+            return None
+
+    def _registered(self, agent_id: str) -> bool:
+        registry = getattr(self.router, "registry", None)
+        return registry is None or agent_id in registry.agents
+
+    def _window(self, incident: IncidentRequest) -> tuple[Any, Any]:
+        return query_window(incident.reported_at, int(self.cfg["simulation"]["window_minutes"]))
 
     @staticmethod
     def should_short_circuit(findings: list[AgentFinding]) -> bool:
@@ -164,6 +209,8 @@ class NetCortexEngine:
                         "incident_id": incident.incident_id,
                         "incident_description": incident.description,
                         "scenario_id": incident.scenario_id,
+                        "anchor_time": incident.reported_at.isoformat(),
+                        "alarm_entities": incident.alarm_entities,
                     },
                 )
                 task = asyncio.create_task(asyncio.wait_for(coro, timeout=timeout))
@@ -219,12 +266,28 @@ class NetCortexEngine:
             return {"findings": findings, "timed_out_agents": timed_out, "errored_agents": errored}
 
         async def collaboration_node(state: NetCortexState):
+            """Round-based, collect-then-revise (net_cortex_impl_v4.md §3):
+
+              1. every agent's finding is published to its peers (finding_publish);
+                 once an agent has heard from all of them it replies with the
+                 targeted validation_requests it wants to send
+              2. each request is routed to the domain it asks; the answer (a
+                 scoped re-run of that domain's detection) goes back to the
+                 asker as a validation_response, whose leads seed next round
+              3. every agent revises its finding once (finding_update)
+
+            Stops when nothing changed and nobody asked anything, or after
+            a2a.max_iterations rounds. An agent that only acks gets its
+            finding revised here from correlation.json, as before.
+            """
+            incident = state["incident"]
             findings = list(state["findings"])
             all_messages: list[A2AMessage] = []
             max_iterations = int(self.cfg["a2a"]["max_iterations"])
+            session = incident.incident_id
             logger.info(
                 "Collaboration started incident=%s findings=%s max_iterations=%s",
-                state["incident"].incident_id,
+                incident.incident_id,
                 len(findings),
                 max_iterations,
             )
@@ -232,7 +295,7 @@ class NetCortexEngine:
             if self.should_short_circuit(findings):
                 logger.info(
                     "Collaboration short-circuited incident=%s reason=no_anomalies",
-                    state["incident"].incident_id,
+                    incident.incident_id,
                 )
                 return {
                     "revised_findings": findings,
@@ -241,49 +304,115 @@ class NetCortexEngine:
                     "a2a_messages": all_messages,
                 }
 
+            start_time, end_time = self._window(incident)
+            context = {
+                "region": incident.region, "start_time": start_time.isoformat(), "end_time": end_time.isoformat(),
+                "scenario_id": incident.scenario_id, "anchor_time": incident.reported_at.isoformat(),
+                "alarm_entities": incident.alarm_entities, "incident_description": incident.description,
+            }
+            asked: set[str] = set()
             previous_summaries = {f.agent_id: f.summary for f in findings}
             for round_number in range(1, max_iterations + 1):
-                logger.info("Collaboration round=%s incident=%s", round_number, state["incident"].incident_id)
+                logger.info("Collaboration round=%s incident=%s", round_number, incident.incident_id)
                 round_messages: list[A2AMessage] = []
-                for finding in findings:
-                    round_messages.extend(
-                        await self.router.broadcast(
-                            sender=finding.agent_id,
-                            message_type="finding_publish",
-                            payload={
-                                "incident_id": state["incident"].incident_id,
-                                "summary": finding.summary,
-                                "anomaly": finding.anomaly_detected,
-                            },
-                            round_number=round_number,
-                            session_id=state["incident"].incident_id,
-                        )
-                    )
+                participants = [f.agent_id for f in findings]
 
-                # NOTE: reconsideration (correlation.json) is applied locally by the
-                # orchestrator after broadcast, not by agents processing live A2A
-                # messages. This is a Phase 0 simplification; a full A2A
-                # implementation would have each agent apply it on peer
-                # finding_publish receipt.
+                # 1. publish; replies carry each agent's questions
+                published = await asyncio.gather(*(
+                    self.router.broadcast(
+                        sender=finding.agent_id,
+                        message_type="finding_publish",
+                        payload={
+                            "incident_id": incident.incident_id,
+                            "summary": finding.summary,
+                            "anomaly": finding.anomaly_detected,
+                            "finding": finding.model_dump(mode="json"),
+                            "context": {**context, "asked": sorted(asked)},
+                            "round": round_number,
+                            "expect_peers": participants,
+                        },
+                        round_number=round_number,
+                        session_id=session,
+                    )
+                    for finding in findings
+                ))
+                requests: dict[str, dict[str, Any]] = {}
+                for messages in published:
+                    round_messages.extend(messages)
+                    for message in messages:
+                        for request in (message.payload.get("response") or {}).get("requests", []) or []:
+                            rid = request.get("request_id")
+                            if rid and rid not in asked and rid not in requests and self._registered(str(request.get("target"))):
+                                requests[rid] = request
+                asked.update(requests)
+
+                # 2. route questions, then deliver each answer to its asker
+                if requests:
+                    logger.info("Collaboration round=%s incident=%s validation_requests=%s",
+                                round_number, incident.incident_id, len(requests))
+                    asks = list(requests.values())
+                    answered = await asyncio.gather(*(
+                        self.router.send_direct(
+                            sender=str(r["sender"]), target=str(r["target"]), message_type="validation_request",
+                            payload={**r, "incident_id": incident.incident_id},
+                            round_number=round_number, session_id=session,
+                        )
+                        for r in asks
+                    ))
+                    round_messages.extend(answered)
+                    deliveries = []
+                    for request, message in zip(asks, answered):
+                        result = message.payload.get("response") or {}
+                        if not result.get("request_id"):
+                            continue
+                        logger.info("Validation incident=%s %s -> %s about %s:%s verdict=%s",
+                                    incident.incident_id, request["sender"], request["target"],
+                                    request["entity"]["type"], request["entity"]["id"], result.get("verdict"))
+                        deliveries.append(self.router.send_direct(
+                            sender=str(request["target"]), target=str(request["sender"]),
+                            message_type="validation_response",
+                            payload={"incident_id": incident.incident_id, "request_id": result["request_id"],
+                                     "verdict": result.get("verdict"), "entity": result.get("entity"),
+                                     "summary": result.get("summary"), "leads": result.get("leads", []),
+                                     "evidence": (result.get("finding") or {}).get("evidence", [])[:5]},
+                            round_number=round_number, session_id=session,
+                        ))
+                    round_messages.extend(await asyncio.gather(*deliveries))
+
+                # 3. every agent revises once
+                updates = await asyncio.gather(*(
+                    self.router.send_direct(
+                        sender=finding.agent_id, target=finding.agent_id, message_type="finding_update",
+                        payload={"incident_id": incident.incident_id, "round": round_number},
+                        round_number=round_number, session_id=session,
+                    )
+                    for finding in findings
+                ))
+                round_messages.extend(updates)
                 revised = []
-                for finding in findings:
+                for finding, message in zip(findings, updates):
+                    response = message.payload.get("response") or {}
+                    if response.get("agent_id") == finding.agent_id:
+                        revised.append(AgentFinding.model_validate(response))
+                        continue
+                    # NOTE: an agent that only acks (older or external) is revised
+                    # here from correlation.json, as in Phase 0.
                     peer_findings = [f for f in findings if f.agent_id != finding.agent_id]
-                    new_finding = apply_local_reconsideration(finding, peer_findings, self.catalog)
-                    revised.append(new_finding)
+                    revised.append(apply_local_reconsideration(finding, peer_findings, self.catalog))
                 findings = revised
-                all_messages.extend(round_messages)
+                all_messages.extend(_slim(m) for m in round_messages)
                 logger.info(
                     "Collaboration round complete incident=%s round=%s messages=%s",
-                    state["incident"].incident_id,
+                    incident.incident_id,
                     round_number,
                     len(round_messages),
                 )
 
                 current_summaries = {f.agent_id: f.summary for f in findings}
-                if current_summaries == previous_summaries:
+                if current_summaries == previous_summaries and not requests:
                     logger.info(
                         "Collaboration converged incident=%s round=%s",
-                        state["incident"].incident_id,
+                        incident.incident_id,
                         round_number,
                     )
                     return {
@@ -296,7 +425,7 @@ class NetCortexEngine:
 
             logger.info(
                 "Collaboration reached max iterations incident=%s iterations=%s",
-                state["incident"].incident_id,
+                incident.incident_id,
                 max_iterations,
             )
             return {
@@ -318,6 +447,12 @@ class NetCortexEngine:
             # synthesize_report calls out to a synchronous Gemini client
             # (blocking network I/O, plus a blocking time.sleep on retry) —
             # see the identical rationale on classify_degradation above.
+            findings = state["revised_findings"]
+            incident = state["incident"]
+            ranked = []
+            if any(f.anomaly_detected for f in findings):
+                topology = await self._topology(incident)
+                ranked = rank_causes(findings, topology, self.catalog, incident.alarm_entities)
             report = await asyncio.to_thread(
                 synthesize_report,
                 state["incident"].incident_id,
@@ -330,6 +465,9 @@ class NetCortexEngine:
                 timed_out_agents=state["timed_out_agents"],
                 errored_agents=state["errored_agents"],
                 catalog=self.catalog,
+                ranked_causes=ranked,
+                alarm_entities=incident.alarm_entities,
+                status=incident_status(findings),
             )
             logger.info(
                 "Synthesizer finished incident=%s confidence=%.2f",
