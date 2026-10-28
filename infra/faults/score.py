@@ -21,11 +21,13 @@ but was crowded out of the key events counts as not fired.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
 
 EXPECT = Path(__file__).resolve().parent / "expect.json"
+DETERMINISTIC_ROOT = re.compile(r"^(\w+ domain( anomaly)?:|No anomaly detected|RCA inconclusive)")
 
 
 def ts(value: str) -> datetime:
@@ -77,6 +79,19 @@ def main(fault: str, truth_path: str, record_path: str, trigger: str = "alarm") 
     }
     if expect.get("no_config_culprit"):
         result["blamed_config"] = any(f["domain"] == "config" for f in anomalous)
+
+    # Does the root-cause sentence itself name the culprit: a cause signal, or the
+    # entity a cause signal fired on? (The evidence can hold the cause while the
+    # headline still leads with a symptom.)
+    root = result["root_cause"].lower()
+    cause_entities = {
+        str(e.get("entity_id", "")).lower()
+        for f in findings for e in f.get("key_events", [])
+        if {r["signal"] for r in e.get("rules_fired", [])} & set(expect.get("cause", []))
+    } - {""}
+    result["headline_cause"] = bool(cause) and any(n.lower() in root for n in [*cause, *cause_entities])
+    # The deterministic synthesizer's root causes have fixed shapes; anything else came from the LLM.
+    result["llm_used"] = not DETERMINISTIC_ROOT.match(report.get("root_cause") or "")
     return result
 
 
