@@ -91,6 +91,21 @@
     "rank_weights": {
       "$ref": "#/$defs/RankWeights"
     },
+    "role_with": {
+      "additionalProperties": {
+        "additionalProperties": {
+          "enum": [
+            "cause",
+            "symptom"
+          ],
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "description": "Signal -> {other signal: role}. When the other signal fires on the same entity at the same time, the first one takes this role instead, e.g. PrefixesSent=0 is only a symptom while BgpPeerState=0.",
+      "title": "Role With",
+      "type": "object"
+    },
     "signal_roles": {
       "additionalProperties": {
         "enum": [

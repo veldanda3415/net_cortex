@@ -82,7 +82,8 @@ def test_llm_root_cause_without_citations_falls_back(monkeypatch):
         "root_cause": "Someone deleted a DNS record.", "ranked_cause_ids": ["C2", "C9"]})
     report = rca_synthesizer.synthesize_report("inc", _anomalous(), [], incident_description="flow down",
                                                ranked_causes=_ranked(), alarm_entities=[{"type": "flow", "id": "f"}])
-    assert report.root_cause.startswith("Config domain: x on hosted_zone Z1")  # deterministic: no citation
+    # No citation: the rules-only sentence, naming what ranks first after the reorder.
+    assert report.root_cause.startswith("Config domain: x on route_table rtb-1")
     assert [c.id for c in report.ranked_causes] == ["C2", "C1"]  # the reorder is still a permutation of known ids
 
 

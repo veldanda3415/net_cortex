@@ -317,6 +317,11 @@ class InvestigationFile(_M):
         description="Signal name (raw or catalog) -> role. A signal that is a cause in one fault and a "
         "symptom in another is left out; time precedence and topology decide it.",
     )
+    role_with: dict[str, dict[str, Literal["cause", "symptom"]]] = Field(
+        default_factory=dict,
+        description="Signal -> {other signal: role}. When the other signal fires on the same entity at the same "
+        "time, the first one takes this role instead, e.g. PrefixesSent=0 is only a symptom while BgpPeerState=0.",
+    )
     lead_patterns: dict[str, str] = Field(
         default_factory=dict,
         description="Regex -> entity type. An agent answering a question proposes as new leads the ids these "

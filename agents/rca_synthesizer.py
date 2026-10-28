@@ -375,6 +375,9 @@ def synthesize_report(
         llm_result = _call_gemini(prompt, llm_model)
     if llm_result and ranked_causes:
         ranked_causes = _rerank(ranked_causes, llm_result)
+        # The rules-only sentence names whatever ranks first after the LLM's
+        # reorder, so the report never names one cause and ranks another first.
+        det_root = _deterministic_from_cause(ranked_causes[0], findings, alarm_entities or []) + _status_note(status)
     if llm_result and isinstance(llm_result.get("root_cause"), str) and not _cited_ok(llm_result["root_cause"], evidence):
         logger.warning("LLM root_cause cites no known rule-fired evidence; using the deterministic root cause")
         llm_result = {k: v for k, v in llm_result.items() if k != "root_cause"}

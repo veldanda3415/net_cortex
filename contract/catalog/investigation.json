@@ -57,6 +57,9 @@
     "tgw_route_uninstalled": "symptom",
     "vpn_bgp_down": "symptom"
   },
+  "role_with": {
+    "PrefixesSent": {"BgpPeerState": "symptom"}
+  },
   "lead_patterns": {
     "\\btgw-rtb-[0-9a-f]{8,17}\\b": "tgw_route_table",
     "\\btgw-attach-[0-9a-f]{8,17}\\b": "tgw_attachment",

@@ -100,7 +100,12 @@ def _dedupe_key(obs: _Observation) -> tuple:
 
 
 def _role(catalog: Catalog, names: list[str]) -> str | None:
-    roles = {catalog.signal_role(n) for n in names}
+    present = set(names)
+    overrides = catalog.investigation.role_with
+    roles = set()
+    for n in present:
+        override = next((role for other, role in overrides.get(n, {}).items() if other in present), None)
+        roles.add(override or catalog.signal_role(n))
     if "cause" in roles:
         return "cause"
     return "symptom" if "symptom" in roles else None
