@@ -358,6 +358,7 @@ def _targets(findings: list[AgentFinding], graph: TopologyGraph, alarm_entities:
 # anything clearly after the symptoms gets none. Metric datapoints are stamped
 # at the start of their period and logs arrive later, so two minutes of slack.
 PRECEDENCE_FULL_SECONDS = 300
+CONNECTED_ONLY = 0.1
 PRECEDENCE_SLACK_SECONDS = 120
 
 
@@ -433,7 +434,9 @@ def rank_causes(findings: list[AgentFinding], topology: TopologyResponse | dict 
                     topo = 1.0
             if best is not None:
                 chain = [node_key(n) for n in reversed(best)]
-                topo = max(topo, 0.6)
+                # Merely connected (not upstream): within a few hops nearly
+                # everything is, so this is almost no evidence.
+                topo = max(topo, CONNECTED_ONLY)
 
         precedence = _precedence(began, onset) if onset is not None else 0.5
 
