@@ -110,6 +110,9 @@ async def main(argv: list[str] | None = None) -> int:
     out = sys.stdout if args.out == "-" else open(args.out, "a")
     try:
         for path in args.records:
+            if not Path(path).exists():
+                print(json.dumps({"record": path, "error": "no such record"}), file=out, flush=True)
+                continue
             record = json.loads(Path(path).read_text())
             fixture = recording_for(record, Path(args.record_dir))
             if not fixture.exists():
