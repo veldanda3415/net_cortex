@@ -136,9 +136,9 @@
    "observed_at": "2026-10-28T05:18:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -153,7 +153,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:17:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:17:00Z"
   },
   {
    "signal_type": "metric",
@@ -480,9 +480,9 @@
    "observed_at": "2026-10-28T05:19:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -497,7 +497,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:18:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:18:00Z"
   },
   {
    "signal_type": "metric",
@@ -824,9 +824,9 @@
    "observed_at": "2026-10-28T05:20:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -841,7 +841,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:19:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:19:00Z"
   },
   {
    "signal_type": "metric",
@@ -1168,9 +1168,9 @@
    "observed_at": "2026-10-28T05:21:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -1185,7 +1185,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:20:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:20:00Z"
   },
   {
    "signal_type": "metric",
@@ -1512,9 +1512,9 @@
    "observed_at": "2026-10-28T05:22:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -1529,7 +1529,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:21:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:21:00Z"
   },
   {
    "signal_type": "metric",
@@ -1877,9 +1877,9 @@
    "observed_at": "2026-10-28T05:23:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -1894,7 +1894,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:22:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:22:00Z"
   },
   {
    "signal_type": "metric",
@@ -2221,9 +2221,9 @@
    "observed_at": "2026-10-28T05:24:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -2238,7 +2238,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:23:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:23:00Z"
   },
   {
    "signal_type": "metric",
@@ -2565,9 +2565,9 @@
    "observed_at": "2026-10-28T05:25:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -2582,7 +2582,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:24:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:24:00Z"
   },
   {
    "signal_type": "metric",
@@ -2909,9 +2909,9 @@
    "observed_at": "2026-10-28T05:26:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -2926,7 +2926,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:25:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:25:00Z"
   },
   {
    "signal_type": "metric",
@@ -3253,9 +3253,9 @@
    "observed_at": "2026-10-28T05:27:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -3270,7 +3270,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:26:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:26:00Z"
   },
   {
    "signal_type": "metric",
@@ -3618,9 +3618,9 @@
    "observed_at": "2026-10-28T05:28:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -3635,7 +3635,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:27:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:27:00Z"
   },
   {
    "signal_type": "metric",
@@ -3962,9 +3962,9 @@
    "observed_at": "2026-10-28T05:29:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -3979,7 +3979,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:28:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:28:00Z"
   },
   {
    "signal_type": "metric",
@@ -4306,9 +4306,9 @@
    "observed_at": "2026-10-28T05:30:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -4323,7 +4323,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:29:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:29:00Z"
   },
   {
    "signal_type": "metric",
@@ -4688,9 +4688,9 @@
    "observed_at": "2026-10-28T05:31:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -4705,7 +4705,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:30:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:30:00Z"
   },
   {
    "signal_type": "metric",
@@ -5032,9 +5032,9 @@
    "observed_at": "2026-10-28T05:32:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -5049,7 +5049,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:31:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:31:00Z"
   },
   {
    "signal_type": "metric",
@@ -5376,9 +5376,9 @@
    "observed_at": "2026-10-28T05:33:30Z",
    "entity": {
     "type": "flow",
-    "id": "app-to-svc",
+    "id": "app-to-partner",
     "labels": {
-     "Flow": "app-to-svc"
+     "Flow": "app-to-partner"
     }
    },
    "name": "SuccessRate",
@@ -5393,7 +5393,7 @@
     "period": 60,
     "region": "us-east-1"
    },
-   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-svc@2026-10-28T05:32:00Z"
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:32:00Z"
   },
   {
    "signal_type": "metric",
@@ -5737,7 +5737,7 @@
    },
    {
     "type": "flow",
-    "id": "app-to-svc"
+    "id": "app-to-partner"
    }
   ],
   "relationships": [
@@ -6281,7 +6281,7 @@
     "type": "probes",
     "source": {
      "type": "flow",
-     "id": "app-to-svc"
+     "id": "app-to-partner"
     },
     "target": {
      "type": "vpc",

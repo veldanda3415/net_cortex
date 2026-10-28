@@ -69,7 +69,7 @@ def topology() -> dict[str, Any]:
         ent("target_group", f"arn:aws:elasticloadbalancing:{REGION}:785629662183:{TG_APP}", dimension=TG_APP),
         ent("load_balancer", f"arn:aws:elasticloadbalancing:{REGION}:785629662183:loadbalancer/{NLB}", dimension=NLB),
         ent("hosted_zone", ZONE), ent("dns_name", DNS_APP),
-        *(ent("flow", f) for f in [*FLOWS_ONPREM, "svc-to-app", "app-to-svc"]),
+        *(ent("flow", f) for f in [*FLOWS_ONPREM, "svc-to-app", "app-to-partner"]),
     ]
     by = {(e["type"], e["id"]): e for e in entities}
 
@@ -121,7 +121,7 @@ def topology() -> dict[str, Any]:
         rel("probes", ("flow", "onprem-iperf-app-a"), ("instance", I_APP_A)),
         rel("probes", ("flow", "svc-to-app"), ("dns_name", DNS_APP)),
         rel("probes", ("flow", "svc-to-app"), ("load_balancer", "")),
-        rel("probes", ("flow", "app-to-svc"), ("vpc", VPC_SVC)),
+        rel("probes", ("flow", "app-to-partner"), ("vpc", VPC_SVC)),
     ]
     return {"entities": entities, "relationships": rels}
 
@@ -179,7 +179,7 @@ def background(start: int = -15, end: int = 0) -> list[dict[str, Any]]:
     for nbr in (NBR1, NBR2):
         out += series("BgpPeerState", "bgp_neighbor", nbr, flat(start, end, 1), ns="NetCortexLab/Router", dim="Neighbor")
         out += series("PrefixesSent", "bgp_neighbor", nbr, flat(start, end, 3), ns="NetCortexLab/Router", dim="Neighbor")
-    for flow in [*FLOWS_ONPREM, "svc-to-app", "app-to-svc"]:
+    for flow in [*FLOWS_ONPREM, "svc-to-app", "app-to-partner"]:
         out += series("SuccessRate", "flow", flow, flat(start, end, 100), ns="NetCortexLab/Traffic", dim="Flow", unit="Percent")
     out += series("PacketDropCountNoRoute", "transit_gateway", TGW, flat(start, end, 0), ns="AWS/TransitGateway",
                   dim="TransitGateway", stat="Sum", unit="Count")
@@ -304,13 +304,13 @@ def case_phz_record_deleted() -> tuple[list, dict]:
 
 def case_peering_route_removed() -> tuple[list, dict]:
     s = background()
-    s = override(s, "SuccessRate", "app-to-svc", {-2: 40, -1: 0, 0: 0})
+    s = override(s, "SuccessRate", "app-to-partner", {-2: 40, -1: 0, 0: 0})
     s.append(cloudtrail("DeleteRoute", "route_table", RTB_APP, -150, "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
                         {"routeTableId": RTB_APP, "destinationCidrBlock": "10.30.0.0/16"}))
     return s, {
         "fault": "peering-route-removed",
-        "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-app-to-svc-degraded",
-        "alarm_entities": [{"type": "flow", "id": "app-to-svc"}],
+        "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-app-to-partner-degraded",
+        "alarm_entities": [{"type": "flow", "id": "app-to-partner"}],
         "culprit": {"type": "route_table", "ids": [RTB_APP], "domain": "config"},
         "why": "A deleted peering route (config) explains a failing flow (metrics) across the VPC peering.",
     }

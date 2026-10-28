@@ -111,3 +111,20 @@ async def test_bridge_groups_dedupes_posts_once_and_deletes_after_success(tmp_pa
     saved = json.loads((tmp_path / "inc-1.json").read_text())
     assert saved == record and saved["report"]["incident_id"] == "inc-1"
     assert not bridge.due()                       # buffer cleared
+
+
+def test_alarm_dimensions_become_alarm_entities():
+    def with_metric(event: dict, namespace: str, dims: dict) -> dict:
+        event["detail"]["configuration"]["metrics"] = [
+            {"id": "m1", "metricStat": {"metric": {"namespace": namespace, "name": "x", "dimensions": dims}}}]
+        return event
+
+    payload = incident_payload([
+        with_metric(_alarm("netcortex-lab-flow-svc-to-app-degraded", "2026-10-27T10:03:10Z"), "NetCortexLab/Traffic", {"Flow": "svc-to-app"}),
+        with_metric(_alarm("netcortex-lab-nlb-unhealthy-targets", "2026-10-27T10:03:20Z"), "AWS/NetworkELB",
+                    {"TargetGroup": "targetgroup/app/abc", "LoadBalancer": "net/app/def"}),
+        with_metric(_alarm("netcortex-lab-flow-svc-to-app-degraded", "2026-10-27T10:03:40Z"), "NetCortexLab/Traffic", {"Flow": "svc-to-app"}),
+    ])
+    assert payload["alarm_entities"] == [{"type": "flow", "id": "svc-to-app"},
+                                         {"type": "target_group", "id": "targetgroup/app/abc"}]
+    assert normalize_incident(payload).alarm_entities == payload["alarm_entities"]

@@ -5,11 +5,11 @@
   "region": "us-east-1",
   "severity": "high",
   "fault": "peering-route-removed",
-  "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-app-to-svc-degraded",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-app-to-partner-degraded",
   "alarm_entities": [
     {
       "type": "flow",
-      "id": "app-to-svc"
+      "id": "app-to-partner"
     }
   ],
   "culprit": {
