@@ -64,6 +64,34 @@ UNIT
   systemctl enable --now netcortex-iperf3.service
 fi
 
+# --- CloudWatch agent: memory and swap (CWAgent mem_used_percent, swap_used_percent) ---
+# EC2 publishes CPU but not memory; NetCortex judges these against signals.json.
+if ! systemctl is-active --quiet amazon-cloudwatch-agent; then
+  for attempt in $(seq 1 30); do
+    if curl -fsSLo /tmp/amazon-cloudwatch-agent.deb \
+        https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/arm64/latest/amazon-cloudwatch-agent.deb; then
+      dpkg -i -E /tmp/amazon-cloudwatch-agent.deb && break
+    fi
+    [ "$attempt" -lt 30 ] || { echo "CloudWatch agent install failed" >&2; break; }
+    sleep 20
+  done
+  mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
+  cat > /opt/aws/amazon-cloudwatch-agent/etc/netcortex.json <<'CWAGENT'
+{
+  "agent": {"metrics_collection_interval": 60},
+  "metrics": {
+    "append_dimensions": {"InstanceId": "${aws:InstanceId}"},
+    "metrics_collected": {
+      "mem": {"measurement": ["mem_used_percent"]},
+      "swap": {"measurement": ["swap_used_percent"]}
+    }
+  }
+}
+CWAGENT
+  /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s \
+    -c file:/opt/aws/amazon-cloudwatch-agent/etc/netcortex.json || echo "CloudWatch agent did not start" >&2
+fi
+
 # --- traffic agent ---
 if [ "$(j '.flows | length')" -gt 0 ]; then
   systemctl enable --now netcortex-traffic.service

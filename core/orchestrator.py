@@ -79,8 +79,8 @@ def validate_config(cfg: dict[str, Any]) -> None:
             "ConfigValidationError: baselines.provider='prometheus' is not implemented yet "
             "(PrometheusBaselineProvider is a stub) — use 'simulation' until it's implemented."
         )
-    if provider != "simulation":
-        raise ValueError("ConfigValidationError: baselines.provider must be 'simulation'")
+    if provider not in ("simulation", "telemetry"):
+        raise ValueError("ConfigValidationError: baselines.provider must be 'simulation' or 'telemetry'")
 
     metrics_z_threshold = float(baselines.get("metrics_z_threshold", 3.0))
     if metrics_z_threshold <= 0:

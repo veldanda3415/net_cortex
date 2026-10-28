@@ -17,6 +17,23 @@ from typing import Any
 DETAIL_TYPE = "CloudWatch Alarm State Change"
 MAX_REASON_CHARS = 200
 
+# Which alarm dimension names the entity the alarm fired on, in priority order
+# (an NLB alarm has TargetGroup and LoadBalancer: the target group is the more
+# specific). Ids are the dimension values, exactly as the CloudWatch plugin uses
+# them, so collaboration can find the same entity in the topology.
+ALARM_DIMENSIONS: list[tuple[str, str]] = [
+    ("TunnelIpAddress", "tunnel"),
+    ("Neighbor", "bgp_neighbor"),
+    ("Flow", "flow"),
+    ("TargetGroup", "target_group"),
+    ("LoadBalancer", "load_balancer"),
+    ("NatGatewayId", "nat_gateway"),
+    ("InstanceId", "instance"),
+    ("TransitGatewayAttachment", "tgw_attachment"),
+    ("TransitGateway", "transit_gateway"),
+    ("VpnId", "vpn_connection"),
+]
+
 
 def is_alarm_event(payload: Any) -> bool:
     return isinstance(payload, dict) and payload.get("source") == "aws.cloudwatch" and payload.get("detail-type") == DETAIL_TYPE
@@ -32,6 +49,18 @@ def is_alarming(event: dict[str, Any]) -> bool:
     return (event.get("detail", {}).get("state", {}) or {}).get("value") == "ALARM"
 
 
+def alarm_entities(event: dict[str, Any]) -> list[dict[str, str]]:
+    """The entities an alarm watches, from its metric dimensions."""
+    out = []
+    for metric in (event.get("detail", {}).get("configuration", {}) or {}).get("metrics", []) or []:
+        dims = ((metric.get("metricStat") or {}).get("metric") or {}).get("dimensions") or {}
+        for name, etype in ALARM_DIMENSIONS:
+            if dims.get(name):
+                out.append({"type": etype, "id": str(dims[name])})
+                break
+    return out
+
+
 def incident_payload(events: list[dict[str, Any]]) -> dict[str, Any]:
     """One /incidents payload for a burst of ALARM events, oldest first.
 
@@ -43,7 +72,11 @@ def incident_payload(events: list[dict[str, Any]]) -> dict[str, Any]:
         raise ValueError("no alarm events")
     events = sorted(events, key=_state_time)
     seen: dict[str, str] = {}
+    entities: list[dict[str, str]] = []
     for event in events:
+        for entity in alarm_entities(event):
+            if entity not in entities:
+                entities.append(entity)
         detail = event.get("detail", {})
         name = detail.get("alarmName", "unknown-alarm")
         description = (detail.get("configuration", {}) or {}).get("description") or ""
@@ -58,4 +91,5 @@ def incident_payload(events: list[dict[str, Any]]) -> dict[str, Any]:
         "external_incident_id": f"{first['detail'].get('alarmName', 'alarm')}@{_state_time(first).isoformat()}",
         "reported_at": _state_time(events[-1]).isoformat(),
         "alarms": list(seen),
+        "alarm_entities": entities,
     }

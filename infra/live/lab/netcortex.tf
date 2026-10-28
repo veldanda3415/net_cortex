@@ -103,6 +103,21 @@ data "aws_iam_policy_document" "netcortex_read" {
     resources = ["*"]
   }
 
+  # get_topology (aws_topology plugin): read-only describe calls.
+  statement {
+    sid = "Topology"
+    actions = [
+      "ec2:DescribeVpnConnections", "ec2:DescribeTransitGatewayAttachments",
+      "ec2:GetTransitGatewayRouteTablePropagations", "ec2:DescribeVpcs", "ec2:DescribeSubnets",
+      "ec2:DescribeRouteTables", "ec2:DescribeNatGateways", "ec2:DescribeVpcPeeringConnections",
+      "ec2:DescribeSecurityGroups", "ec2:DescribeNetworkInterfaces", "ec2:DescribeNetworkAcls",
+      "ec2:DescribeInstances", "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeTargetGroups", "elasticloadbalancing:DescribeTargetHealth",
+      "route53:ListHostedZones", "route53:ListResourceRecordSets",
+    ]
+    resources = ["*"]
+  }
+
   statement {
     sid       = "AlarmQueue"
     actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]

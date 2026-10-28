@@ -39,4 +39,5 @@ def normalize_incident(payload: dict) -> IncidentRequest:
         source_system=payload.get("source_system"),
         external_incident_id=payload.get("external_incident_id"),
         reported_at=_alarm_time(payload),
+        alarm_entities=payload.get("alarm_entities") or [],
     )

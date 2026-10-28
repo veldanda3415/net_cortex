@@ -296,4 +296,4 @@ def test_aws_plugins_reject_non_aws_regions():
 
 def test_aws_lab_sources_config_loads():
     service = TelemetryService(load_sources_config("config/telemetry.aws-lab.yaml"))
-    assert {p.name for p in service.plugins} == {"cloudwatch", "cloudwatch_logs", "cloudtrail", "tgw_routes"}
+    assert {p.name for p in service.plugins} == {"cloudwatch", "cloudwatch_logs", "cloudtrail", "tgw_routes", "aws_topology"}

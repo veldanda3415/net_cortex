@@ -94,6 +94,7 @@ async def run_rca(
     scenario_id: int = 1,
     source_system: str = "mcp_client",
     reported_at: str | None = None,
+    alarm_entities: list[dict] | None = None,
 ) -> dict:
     """Run root cause analysis on a network incident.
 
@@ -108,6 +109,8 @@ async def run_rca(
         source_system: Originating system identifier.
         reported_at: ISO-8601 alarm time; anchors the telemetry window
             (end = reported_at, start = end - window). Defaults to now.
+        alarm_entities: What the alarm fired on, as [{"type": "flow", "id": "svc-to-app"}];
+            collaboration walks the topology from here.
     """
     if _task_store is None or _engine is None:
         return {"error": "Server not initialized. Start with mcp-serve command."}
@@ -133,6 +136,7 @@ async def run_rca(
         severity=severity,
         source_system=source_system,
         external_incident_id=f"MCP-{scenario_id}",
+        alarm_entities=alarm_entities or [],
         **({"reported_at": alarm_time} if alarm_time else {}),
     )
 

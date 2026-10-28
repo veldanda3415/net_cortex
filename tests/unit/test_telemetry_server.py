@@ -166,7 +166,7 @@ def test_all_required_plugins_registered():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("name", ["frr_ssm", "prometheus", "elk", "splunk"])
+@pytest.mark.parametrize("name", ["frr_ssm", "elk", "splunk"])
 async def test_skeletons_raise_not_implemented_and_cannot_be_enabled(name):
     cls = get_plugin_class(name)
     domain = sorted(cls.domains)[0]

@@ -17,6 +17,16 @@ signal name is the CloudWatch metric name, which is what signals.json keys
 on. Every dimension becomes an entity label; `entity.id` names the dimension
 used as the entity id.
 
+An entry can also re-emit a series under another signal name, converted:
+
+      - {namespace: AWS/VPN, names: [TunnelDataOut], stat: Sum, dimensions: [TunnelIpAddress],
+         entity: {type: tunnel, id: TunnelIpAddress},
+         emit_as: link_out_bps, scale: 8, per_second: true,     # bytes per period -> bits/s
+         labels: {capacity_bps: "1250000000"}}                  # judged against this capacity
+
+`labels` are added to the entity, so a rule can divide by them
+(signals.json threshold `per: labels.capacity_bps`).
+
 A metric that publishes nothing (instance stopped, agent offline) produces no
 signal: absence is not detectable here.
 
@@ -53,6 +63,10 @@ class _MetricSpec(BaseModel):
     dimensions: list[str] = Field(min_length=1)
     entity: _Entity
     unit: str | None = None
+    emit_as: str | None = Field(default=None, description="Signal name to emit instead of the metric name")
+    scale: float = Field(default=1.0, gt=0, description="Multiply each value by this")
+    per_second: bool = Field(default=False, description="Divide each value by the period (a Sum becomes a rate)")
+    labels: dict[str, str] = Field(default_factory=dict, description="Extra entity labels, e.g. capacity_bps")
 
 
 class _Config(BaseModel):
@@ -133,18 +147,20 @@ class CloudWatchPlugin(AwsPlugin):
             for page in pages:
                 for result in page.get("MetricDataResults", []):
                     spec, metric_name, dims = by_id[result["Id"]]
-                    found = catalog.signal(metric_name)
+                    name = spec.emit_as or metric_name
+                    found = catalog.signal(name)
                     unit = spec.unit or (found[1].unit if found else None)
                     dim_key = ",".join(f"{k}={v}" for k, v in sorted(dims.items()))
-                    entity = Entity(type=spec.entity.type, id=dims[spec.entity.id], labels=dict(dims))
+                    entity = Entity(type=spec.entity.type, id=dims[spec.entity.id], labels={**spec.labels, **dims})
+                    factor = spec.scale / (period if spec.per_second else 1)
                     for ts, value in zip(result.get("Timestamps", []), result.get("Values", [])):
                         ts = utc(ts)
                         signals.append(Signal(
                             signal_type="metric", timestamp=ts, observed_at=observed, entity=entity,
-                            name=metric_name, value=float(value), unit=unit, domain="metrics", source=self.name,
+                            name=name, value=float(value) * factor, unit=unit, domain="metrics", source=self.name,
                             attributes={"namespace": spec.namespace, "statistic": spec.stat, "period": period,
                                         "region": region},
-                            evidence_ref=f"cloudwatch:{spec.namespace}/{metric_name}/{dim_key}@{ts.isoformat()}",
+                            evidence_ref=f"cloudwatch:{spec.namespace}/{name}/{dim_key}@{ts.isoformat()}",
                         ))
         signals.sort(key=lambda s: s.timestamp)
         status = "partial" if truncated else "ok"

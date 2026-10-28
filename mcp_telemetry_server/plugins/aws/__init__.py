@@ -1,7 +1,7 @@
 """AWS source plugins. Importing this package registers them.
 
 Each cloud or on-prem backend lives in its own package or module under
-plugins/ (aws/ here; Prometheus/ELK/Splunk in legacy_backends.py) and emits
+plugins/ (aws/ here, prometheus.py, ELK/Splunk skeletons in legacy_backends.py) and emits
 the same contract v2 signals. What a signal means is decided by the
 detection catalog, not by the plugin.
 
@@ -9,10 +9,11 @@ detection catalog, not by the plugin.
     cloudwatch_logs  logs, routing   named events or counts from log groups (FilterLogEvents)
     cloudtrail       config    management events (LookupEvents)
     tgw_routes       routing   current TGW blackhole routes (SearchTransitGatewayRoutes)
+    aws_topology     topology  VPN, TGW, VPC, ENI/SG, ELB and Route 53 relationships (describe calls)
     frr_ssm          logs, routing   skeleton; the lab ships FRR logs to CloudWatch instead
 """
 
-from mcp_telemetry_server.plugins.aws import cloudtrail, cloudwatch, logs, tgw  # noqa: F401  (registration)
+from mcp_telemetry_server.plugins.aws import cloudtrail, cloudwatch, logs, tgw, topology  # noqa: F401  (registration)
 from mcp_telemetry_server.plugins.base import SkeletonPlugin, register_plugin
 
 
