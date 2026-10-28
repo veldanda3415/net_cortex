@@ -322,7 +322,7 @@ How the rule fields behave:
 
 ### What still requires code
 
-- **A new data source.** A telemetry source plugin, such as the CloudWatch/CloudTrail/TGW/Flow Logs/FRR skeletons, plus its credentials and IAM. Once written, its field mapping can live in `sources.json`.
+- **A new data source.** A telemetry source plugin, plus its credentials and IAM. The AWS plugins in `mcp_telemetry_server/plugins/aws/` are the worked example; an Azure, GCP or on-prem backend is a sibling package. New log formats or error classes on an existing log group are config (`cloudwatch_logs` queries), not code.
 - **A new rule type.** Add it to `contract/catalog_models.py` and `detection/rules.py`. This is deliberate: the set stays closed and reviewable.
 - **A new MCP tool.** Today these are `get_metrics`, `get_logs`, `get_routing_events`, `get_config_changes`, `get_signals` and `get_topology`. New domains use `get_signals`, so they don't need one.
 - **Detecting on log message text.** Rules match a signal's `name` and severity, never its free text, so there is no substring or regex detection. The workaround is to name the error at the source (see the recipes above). A `message_match` option on `event_presence` would be a new rule capability.

@@ -31,6 +31,10 @@ class WebhookServer:
                 "/incidents accepts unauthenticated requests. Do not expose this outside local demos."
             )
 
+        @self.app.get("/health")
+        async def health() -> dict:
+            return {"status": "ok" if self._handler is not None else "starting"}
+
         @self.app.post("/incidents")
         async def ingest(request: Request, payload: dict) -> dict:
             if auth_enabled:

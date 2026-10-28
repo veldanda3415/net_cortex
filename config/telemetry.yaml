@@ -5,9 +5,10 @@
 # narrowed with `domains:`). Every tool call fans out to all enabled plugins
 # for its domain and reports one coverage entry per plugin.
 #
-# Cloud plugins (cloudwatch, cloudtrail, tgw_routes, flow_logs, frr_ssm) and
-# prometheus/elk/splunk are interface skeletons in this release: enabling one
-# fails startup with a clear error.
+# The AWS plugins (cloudwatch, cloudwatch_logs, cloudtrail, tgw_routes) need their
+# own config; see config/telemetry.aws-lab.yaml for a full example against the lab.
+# frr_ssm and prometheus/elk/splunk are interface skeletons: enabling one fails
+# startup with a clear error.
 
 sources:
   simulation:
@@ -26,7 +27,7 @@ sources:
     enabled: false
   tgw_routes:
     enabled: false
-  flow_logs:
+  cloudwatch_logs:
     enabled: false
   frr_ssm:
     enabled: false

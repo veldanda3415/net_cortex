@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from ingestion.cloudwatch_alarms import incident_payload, is_alarm_event
 from models.schemas import IncidentRequest
 
 # Keys an upstream alarm may use for "when this was detected". reported_at
@@ -26,6 +27,10 @@ def _alarm_time(payload: dict) -> datetime:
 
 
 def normalize_incident(payload: dict) -> IncidentRequest:
+    # A raw EventBridge alarm event (e.g. from an API destination) is mapped
+    # by its alerting system's adapter first.
+    if is_alarm_event(payload):
+        payload = incident_payload([payload])
     return IncidentRequest(
         description=payload.get("description", "Unknown incident"),
         region=payload.get("region", "us-east"),

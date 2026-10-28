@@ -30,7 +30,15 @@
     "instance": {"description": "EC2 instance"},
     "vpc_peering": {"description": "VPC peering connection"},
     "bgp_neighbor": {"description": "BGP neighbor of a customer-gateway router (FRR)"},
-    "iam_principal": {"description": "Caller recorded by CloudTrail"}
+    "iam_principal": {"description": "Caller recorded by CloudTrail"},
+    "nat_gateway": {"description": "AWS NAT gateway"},
+    "load_balancer": {"description": "Elastic Load Balancing load balancer"},
+    "target_group": {"description": "Load balancer target group"},
+    "hosted_zone": {"description": "Route 53 hosted zone"},
+    "dns_name": {"description": "DNS query name"},
+    "flow": {"description": "Synthetic client-to-service probe flow"},
+    "ike_connection": {"description": "IKE/IPsec connection on a customer-gateway router (strongSwan connection name)"},
+    "aws_service": {"description": "AWS service endpoint (fallback entity for a CloudTrail call with no resource)"}
   },
   "relationships": {
     "member_of": {"description": "Tunnel belongs to a VPN connection", "source": ["tunnel"], "target": ["vpn_connection"]},

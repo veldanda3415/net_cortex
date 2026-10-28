@@ -195,6 +195,8 @@ sed -i 's/^bgpd=no/bgpd=yes/' /etc/frr/daemons
     echo "router bgp $ONPREM_ASN"
     echo " bgp router-id $LOCAL_IP"
     echo " no bgp ebgp-requires-policy"
+    # FRR's traditional profile doesn't log session changes; NetCortex reads them (%ADJCHANGE).
+    echo " bgp log-neighbor-changes"
     for i in $(seq 0 $((N_TUNNELS - 1))); do
       peer=$(j ".tunnels[$i].inside_remote")
       echo " neighbor $peer remote-as $AWS_ASN"
