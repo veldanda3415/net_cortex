@@ -353,6 +353,23 @@ def _targets(findings: list[AgentFinding], graph: TopologyGraph, alarm_entities:
     return nodes  # type: ignore[return-value]
 
 
+# A cause shortly before the first symptom gets full precedence; older ones
+# fade (a change 25 minutes earlier is more likely unrelated background), and
+# anything clearly after the symptoms gets none. Metric datapoints are stamped
+# at the start of their minute, so a minute of slack either way.
+PRECEDENCE_FULL_SECONDS = 300
+PRECEDENCE_SLACK_SECONDS = 60
+
+
+def _precedence(first_seen: datetime, onset: datetime) -> float:
+    before = (onset - first_seen).total_seconds()
+    if before < -PRECEDENCE_SLACK_SECONDS:
+        return 0.0
+    if before <= PRECEDENCE_FULL_SECONDS:
+        return 1.0
+    return round(PRECEDENCE_FULL_SECONDS / before, 3)
+
+
 def rank_causes(findings: list[AgentFinding], topology: TopologyResponse | dict | None, catalog: Catalog,
                 alarm_entities: list[dict] | None = None) -> list[RankedCause]:
     """Every entity with rule-fired evidence that sits in the topology,
@@ -376,11 +393,13 @@ def rank_causes(findings: list[AgentFinding], topology: TopologyResponse | dict 
     if not grouped:
         return []
 
+    # When the current trouble started on the alarmed entities: the onset of
+    # their latest bad episode, not an earlier dip in the same window.
     symptom_times = [
-        _ts(row["first_seen"])
+        _ts(row.get("onset") or row["first_seen"])
         for (node, _), g in grouped.items() if node in targets
         for row in g["rows"]
-    ] or [_ts(r["first_seen"]) for g in grouped.values() for r in g["rows"] if r.get("role") == "symptom"]
+    ] or [_ts(r.get("onset") or r["first_seen"]) for g in grouped.values() for r in g["rows"] if r.get("role") == "symptom"]
 
     ranked: list[RankedCause] = []
     for (node, domain), g in grouped.items():
@@ -390,7 +409,9 @@ def rank_causes(findings: list[AgentFinding], topology: TopologyResponse | dict 
         roles = {r.get("role") for r in rows}
         role = "cause" if "cause" in roles else (None if None in roles else "symptom")
         severity = max(SEVERITY_SCORE.get(r.get("severity", "info"), 0.25) for r in rows)
-        evidence = min(1.0, 0.5 * severity + 0.15 * len(signals) + 0.25 * g["confidence"])
+        # Distinct signals count up to two: a deploy touching one table with
+        # five API calls is not five times the evidence.
+        evidence = min(1.0, 0.5 * severity + 0.15 * min(len(signals), 2) + 0.25 * g["confidence"])
 
         chain: list[str] = []
         if not targets:
@@ -411,12 +432,7 @@ def rank_causes(findings: list[AgentFinding], topology: TopologyResponse | dict 
                 topo = max(topo, 0.6)
 
         others = [t for t in symptom_times if t != first_seen] or symptom_times
-        if not others:
-            precedence = 0.5
-        else:
-            earliest = min(others)
-            delta = (first_seen - earliest).total_seconds()
-            precedence = 1.0 if delta <= 0 else (0.5 if delta <= 60 else 0.0)
+        precedence = _precedence(first_seen, min(others)) if others else 0.5
 
         features = {"evidence": round(evidence, 3), "topology": topo, "precedence": precedence,
                     "role": ROLE_SCORE[role]}

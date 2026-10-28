@@ -16,13 +16,17 @@ logger = logging.getLogger("net_cortex.a2a_router")
 
 
 class A2ARouter:
-    def __init__(self, registry: AgentRegistry, message_timeout_seconds: int) -> None:
+    def __init__(self, registry: AgentRegistry, message_timeout_seconds: int,
+                 mounts: dict[str, httpx.AsyncBaseTransport] | None = None) -> None:
+        """`mounts` (URL prefix -> transport) lets agents run in-process, e.g.
+        httpx.ASGITransport per agent app, for offline replays."""
         self.registry = registry
         self.message_timeout_seconds = message_timeout_seconds
+        self._mounts = mounts
 
     async def _post_task(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
         timeout = httpx.Timeout(self.message_timeout_seconds)
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        async with httpx.AsyncClient(timeout=timeout, mounts=self._mounts) as client:
             response = await client.post(endpoint, json=payload)
             response.raise_for_status()
             return response.json()

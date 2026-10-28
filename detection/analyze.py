@@ -138,6 +138,31 @@ def _evidence(catalog: Catalog, hit_obs: list[_Observation], events: dict[int, d
     return ordered[:MAX_EVIDENCE]
 
 
+def _with_onsets(rows: list[dict[str, Any]], hit_obs: list[_Observation], firing: dict[tuple, list[tuple[datetime, bool]]],
+                 stateful: set[tuple]) -> list[dict[str, Any]]:
+    """`onset`: when the row's latest bad episode began. For a metric that dipped
+    at the start of the window and again at the alarm, that is the second dip,
+    not first_seen; ranking compares causes against it. Events keep first_seen."""
+    cats: dict[tuple[str, str, str], set[str]] = {}
+    for obs in hit_obs:
+        for h in obs.hits:
+            cats.setdefault((obs.entity.type, obs.entity.id, h.signal.name), set()).add(h.catalog_name)
+    for row in rows:
+        onset = None
+        for name in row["signals"]:
+            for cat in cats.get((row["entity_type"], row["entity_id"], name), ()):
+                key = (row["entity_type"], row["entity_id"], cat)
+                if key not in stateful:
+                    continue
+                ordered = sorted(firing.get(key, []), key=lambda item: item[0])
+                edges = [t for i, (t, hit) in enumerate(ordered) if hit and (i == 0 or not ordered[i - 1][1])]
+                if edges:
+                    candidate = edges[-1].isoformat()
+                    onset = candidate if onset is None else max(onset, candidate)
+        row["onset"] = onset or row["first_seen"]
+    return rows
+
+
 def _entity_status(hit_obs: list[_Observation], firing: dict[tuple, list[tuple[datetime, bool]]],
                    stateful: set[tuple]) -> list[dict[str, Any]]:
     """For each hit entity, over every sample seen (window + post-alarm):
@@ -473,6 +498,6 @@ def analyze_domain(
         confidence=confidence,
         data_degraded=response.degraded,
         unclassified_evidence=[_unclassified_row(s) for s in unclassified[:MAX_UNCLASSIFIED]],
-        evidence=_evidence(catalog, hit_obs, events),
+        evidence=_with_onsets(_evidence(catalog, hit_obs, events), hit_obs, firing, stateful),
         entity_status=_entity_status(hit_obs, firing, stateful),
     )
