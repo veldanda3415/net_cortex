@@ -21,6 +21,8 @@ and synthesizes both machine-structured and human-readable RCA output.
 
 ## Documentation
 
+**Adopting NetCortex in your own network? Start with [project_docs/adopt.md](project_docs/adopt.md):** six steps, from an offline try-out to collaborating agents on your telemetry.
+
 For contributors and production-oriented extensions, use these guides:
 
 - [project_docs/agent-authoring-guide.md](project_docs/agent-authoring-guide.md): how domain agents decide, score confidence, and collaborate.
