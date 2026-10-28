@@ -1,0 +1,26 @@
+{
+  "name": "tunnel-flapping",
+  "scenario_id": 2008,
+  "fixture": "tests/fixtures/cross_domain/tunnel-flapping.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "tunnel-down",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-vpn-tunnel2-down",
+  "alarm_entities": [
+    {
+      "type": "tunnel",
+      "id": "34.224.247.80"
+    }
+  ],
+  "culprit": {
+    "type": "tunnel",
+    "ids": [
+      "34.224.247.80",
+      "vpn-02d7b1a3f6189fd11-tunnel-2"
+    ],
+    "domain": "metrics"
+  },
+  "minutes_since_alarm": 10,
+  "expect_status": "flapping",
+  "why": "The tunnel keeps going down and up after the alarm: report flapping, not a steady outage."
+}

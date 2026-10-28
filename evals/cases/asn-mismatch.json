@@ -1,0 +1,27 @@
+{
+  "name": "asn-mismatch",
+  "scenario_id": 2002,
+  "fixture": "tests/fixtures/cross_domain/asn-mismatch.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "asn-mismatch",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-bgp-169.254.100.1-down; netcortex-lab-vpn-tunnel1-down",
+  "alarm_entities": [
+    {
+      "type": "bgp_neighbor",
+      "id": "169.254.100.1"
+    },
+    {
+      "type": "tunnel",
+      "id": "3.86.174.132"
+    }
+  ],
+  "culprit": {
+    "type": "bgp_neighbor",
+    "ids": [
+      "169.254.100.1"
+    ],
+    "domain": "log"
+  },
+  "why": "The decisive FRR 'Bad Peer AS' line (log) is buried under 16 repeated AWS BGP DOWN lines; the alarm is a metric."
+}

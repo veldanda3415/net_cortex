@@ -1,0 +1,17 @@
+{
+  "name": "loss-latency",
+  "scenario_id": 2007,
+  "fixture": "tests/fixtures/cross_domain/loss-latency.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "loss-latency",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-onprem-to-nlb-latency; netcortex-lab-flow-onprem-to-nlb-loss",
+  "alarm_entities": [
+    {
+      "type": "flow",
+      "id": "onprem-to-nlb"
+    }
+  ],
+  "culprit": null,
+  "why": "Loss and latency with no control-plane change: the new LatencyMs/LossPercent rules see the symptom, and nothing is blamed on config."
+}

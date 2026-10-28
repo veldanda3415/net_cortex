@@ -1,0 +1,23 @@
+{
+  "name": "peering-route-removed",
+  "scenario_id": 2005,
+  "fixture": "tests/fixtures/cross_domain/peering-route-removed.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "peering-route-removed",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-app-to-svc-degraded",
+  "alarm_entities": [
+    {
+      "type": "flow",
+      "id": "app-to-svc"
+    }
+  ],
+  "culprit": {
+    "type": "route_table",
+    "ids": [
+      "rtb-0a7c3e5d9f1b2a4c6"
+    ],
+    "domain": "config"
+  },
+  "why": "A deleted peering route (config) explains a failing flow (metrics) across the VPC peering."
+}

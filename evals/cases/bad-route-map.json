@@ -1,0 +1,28 @@
+{
+  "name": "bad-route-map",
+  "scenario_id": 2006,
+  "fixture": "tests/fixtures/cross_domain/bad-route-map.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "bad-route-map",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-onprem-to-nlb-degraded; netcortex-lab-flow-onprem-iperf-app-a-degraded",
+  "alarm_entities": [
+    {
+      "type": "flow",
+      "id": "onprem-to-nlb"
+    },
+    {
+      "type": "flow",
+      "id": "onprem-iperf-app-a"
+    }
+  ],
+  "culprit": {
+    "type": "bgp_neighbor",
+    "ids": [
+      "169.254.100.1",
+      "169.254.100.5"
+    ],
+    "domain": "metrics"
+  },
+  "why": "The router stopped advertising prefixes (bgp_neighbor) while BGP stayed up; routes vanished from TGW (routing) and flows failed."
+}
