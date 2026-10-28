@@ -105,7 +105,7 @@ async def test_metrics_adapter_parses_valid_rows():
     assert fake.calls == [("get_metrics", {
         "region": "us-east", "start_time": START.isoformat().replace("+00:00", "Z"),
         "end_time": END.isoformat().replace("+00:00", "Z"), "include_baseline": False,
-        "scenario_id": 1, "contract_version": "2.0",
+        "scenario_id": 1, "contract_version": "2.1",
     })]
 
 

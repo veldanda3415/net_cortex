@@ -39,6 +39,11 @@ class Relationship(_M):
     description: str = ""
     source: list[str] = Field(min_length=1, description="Allowed source entity types")
     target: list[str] = Field(min_length=1, description="Allowed target entity types")
+    dependent: Literal["source", "target", "both"] = Field(
+        default="both",
+        description="Which end depends on the other: a fault on the other end shows up on this end. "
+        "Used to rank a cause upstream of the alarm above one that is only connected to it.",
+    )
 
 
 class EntitiesFile(_M):
@@ -61,6 +66,12 @@ class ThresholdRule(_Rule):
     min: float | None = None
     max: float | None = None
     field: str = Field(default="value", description="'value' or 'attributes.<name>'")
+    per: str | None = Field(
+        default=None,
+        description="Divide the field by this one before comparing, e.g. 'labels.capacity_bps' for "
+        "utilization. A signal without the divisor (missing or 0) does not fire.",
+    )
+    scale: float = Field(default=1.0, gt=0, description="Multiply the field by this first (e.g. 8 for bytes -> bits)")
 
 
 class StateEqualsRule(_Rule):
@@ -90,6 +101,8 @@ class RateChangeRule(_Rule):
     direction: Literal["increase", "decrease"]
     factor: float = Field(gt=1, description="Fires when value >= reference*factor (increase) or <= reference/factor (decrease)")
     min_reference: float = Field(default=0.0, ge=0, description="Ignore series whose reference level is at or below this")
+    reference: Literal["mean", "median"] = Field(
+        default="mean", description="How the reference level is taken; median resists bursty series")
 
 
 class EventPresenceRule(_Rule):
@@ -278,6 +291,41 @@ class CorrelationFile(_M):
     rules: dict[str, CorrelationRule] = Field(default_factory=dict)
 
 
+# --------------------------------------------------------------- investigation
+
+class WalkSpec(_M):
+    max_hops: int = Field(default=3, ge=1, le=6, description="Topology hops from an anchor entity")
+    lookback_minutes: int = Field(default=15, ge=0, description="A question's window starts this long before the first symptom")
+    max_requests_per_round: int = Field(default=12, ge=1, description="Cap on validation requests per collaboration round")
+
+
+class RankWeights(_M):
+    evidence: float = Field(default=1.0, ge=0)
+    topology: float = Field(default=1.0, ge=0)
+    precedence: float = Field(default=1.0, ge=0)
+    role: float = Field(default=1.0, ge=0)
+
+
+class InvestigationFile(_M):
+    catalog_version: str = "1.0"
+    probes: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Entity type -> domains that can be asked about an entity of that type",
+    )
+    signal_roles: dict[str, Literal["cause", "symptom"]] = Field(
+        default_factory=dict,
+        description="Signal name (raw or catalog) -> role. A signal that is a cause in one fault and a "
+        "symptom in another is left out; time precedence and topology decide it.",
+    )
+    lead_patterns: dict[str, str] = Field(
+        default_factory=dict,
+        description="Regex -> entity type. An agent answering a question proposes as new leads the ids these "
+        "patterns find in its evidence (e.g. a route table id inside a CloudTrail request).",
+    )
+    walk: WalkSpec = Field(default_factory=WalkSpec)
+    rank_weights: RankWeights = Field(default_factory=RankWeights)
+
+
 # --------------------------------------------------------------------- sources
 
 class EntityMapping(_M):
@@ -321,6 +369,7 @@ CATALOG_FILES: dict[str, type[BaseModel]] = {
     "domains.json": DomainsFile,
     "correlation.json": CorrelationFile,
     "sources.json": SourcesFile,
+    "investigation.json": InvestigationFile,
 }
 
 

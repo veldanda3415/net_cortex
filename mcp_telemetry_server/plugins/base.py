@@ -11,9 +11,13 @@ tool handlers.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from typing import Any, ClassVar
 
 from contract import Coverage, Entity, Signal, TelemetryQuery, TopologyEdge
+
+# How far before the window `include_baseline` reaches (TelemetryService uses the same).
+BASELINE_LOOKBACK = timedelta(hours=24)
 
 # "*" in a plugin's `domains` means "any domain the catalog defines" (e.g.
 # replay can serve a domain added through the catalog alone).

@@ -219,7 +219,7 @@
       "type": "object"
     }
   },
-  "$id": "https://netcortex.dev/contract/2.0/tool_response.json",
+  "$id": "https://netcortex.dev/contract/2.1/tool_response.json",
   "additionalProperties": false,
   "properties": {
     "baseline_window": {
@@ -234,7 +234,7 @@
       "default": null
     },
     "contract_version": {
-      "default": "2.0",
+      "default": "2.1",
       "title": "Contract Version",
       "type": "string"
     },
@@ -273,5 +273,5 @@
   ],
   "title": "ToolResponse",
   "type": "object",
-  "x-contract-version": "2.0"
+  "x-contract-version": "2.1"
 }

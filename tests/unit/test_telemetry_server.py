@@ -86,7 +86,7 @@ async def test_tools_return_tool_response_with_coverage():
     async with Client(server) as client:
         result = await client.call_tool("get_metrics", {"region": "us-east", "scenario_id": 1, **_window_args()})
     response = ToolResponse.model_validate(json.loads(result.content[0].text))
-    assert response.contract_version == "2.0"
+    assert response.contract_version == "2.1"
     assert [c.source for c in response.coverage] == ["simulation"]
     assert {s.name for s in response.signals} == {"error_rate", "packet_loss", "throughput_gbps", "latency_ms"}
     # Every signal carries a pointer back to its raw record, unique per signal.
@@ -202,7 +202,7 @@ def test_health_and_ready_routes_report_per_plugin_status():
         ready = http.get("/ready")
     assert health.status_code == 200 and ready.status_code == 200
     body = health.json()
-    assert body["contract_version"] == "2.0" and body["status"] == "ok"
+    assert body["contract_version"] == "2.1" and body["status"] == "ok"
     assert set(body["plugins"]) == {"simulation", "replay"}
     assert body["plugins"]["replay"]["fixtures"] == ["vpn_tunnel_down.json"]
 

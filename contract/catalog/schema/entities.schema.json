@@ -15,6 +15,17 @@
     "Relationship": {
       "additionalProperties": false,
       "properties": {
+        "dependent": {
+          "default": "both",
+          "description": "Which end depends on the other: a fault on the other end shows up on this end. Used to rank a cause upstream of the alarm above one that is only connected to it.",
+          "enum": [
+            "source",
+            "target",
+            "both"
+          ],
+          "title": "Dependent",
+          "type": "string"
+        },
         "description": {
           "default": "",
           "title": "Description",

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import string
 import sys
 from dataclasses import dataclass, field
@@ -36,6 +37,7 @@ from contract.catalog_models import (
     DomainDef,
     DomainsFile,
     EntitiesFile,
+    InvestigationFile,
     SignalDef,
     SignalsFile,
     SourceMapping,
@@ -112,6 +114,7 @@ class Catalog:
     domains: DomainsFile
     correlation: CorrelationFile
     sources: SourcesFile
+    investigation: InvestigationFile = field(default_factory=InvestigationFile)
     origin: list[str] = field(default_factory=list)
     _by_name: dict[str, tuple[str, SignalDef]] = field(default_factory=dict, repr=False)
 
@@ -152,6 +155,14 @@ class Catalog:
 
     def mappings_for(self, source: str) -> dict[str, SourceMapping]:
         return {mid: m for mid, m in self.sources.mappings.items() if m.source == source}
+
+    def signal_role(self, raw_name: str) -> str | None:
+        """'cause', 'symptom' or None, by raw name first, then catalog name."""
+        roles = self.investigation.signal_roles
+        if raw_name in roles:
+            return roles[raw_name]
+        found = self.signal(raw_name)
+        return roles.get(found[0]) if found else None
 
 
 def _template_roots(template: str) -> set[str]:
@@ -202,6 +213,8 @@ def cross_validate(cat: Catalog) -> None:
             seen[alias] = name
         rule = sig.rule
         if rule is not None and rule.type == "threshold":
+            if rule.per is not None and not rule.per.startswith(("attributes.", "labels.")):
+                raise CatalogError(f"{where}.rule.per: '{rule.per}' must be 'attributes.<name>' or 'labels.<name>'")
             if rule.op == "between" and (rule.min is None or rule.max is None):
                 raise CatalogError(f"{where}.rule: op 'between' needs min and max")
             if rule.op != "between" and rule.value is None:
@@ -268,6 +281,23 @@ def cross_validate(cat: Catalog) -> None:
         for i, cond in enumerate(rule.when.all):
             _check_condition(cond, f"{where}.when.all.{i}", domains)
 
+    for etype, probe_domains in cat.investigation.probes.items():
+        where = f"investigation.json: probes.{etype}"
+        if etype not in entity_types:
+            raise CatalogError(f"{where}: unknown entity type '{etype}'")
+        unknown = set(probe_domains) - domains
+        if unknown:
+            raise CatalogError(f"{where}: unknown domain(s) {sorted(unknown)}")
+
+    for pattern, etype in cat.investigation.lead_patterns.items():
+        where = f"investigation.json: lead_patterns.{pattern}"
+        if etype not in entity_types:
+            raise CatalogError(f"{where}: unknown entity type '{etype}'")
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            raise CatalogError(f"{where}: invalid regex: {exc}") from None
+
     for mid, m in cat.sources.mappings.items():
         where = f"sources.json: mappings.{mid}"
         if m.domain not in telemetry:
@@ -319,6 +349,7 @@ def load_catalog(override_dir: str | os.PathLike | None = None, default_dir: str
         domains=parsed["domains.json"],  # type: ignore[arg-type]
         correlation=parsed["correlation.json"],  # type: ignore[arg-type]
         sources=parsed["sources.json"],  # type: ignore[arg-type]
+        investigation=parsed["investigation.json"],  # type: ignore[arg-type]
         origin=origin,
     )
     cross_validate(cat)

@@ -29,6 +29,8 @@ def query_from_request(data: dict[str, Any]) -> TelemetryQuery:
     window = int(data.get("window_minutes") or DEFAULT_WINDOW_MINUTES)
     end_raw = data.get("end_time")
     end = datetime.fromisoformat(end_raw) if isinstance(end_raw, str) else (end_raw or datetime.now(timezone.utc))
+    anchor_raw = data.get("anchor_time")
+    anchor = datetime.fromisoformat(anchor_raw) if isinstance(anchor_raw, str) else anchor_raw
     start_raw = data.get("start_time")
     start = datetime.fromisoformat(start_raw) if isinstance(start_raw, str) else start_raw
     if start is None:
@@ -40,4 +42,5 @@ def query_from_request(data: dict[str, Any]) -> TelemetryQuery:
         entity_filters=data.get("entity_filters"),
         include_baseline=bool(data.get("include_baseline", False)),
         scenario_id=data.get("scenario_id"),
+        anchor_time=anchor,
     )

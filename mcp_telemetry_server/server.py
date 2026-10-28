@@ -62,6 +62,7 @@ def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry", c
         include_baseline: bool,
         scenario_id: int | None,
         contract_version: str,
+        anchor_time: datetime | None = None,
     ) -> dict:
         query = _validated_query(
             contract_version,
@@ -71,6 +72,7 @@ def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry", c
             entity_filters=entity_filters,
             include_baseline=include_baseline,
             scenario_id=scenario_id,
+            anchor_time=anchor_time,
         )
         response = await service.query(domain, query)
         return response.model_dump(mode="json")
@@ -84,13 +86,14 @@ def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry", c
         include_baseline: bool = False,
         scenario_id: int | None = None,
         contract_version: str = CONTRACT_VERSION,
+        anchor_time: datetime | None = None,
     ) -> dict:
         """Metric signals (counters, gauges, rates) for a region in [start_time, end_time].
 
         Returns a contract v2 ToolResponse: window, coverage per source, signals.
         """
         return await _domain_tool("metrics", region, start_time, end_time, entity_filters,
-                                  include_baseline, scenario_id, contract_version)
+                                  include_baseline, scenario_id, contract_version, anchor_time)
 
     @server.tool()
     async def get_logs(
@@ -101,10 +104,11 @@ def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry", c
         include_baseline: bool = False,
         scenario_id: int | None = None,
         contract_version: str = CONTRACT_VERSION,
+        anchor_time: datetime | None = None,
     ) -> dict:
         """Log event signals for a region in [start_time, end_time]. Returns a contract v2 ToolResponse."""
         return await _domain_tool("logs", region, start_time, end_time, entity_filters,
-                                  include_baseline, scenario_id, contract_version)
+                                  include_baseline, scenario_id, contract_version, anchor_time)
 
     @server.tool()
     async def get_routing_events(
@@ -115,13 +119,14 @@ def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry", c
         include_baseline: bool = False,
         scenario_id: int | None = None,
         contract_version: str = CONTRACT_VERSION,
+        anchor_time: datetime | None = None,
     ) -> dict:
         """Routing change/state signals (reroutes, BGP, route tables) in [start_time, end_time].
 
         Returns a contract v2 ToolResponse.
         """
         return await _domain_tool("routing", region, start_time, end_time, entity_filters,
-                                  include_baseline, scenario_id, contract_version)
+                                  include_baseline, scenario_id, contract_version, anchor_time)
 
     @server.tool()
     async def get_config_changes(
@@ -132,10 +137,11 @@ def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry", c
         include_baseline: bool = False,
         scenario_id: int | None = None,
         contract_version: str = CONTRACT_VERSION,
+        anchor_time: datetime | None = None,
     ) -> dict:
         """Configuration change signals in [start_time, end_time]. Returns a contract v2 ToolResponse."""
         return await _domain_tool("config", region, start_time, end_time, entity_filters,
-                                  include_baseline, scenario_id, contract_version)
+                                  include_baseline, scenario_id, contract_version, anchor_time)
 
     @server.tool()
     async def get_signals(
@@ -147,6 +153,7 @@ def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry", c
         include_baseline: bool = False,
         scenario_id: int | None = None,
         contract_version: str = CONTRACT_VERSION,
+        anchor_time: datetime | None = None,
     ) -> dict:
         """Signals for any telemetry domain defined in the detection catalog (domains.json
         `telemetry_domain`), in [start_time, end_time]. Returns a contract v2 ToolResponse.
@@ -157,7 +164,7 @@ def build_server(service: TelemetryService, name: str = "NetCortex-Telemetry", c
         if domain not in known:
             raise ToolError(f"Unknown telemetry domain '{domain}'; the catalog defines {known}")
         return await _domain_tool(domain, region, start_time, end_time, entity_filters,
-                                  include_baseline, scenario_id, contract_version)
+                                  include_baseline, scenario_id, contract_version, anchor_time)
 
     @server.tool()
     async def get_topology(

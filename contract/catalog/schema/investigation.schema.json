@@ -1,0 +1,112 @@
+{
+  "$defs": {
+    "RankWeights": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "default": 1.0,
+          "minimum": 0,
+          "title": "Evidence",
+          "type": "number"
+        },
+        "precedence": {
+          "default": 1.0,
+          "minimum": 0,
+          "title": "Precedence",
+          "type": "number"
+        },
+        "role": {
+          "default": 1.0,
+          "minimum": 0,
+          "title": "Role",
+          "type": "number"
+        },
+        "topology": {
+          "default": 1.0,
+          "minimum": 0,
+          "title": "Topology",
+          "type": "number"
+        }
+      },
+      "title": "RankWeights",
+      "type": "object"
+    },
+    "WalkSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "lookback_minutes": {
+          "default": 15,
+          "description": "A question's window starts this long before the first symptom",
+          "minimum": 0,
+          "title": "Lookback Minutes",
+          "type": "integer"
+        },
+        "max_hops": {
+          "default": 3,
+          "description": "Topology hops from an anchor entity",
+          "maximum": 6,
+          "minimum": 1,
+          "title": "Max Hops",
+          "type": "integer"
+        },
+        "max_requests_per_round": {
+          "default": 12,
+          "description": "Cap on validation requests per collaboration round",
+          "minimum": 1,
+          "title": "Max Requests Per Round",
+          "type": "integer"
+        }
+      },
+      "title": "WalkSpec",
+      "type": "object"
+    }
+  },
+  "$id": "https://netcortex.dev/contract/catalog/investigation.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "catalog_version": {
+      "default": "1.0",
+      "title": "Catalog Version",
+      "type": "string"
+    },
+    "lead_patterns": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Regex -> entity type. An agent answering a question proposes as new leads the ids these patterns find in its evidence (e.g. a route table id inside a CloudTrail request).",
+      "title": "Lead Patterns",
+      "type": "object"
+    },
+    "probes": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "description": "Entity type -> domains that can be asked about an entity of that type",
+      "title": "Probes",
+      "type": "object"
+    },
+    "rank_weights": {
+      "$ref": "#/$defs/RankWeights"
+    },
+    "signal_roles": {
+      "additionalProperties": {
+        "enum": [
+          "cause",
+          "symptom"
+        ],
+        "type": "string"
+      },
+      "description": "Signal name (raw or catalog) -> role. A signal that is a cause in one fault and a symptom in another is left out; time precedence and topology decide it.",
+      "title": "Signal Roles",
+      "type": "object"
+    },
+    "walk": {
+      "$ref": "#/$defs/WalkSpec"
+    }
+  },
+  "title": "InvestigationFile",
+  "type": "object"
+}
