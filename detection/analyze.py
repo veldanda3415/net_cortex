@@ -165,8 +165,9 @@ def _with_onsets(rows: list[dict[str, Any]], hit_obs: list[_Observation], firing
 
 def _entity_status(hit_obs: list[_Observation], firing: dict[tuple, list[tuple[datetime, bool]]],
                    stateful: set[tuple]) -> list[dict[str, Any]]:
-    """For each hit entity, over every sample seen (window + post-alarm):
-    `episodes`, the most separate times one of its series went bad, and
+    """For each hit entity, over every sample seen (window + post-alarm), from
+    its metric and state series only: `episodes`, the most separate times one
+    of them went bad, and
     `current_state` from the latest sample of its stateful series (metric or
     state; an event series has no "cleared" sample, so an entity seen only
     through events is `unknown`)."""
@@ -183,12 +184,13 @@ def _entity_status(hit_obs: list[_Observation], firing: dict[tuple, list[tuple[d
         for key, samples in firing.items():
             if key[:2] != ent:
                 continue
+            if key not in stateful:
+                continue  # an event series has no "cleared" sample: it cannot flap or recover
             ordered = sorted(samples, key=lambda item: item[0])
             states = [hit for _, hit in ordered]
             episodes = max(episodes, sum(1 for i, hit in enumerate(states) if hit and (i == 0 or not states[i - 1])))
-            if key in stateful:
-                transitions += sum(1 for a, b in zip(states, states[1:]) if a != b)
-                last.append(ordered[-1])
+            transitions += sum(1 for a, b in zip(states, states[1:]) if a != b)
+            last.append(ordered[-1])
         if last:
             current = "firing" if max(last, key=lambda item: item[0])[1] else "cleared"
         else:
