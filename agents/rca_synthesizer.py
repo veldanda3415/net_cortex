@@ -104,7 +104,8 @@ def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], m
         "Unclassified evidence (signals outside the detection catalog; no rule judged them, "
         f"weigh them cautiously):\n{_unclassified_text(findings)}\n\n"
         "Rules: base every claim on the citable evidence and cite it inline as [E<n>]. Do not cite anything else. "
-        "A cause upstream of the alarm in the topology that fired first usually explains the downstream symptoms.\n\n"
+        "A cause upstream of the alarm in the topology that fired first usually explains the downstream symptoms. "
+        "If the incident status is recovered or flapping, say so in root_cause.\n\n"
         "Return ONLY valid JSON with exactly these keys:\n"
         + ("  ranked_cause_ids: the candidate cause ids (e.g. [\"C2\", \"C1\"]) in your order, most likely first\n" if ranked else "")
         + "  root_cause: one concise sentence naming the specific root cause (include component name, what changed, and magnitude if known), with [E<n>] citations\n"

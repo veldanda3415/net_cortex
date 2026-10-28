@@ -75,13 +75,14 @@ Timeouts are applied for you. Each plugin call is wrapped in `sources.<name>.tim
 | Plugin | Domains | Status |
 |---|---|---|
 | `simulation` | metrics, logs, routing, config, topology | Implemented. Serves `simulation/scenarios.py`, rebased so each scenario's incident time lands on `end_time`. Ages are rounded to whole seconds. LogEvent/ConfigChange rows have no region, so they are filtered at bundle level. |
-| `replay` | metrics, logs, routing, config, topology | Implemented. Reads recorded v2 fixtures (`fixtures_dir` or `fixtures`) and shifts every timestamp by `query.end_time − recorded_window.end`. Used for CI, and later for replaying recorded AWS sessions offline. See `tests/fixtures/replay/`. |
-| `cloudwatch` | metrics | Implemented (`plugins/aws/`). CloudWatch metrics listed in config, by namespace, metric names, statistic and exact dimension set. |
+| `replay` | metrics, logs, routing, config, topology | Implemented. Reads recorded v2 fixtures (`fixtures_dir` or `fixtures`) and shifts every timestamp so the fixture's `alarm_at` (default `recorded_window.end`) lands on the query's `anchor_time` (default `end_time`). A fixture may declare `scenario_id` to answer only that scenario. Used for CI, the cross-domain eval (`tests/fixtures/cross_domain/`) and recorded AWS sessions. |
+| `cloudwatch` | metrics | Implemented (`plugins/aws/`). CloudWatch metrics listed in config, by namespace, metric names, statistic and exact dimension set. An entry can re-emit a series under another name as a rate with extra labels (`emit_as`, `scale`, `per_second`, `labels`), e.g. tunnel bits/s with its capacity. |
 | `cloudwatch_logs` | logs, routing | Implemented. One FilterLogEvents query per configured log group. `classify` rules give each error class its own signal name, either per line or as a per-minute count. Flow logs, VPN logs, FRR/charon, Resolver queries and Network Manager events all go through it. `deny_log_groups` refuses a log group at startup. |
 | `cloudtrail` | config | Implemented. LookupEvents write calls from an `event_sources` allow-list, with the changed resource as the entity. |
 | `tgw_routes` | routing | Implemented. Current TGW blackhole routes, only for windows that end near now (it's a snapshot). |
+| `aws_topology` | topology | Implemented. `get_topology` from read-only describe calls: VPN tunnels (with outside IP and capacity labels) and their BGP neighbors, TGW attachments, associations and propagations, VPCs, subnets, route tables and their next hops, NACLs, SGs, ENIs, instances, NLB target groups and load balancers, private hosted zones. Synthetic flows are declared in config (`flows`). Cached for `cache_seconds`. Entity ids match what the other plugins emit; other names become labels. |
 | `frr_ssm` | logs, routing | Skeleton. The lab ships FRR logs to CloudWatch instead. |
-| `prometheus` | metrics | Skeleton (moved here from `providers/adapters/`) |
+| `prometheus` | metrics | Implemented (`plugins/prometheus.py`). Prometheus, Mimir or Cortex `query_range` per configured expression; each series becomes an entity from a chosen label. `tenant` sends `X-Scope-OrgID`; bearer or basic auth come from env. `capacity_expr` adds `labels.capacity_bps` for utilization rules. |
 | `elk`, `splunk` | logs | Skeleton (moved here from `providers/adapters/`) |
 
 Skeletons (`SkeletonPlugin`) raise `NotImplementedError`. Their docstrings list the API calls the real implementation will need, so a reviewer can check the IAM or API permissions up front. Enabling a skeleton fails server startup with a clear error rather than serving guaranteed-failed coverage.
@@ -92,9 +93,14 @@ The AWS plugins import boto3 only when one is enabled, and every call they make 
 
 Nothing above the plugins is AWS-specific. Agents, detection, the orchestrator and the synthesizer only see contract v2 signals and the catalog. Adding Azure, GCP or an on-prem stack takes three pieces:
 
-1. **Source plugins.** Put them in a package such as `plugins/azure/` (Azure Monitor metrics, Log Analytics, Activity Log) or `plugins/gcp/` (Cloud Monitoring, Cloud Logging, Cloud Audit Logs), or extend the Prometheus/ELK/Splunk skeletons for on-prem. Import the SDK lazily, as `plugins/aws/base.py` does.
+1. **Source plugins.** Put them in a package such as `plugins/azure/` (Azure Monitor metrics, Log Analytics, Activity Log) or `plugins/gcp/` (Cloud Monitoring, Cloud Logging, Cloud Audit Logs), or, on-prem, point `prometheus` at Prometheus/Mimir and extend the ELK/Splunk skeletons. Import the SDK lazily, as `plugins/aws/base.py` does.
 2. **Catalog entries.** Give the backend's native names meaning: a `signals.json` entry with a rule, or `match_names` on an existing signal (for example, an Azure Activity Log `Microsoft.Network/networkSecurityGroups/securityRules/write` alongside the CloudTrail mutations). Add new resource kinds to `entities.json`. These can live in a `$NETCORTEX_CATALOG_DIR` override per environment.
-3. **An alert adapter.** This maps the backend's alert schema onto the `/incidents` payload, as `ingestion/cloudwatch_alarms.py` does for CloudWatch alarm events. If NetCortex can't be reached from that cloud, add a pull bridge like `ingestion/sqs_alarm_bridge.py` (for example, a Pub/Sub or Service Bus subscriber).
+3. **An alert adapter.** This maps the backend's alert schema onto the `/incidents` payload, as `ingestion/cloudwatch_alarms.py` does for CloudWatch alarm events, including `alarm_entities` (what the alarm watches, from its dimensions or labels), where collaboration starts its topology walk.
+4. **Topology (recommended).** A plugin serving `topology` with the backend's own ids (and other names as labels), like `aws_topology`. Without it agents still analyze, but they cannot ask each other about upstream entities, and causes are ranked per domain instead of by position. If NetCortex can't be reached from that cloud, add a pull bridge like `ingestion/sqs_alarm_bridge.py` (for example, a Pub/Sub or Service Bus subscriber).
+
+### Recording live telemetry for replay
+
+Set `telemetry.record_dir` (or `$NETCORTEX_RECORD_DIR`) on the RCA side and every response it receives, plus the topology, is merged into one replay fixture per alarm: `<record_dir>/<region>_<alarm>.json`, with `alarm_at`, deduplicated signals and the union of the query windows. `config/config.aws-lab.yaml` turns it on, so a live campaign leaves fixtures that reproduce each incident offline (`sources.replay.fixtures`). Add an `evals/cases/*.json` entry to score one with `eval --cases`.
 
 ### Configuring sources (telemetry server)
 

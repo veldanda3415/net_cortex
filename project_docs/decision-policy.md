@@ -22,9 +22,12 @@ Produce one conclusion that is:
 - Each agent emits AgentFinding independently.
 - Metrics and config agents use per-entity z-score baselines from `BaselineProvider` before falling back to hard-coded thresholds.
 
-3. Collaboration rounds
-- Agents share findings and peer feedback.
-- Agents revise findings once per round.
+3. Collaboration rounds (at most `a2a.max_iterations`, 2)
+- Agents publish findings to each other.
+- Each agent asks the domains that can see what its anomalies depend on targeted questions (`validation_request`), scoped to one entity and a window that reaches back before the first symptom.
+- Peers answer by re-running their own detection on that scoped query; answers carry leads for the next round.
+- Each agent revises its finding once per round (`finding_update`): evidence its answers found, then `correlation.json`.
+- See "How Peer Collaboration Actually Works" in `agent-authoring-guide.md`.
 
 4. Synthesis
 - Deterministic confidence aggregation in code.
@@ -42,13 +45,34 @@ Contradiction is flagged when findings make mutually incompatible cause claims.
 
 ## Root Cause Selection Policy
 
-1. Filter to anomalous findings.
-2. Rank by confidence.
-3. Apply corroboration boost for findings validated by other domains.
-4. Select top-ranked cause as primary root cause.
-5. Record remaining high-signal findings as contributing factors.
+When the topology knows the entities involved (`get_topology`), causes are ranked by entity, not by domain. The code is `detection/investigate.py::rank_causes`.
+
+1. **Candidates.** Every (entity, domain) with rule-fired evidence that sits in the topology, including evidence found by a peer's question.
+2. **Score.** A weighted mean of four features. The weights are in `contract/catalog/investigation.json` `rank_weights`.
+   - **evidence:** severity, distinct signals, the domain's confidence.
+   - **topology:** 1.0 when an alarm entity depends on the candidate, following the relationships' `dependent` direction. 0.6 when it is connected within `walk.max_hops`, 0.3 when it is the alarm entity itself, 0 otherwise. Without alarm entities, the entities showing symptom-role signals stand in for the alarm.
+   - **precedence:** 1.0 when the candidate fired no later than about a minute after the earliest symptom on another entity, 0.5 within three minutes, 0 after that.
+   - **role:** cause 1.0, neutral 0.5, symptom 0 (`signal_roles`, seeded from `infra/faults/expect.json`; signals that are a cause in one fault and a symptom in another are neutral).
+3. **Root cause.** The deterministic root cause names the top candidate: signals, entity, time, and the topology chain to the alarm.
+4. **Fallback.** Without topology, or when no evidence entity is in it (all simulation scenarios), selection is per domain, as before:
+   - Filter to anomalous findings.
+   - Rank by confidence.
+   - Apply corroboration boost for findings validated by other domains.
+   - Select top-ranked cause as primary root cause.
+   - Record remaining high-signal findings as contributing factors.
 
 If no anomalous findings remain, conclude no-anomaly outcome.
+
+## Incident Status
+
+An agent reads the minutes after the alarm as well when the alarm is at least a minute old (capped at 15 minutes). For each hit entity it records `episodes` (separate times a series went bad) and `current_state` (the latest sample of its metric or state series). Log events have no "cleared" sample, so an entity seen only through events is `unknown`. The report's `incident_status` is:
+
+- **flapping:** some entity went bad twice or more.
+- **ongoing:** an entity is still bad at its latest sample.
+- **recovered:** every entity with a state has cleared.
+- **unknown:** nothing has a state.
+
+A recovered or flapping status is stated in the root cause, so a self-recovered flap does not read as an outage.
 
 ## Confidence Policy
 
@@ -112,7 +136,11 @@ Simulation coverage note:
 
 ## LLM Policy
 
-LLM is used for narrative synthesis only.
+LLM is used to re-rank the code's candidate causes and to write the narrative.
+
+- The prompt lists the rule-fired evidence as numbered items (`E1`, `E2`, ...) and the ranked candidates (`C1`, ...).
+- The LLM may return `ranked_cause_ids`. A permutation of known ids is accepted; unknown ids are dropped; an answer naming none keeps the code's order.
+- Its `root_cause` must cite known evidence ids inline (`[E3]`). An uncited root cause, or one citing an unknown id, is replaced by the deterministic one.
 
 LLM must not:
 
