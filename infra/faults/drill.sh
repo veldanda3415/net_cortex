@@ -57,14 +57,18 @@ find_record() {
 # alarm fired. Says nothing about the fault. Prints the saved record's path.
 manual_incident() {
   local payload resp out auth=()
+  resp=$(mktemp)
   payload=$(jq -cn --arg r "$AWS_REGION" --arg at "$(date -u +%FT%TZ)" '{
     description: "Users report intermittent problems reaching the app from on-prem and between VPCs. No alarm has fired.",
     region: $r, severity: "high", source_system: "drill", reported_at: $at}')
   [ -z "${NETCORTEX_WEBHOOK_TOKEN:-}" ] || auth=(-H "Authorization: Bearer $NETCORTEX_WEBHOOK_TOKEN")
-  resp=$(curl -sf -m 600 "${auth[@]}" -H 'Content-Type: application/json' -d "$payload" "$NETCORTEX_URL/incidents") || return 1
+  # The report goes through a file: it is too big for a command-line argument.
+  curl -sf -m 600 "${auth[@]}" -H 'Content-Type: application/json' -d "$payload" "$NETCORTEX_URL/incidents" >"$resp" \
+    || { rm -f "$resp"; return 1; }
   mkdir -p "$BRIDGE_OUT"
   out="$BRIDGE_OUT/drill-$FAULT-$(date +%s).json"
-  jq -n --argjson i "$payload" --argjson r "$resp" '{incident: $i, report: $r, posted_at: (now | todate)}' >"$out"
+  jq -n --argjson i "$payload" --slurpfile r "$resp" '{incident: $i, report: $r[0], posted_at: (now | todate)}' >"$out"
+  rm -f "$resp"
   echo "$out"
 }
 
