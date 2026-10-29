@@ -109,5 +109,7 @@ def test_unknown_signals_are_kept_as_unclassified_evidence_not_errors():
     assert finding.unclassified_evidence == [{
         "name": "NatGatewayErrorPortAllocation", "signal_type": "metric", "source": "cloudwatch",
         "entity": "nat_gateway:nat-0abc", "value": 37.0, "severity": "info", "timestamp": ts.isoformat(),
-        "evidence_ref": "cloudwatch:AWS/NATGateway/ErrorPortAllocation@x",
+        "evidence_ref": "cloudwatch:AWS/NATGateway/ErrorPortAllocation@x", "count": 1,
+        "evidence_refs": ["cloudwatch:AWS/NATGateway/ErrorPortAllocation@x"], "last_seen": ts.isoformat(),
+        "min": 37.0, "max": 37.0,
     }]

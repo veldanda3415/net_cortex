@@ -3,7 +3,8 @@
 Resolution: the default catalog shipped in contract/catalog/, merged with
 an optional override directory ($NETCORTEX_CATALOG_DIR). Each override file
 replaces default entries *by key* (a whole signal / domain / rule entry at
-a time; top-level scalars like catalog_version are replaced too).
+a time; top-level scalars like catalog_version are replaced too). An entry
+set to null deletes the default entry.
 
 Validation runs in three passes and the first failure names the file and
 field: JSON Schema per file, typed models, then cross-file references.
@@ -97,13 +98,29 @@ def _read_json(path: Path) -> Any:
         raise CatalogError(f"{path}: line {exc.lineno} col {exc.colno}: invalid JSON: {exc.msg}") from None
 
 
-def _merge(default: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+def _deletions(override: dict[str, Any]) -> tuple[dict[str, Any], dict[str, list[str]]]:
+    """An override entry set to null deletes that default entry (e.g. a signal,
+    to see how the RCA does without it). Returns the override without them."""
+    kept: dict[str, Any] = {}
+    deleted: dict[str, list[str]] = {}
+    for key, value in override.items():
+        if isinstance(value, dict):
+            deleted[key] = [k for k, v in value.items() if v is None]
+            value = {k: v for k, v in value.items() if v is not None}
+        kept[key] = value
+    return kept, {k: v for k, v in deleted.items() if v}
+
+
+def _merge(default: dict[str, Any], override: dict[str, Any], deleted: dict[str, list[str]] | None = None) -> dict[str, Any]:
     merged = dict(default)
     for key, value in override.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = {**merged[key], **value}  # entry-level: override entry wins whole
         else:
             merged[key] = value
+    for key, names in (deleted or {}).items():
+        if isinstance(merged.get(key), dict):
+            merged[key] = {k: v for k, v in merged[key].items() if k not in names}
     return merged
 
 
@@ -329,9 +346,9 @@ def load_catalog(override_dir: str | os.PathLike | None = None, default_dir: str
         origin.append(str(default_path))
         if override is not None and (override / filename).exists():
             over_path = override / filename
-            over = _read_json(over_path)
+            over, deleted = _deletions(_read_json(over_path))
             _validate_file(filename, over, str(over_path))
-            data = _merge(data, over)
+            data = _merge(data, over, deleted)
             origin.append(str(over_path))
             label = f"{filename} (merged with {over_path})"
         else:

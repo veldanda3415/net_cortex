@@ -130,6 +130,7 @@ class RankedCause(BaseModel):
     chain: list[str] = Field(default_factory=list, description="Topology path cause -> ... -> alarm entity")
     aliases: list[str] = Field(default_factory=list, description="Other names of the entity (labels), e.g. a tunnel's outside IP")
     via_validation: bool = False
+    via_hypothesis: bool = Field(default=False, description="Some of its evidence is an LLM hypothesis the agents verified")
 
 
 class RCAReport(BaseModel):
@@ -164,6 +165,11 @@ class RCAReport(BaseModel):
         description="Candidate causes ranked by evidence, topology position, time precedence and signal role.",
     )
     incident_status: Literal["ongoing", "recovered", "flapping", "unknown"] = "unknown"
+    hypotheses: list[dict] = Field(
+        default_factory=list,
+        description="LLM hypotheses (temporary rules) and the code checks' verdicts. Only supported ones count as "
+        "evidence; the rest are listed here, never in root_cause.",
+    )
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

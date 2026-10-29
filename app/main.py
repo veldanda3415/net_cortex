@@ -211,6 +211,17 @@ def write_outputs(report: dict[str, Any], incident_id: str, supervisor_state: di
     }
     (out_dir / "supervisor_state.json").write_text(json.dumps(state_summary, indent=2), encoding="utf-8")
 
+    # Supported LLM hypotheses as draft catalog entries, for a human to approve.
+    if any(h.get("verdict") == "supported" for h in report.get("hypotheses", [])):
+        from detection.hypotheses import draft_entries
+
+        try:
+            drafts = draft_entries(report["hypotheses"], get_catalog())
+        except Exception:
+            logger.exception("Could not draft catalog entries for incident=%s", incident_id)
+        else:
+            (out_dir / "proposed_signals.json").write_text(json.dumps(drafts, indent=2), encoding="utf-8")
+
 
 def _keyword_coverage(report: dict[str, Any], expected_keywords: list[str]) -> tuple[list[str], list[str], float]:
     conflict_text = "conflict detected" if report.get("conflict_detected") else "no conflict"
@@ -309,7 +320,16 @@ def serve(config: str = typer.Option("config/config.yaml")):
         tasks, engine = await start_runtime(cfg)
 
         webhook = WebhookServer(cfg)
-        webhook.set_handler(engine.run_incident)
+
+        async def handle(incident: IncidentRequest):
+            report = await engine.run_incident(incident)
+            try:
+                write_outputs(report.model_dump(mode="json"), incident.incident_id, engine.last_result_state)
+            except Exception:
+                logger.exception("Could not write outputs for incident=%s", incident.incident_id)
+            return report
+
+        webhook.set_handler(handle)
         ingest_task = asyncio.create_task(start_server(webhook.app, cfg["ingestion"]["host"], int(cfg["ingestion"]["port"])))
 
         try:

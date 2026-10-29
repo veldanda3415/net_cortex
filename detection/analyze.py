@@ -40,6 +40,8 @@ logger = logging.getLogger("net_cortex.detection")
 MAX_UNCLASSIFIED = 20
 MAX_EVIDENCE = 50
 MAX_REFS_PER_ROW = 5
+MAX_UNCLASSIFIED_TEXT = 300
+UNCLASSIFIED_TEXT = ("message", "sample", "details", "request")
 ROLE_RANK = {"cause": 0, None: 1, "symptom": 2}
 _DIGITS = re.compile(r"\d+")
 
@@ -83,13 +85,20 @@ def _group_key(signal: Signal) -> tuple:
     )
 
 
+def _signal_text(signal: Signal, attrs: tuple[str, ...] = ("message", "sample", "details")) -> str | None:
+    for attr in attrs:
+        if attr in signal.attributes:
+            return str(signal.attributes[attr])
+    return None
+
+
 def _text_key(obs: _Observation) -> str:
     """A log line's text with numbers blanked, so the same message repeated
     with new timestamps/counters/IPs counts as one line."""
     for s in obs.signals:
-        for attr in ("message", "sample", "details"):
-            if attr in s.attributes:
-                return _DIGITS.sub("#", str(s.attributes[attr]))
+        text = _signal_text(s)
+        if text is not None:
+            return _DIGITS.sub("#", text)
     return ""
 
 
@@ -206,7 +215,7 @@ def _entity_status(hit_obs: list[_Observation], firing: dict[tuple, list[tuple[d
 
 
 def _unclassified_row(signal: Signal) -> dict[str, Any]:
-    return {
+    row = {
         "name": signal.name,
         "signal_type": signal.signal_type,
         "source": signal.source,
@@ -216,6 +225,36 @@ def _unclassified_row(signal: Signal) -> dict[str, Any]:
         "timestamp": signal.timestamp.isoformat(),
         "evidence_ref": signal.evidence_ref,
     }
+    text = _signal_text(signal, UNCLASSIFIED_TEXT)
+    if text is not None:
+        row["text"] = text[:MAX_UNCLASSIFIED_TEXT]
+    return row
+
+
+def _unclassified_rows(signals: list[Signal]) -> list[dict[str, Any]]:
+    """One row per (name, entity, text with numbers blanked): a log line repeated
+    with new counters, or every sample of one metric series, is one row with a
+    count, first/last seen, the value range and up to MAX_REFS_PER_ROW refs.
+    The most severe rows are kept first."""
+    rows: dict[tuple, dict[str, Any]] = {}
+    for s in sorted(signals, key=lambda x: x.timestamp):
+        text = _signal_text(s, UNCLASSIFIED_TEXT)
+        key = (s.name, s.entity.type, s.entity.id, _DIGITS.sub("#", text) if text else "")
+        row = rows.get(key)
+        if row is None:
+            rows[key] = row = {**_unclassified_row(s), "count": 0, "evidence_refs": []}
+        row["count"] += 1
+        row["last_seen"] = s.timestamp.isoformat()
+        if s.value is not None:
+            row["value"] = s.value
+            row["min"] = min(row.get("min", s.value), s.value)
+            row["max"] = max(row.get("max", s.value), s.value)
+        if SEVERITY_RANK[s.severity] > SEVERITY_RANK[row["severity"]]:
+            row["severity"] = s.severity
+        if s.evidence_ref and len(row["evidence_refs"]) < MAX_REFS_PER_ROW:
+            row["evidence_refs"].append(s.evidence_ref)
+    ordered = sorted(rows.values(), key=lambda r: (-SEVERITY_RANK[r["severity"]], r["timestamp"]))
+    return ordered[:MAX_UNCLASSIFIED]
 
 
 def key_event(obs: _Observation, domain: DomainDef) -> dict[str, Any]:
@@ -504,7 +543,7 @@ def analyze_domain(
         end_time=max((o.timestamp for o in time_source), default=fallback_time),
         confidence=confidence,
         data_degraded=response.degraded,
-        unclassified_evidence=[_unclassified_row(s) for s in unclassified[:MAX_UNCLASSIFIED]],
+        unclassified_evidence=_unclassified_rows(unclassified),
         evidence=_with_onsets(_evidence(catalog, hit_obs, events), hit_obs, firing, stateful),
         entity_status=_entity_status(hit_obs, firing, stateful),
     )
