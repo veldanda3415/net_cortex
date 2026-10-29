@@ -203,6 +203,7 @@ class ADKA2ARouter:
     async def send_direct(self, sender: str, target: str, message_type: str, payload: dict[str, Any], round_number: int, session_id: str) -> A2AMessage:
         task_cls = self._require_symbol("a2a.types", "Task")
         status = "failed"
+        response_data: dict[str, Any] | None = None
         try:
             result = await self._send(
                 agent_id=target,
@@ -216,6 +217,9 @@ class ADKA2ARouter:
                 text=message_type,
                 session_id=session_id,
             )
+            response_data = (
+                self._extract_data_from_task(result) if isinstance(result, task_cls) else self._extract_data_from_message(result)
+            ) or None
             if isinstance(result, task_cls):
                 state = "unknown"
                 if getattr(result, "status", None) and getattr(result.status, "state", None) is not None:
@@ -242,7 +246,7 @@ class ADKA2ARouter:
             sender_agent=sender,
             target_agent=target,
             message_type=message_type,
-            payload={"status": status, **payload},
+            payload={"status": status, **payload, **({"response": response_data} if response_data is not None else {})},
             round_number=round_number,
             timestamp=datetime.now(timezone.utc),
         )

@@ -356,7 +356,25 @@ def eval(
     verbose: bool = typer.Option(False, help="Enable debug logging"),
     require_llm: bool = typer.Option(False, help="Fail the run if LLM-based classification/synthesis is unavailable"),
     fail_on_miss: bool = typer.Option(False, help="Return exit code 1 when any expected keyword is missing"),
+    cases: str = typer.Option(None, "--cases", help="Run replay cases from this directory (e.g. evals/cases) instead of "
+                              "the simulation scenarios, scoring cross-domain root causes"),
+    window_minutes: int = typer.Option(15, help="--cases only: analysis window, as in the AWS lab config"),
 ):
+    if cases:
+        async def _run_cases():
+            from evals.runner import print_results, run_cases
+
+            configure_runtime_logging(verbose)
+            cfg = load_config(config)
+            cfg.setdefault("llm", {})["require_success"] = bool(require_llm)
+            results = await run_cases(cfg, cases, start_runtime, write_outputs, window_minutes)
+            print_results(results)
+            if fail_on_miss and not all(r["passed"] for r in results):
+                raise typer.Exit(code=1)
+
+        asyncio.run(_run_cases())
+        raise SystemExit(0)
+
     async def _run_eval():
         configure_runtime_logging(verbose)
         logger.info("Loading config from %s", config)

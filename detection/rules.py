@@ -92,6 +92,12 @@ def threshold(rule: ThresholdRule, signal: Signal, rule_id: str) -> RuleHit | No
     value = _num(field_value(signal, rule.field))
     if value is None:
         return None
+    value *= rule.scale
+    if rule.per is not None:
+        divisor = _num(field_value(signal, rule.per))
+        if not divisor:
+            return None
+        value /= divisor
     if rule.op == "gt":
         hit = value > rule.value  # type: ignore[operator]
         default = f"{signal.name} {_fmt(value)} > {_fmt(rule.value)}"  # type: ignore[arg-type]
@@ -178,7 +184,7 @@ def rate_change(rule: RateChangeRule, signal: Signal, ctx: RuleContext, rule_id:
         ]
     if not reference_samples:
         return None
-    reference = statistics.fmean(reference_samples)
+    reference = (statistics.median if rule.reference == "median" else statistics.fmean)(reference_samples)
     if reference <= rule.min_reference:
         return None
     if rule.direction == "increase":

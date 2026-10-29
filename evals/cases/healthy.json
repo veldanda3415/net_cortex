@@ -1,0 +1,12 @@
+{
+  "name": "healthy",
+  "scenario_id": 2010,
+  "fixture": "tests/fixtures/cross_domain/healthy.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "mss-clamp-removed",
+  "description": "Scheduled health check: no alarm",
+  "alarm_entities": [],
+  "culprit": null,
+  "why": "Negative control: a healthy lab must produce a clean report."
+}

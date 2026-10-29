@@ -138,10 +138,14 @@ async def test_query_window_is_anchored_to_reported_at(engine):
 
     domains = {d for d, _ in RECORDED_QUERIES}
     assert domains == {"metrics", "logs", "routing", "config"}
-    for _, query in RECORDED_QUERIES:
-        assert query.end_time == alarm
-        assert query.start_time == alarm - timedelta(minutes=30)
-        assert query.scenario_id == 1
+    analysis = [q for _, q in RECORDED_QUERIES if q.start_time < alarm]
+    status = [q for _, q in RECORDED_QUERIES if q.start_time == alarm]
+    assert {q.end_time for q in analysis} == {alarm}
+    assert {q.start_time for q in analysis} == {alarm - timedelta(minutes=30)}
+    assert all(q.scenario_id == 1 and q.anchor_time == alarm for _, q in RECORDED_QUERIES)
+    # The alarm is old, so each agent also asked whether it is still happening:
+    # the 15 minutes after the alarm, never "until now".
+    assert {q.end_time for q in status} == {alarm + timedelta(minutes=15)}
     # Simulation data is rebased onto that window, so the analysis still sees the incident.
     metrics = _finding(report, "metrics")
     assert metrics.anomaly_detected

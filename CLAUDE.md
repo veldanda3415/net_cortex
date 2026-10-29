@@ -28,6 +28,7 @@ python app/main.py mcp-serve --port 9000
 # Replay/eval bundled scenarios, scoring expected RCA keyword coverage
 python app/main.py eval --all-scenarios --fail-on-miss
 python app/main.py eval --scenario 10
+python app/main.py eval --cases evals/cases       # cross-domain replay cases: culprit top-1, named, status
 
 # Tests
 python -m pytest -q
@@ -52,7 +53,7 @@ LLM strict mode (`llm.require_success` / `--require-llm`) makes classification a
 - **supervisor**: `agents/supervisor.py` classifies `degradation_type` (LLM with heuristic fallback) and selects the minimal-but-safe domain set via `select_active_agents`, which reads `degradation_map` in `contract/catalog/domains.json`. Network/unknown degradation always runs every domain because incident descriptions state symptoms, not causes — don't "optimize" this pruning without re-reading the design note in that file.
 - **analysis**: fans out `send_analysis` to each active agent concurrently via the configured router, with a per-agent timeout (`a2a.analysis_timeout_seconds`); timeouts/errors land in `timed_out_agents`, not a hard failure.
 - **collaboration**: broadcasts each finding to peers (`router.broadcast`), then calls `apply_local_reconsideration` — this applies `contract/catalog/correlation.json` via `detection.reconsider(finding, peer_findings, catalog)` **locally in the orchestrator**, not via agents processing live A2A messages. That's a known Phase-0 simplification (see the `NOTE` in `orchestrator.py`); don't assume peer reconsideration happens inside the agent HTTP handlers even though those handlers also have their own (separate, session-based) peer-message queuing/reconsideration path for direct A2A calls. Rounds repeat until findings converge or `a2a.max_iterations` is hit. `should_short_circuit` skips collaboration entirely when no agent found an anomaly.
-- **synthesizer**: `agents/rca_synthesizer.py` deterministically aggregates confidence/conflict signals, with an optional Gemini call for `human_readable_summary` and richer causal-chain text; on LLM failure it always has a deterministic fallback.
+- **synthesizer**: before it runs, the orchestrator ranks candidate causes (`detection/investigate.py::rank_causes`: evidence, topology position vs the alarm, time precedence, signal role) and computes `incident_status` (ongoing/recovered/flapping) from the agents' `entity_status`. `agents/rca_synthesizer.py` deterministically aggregates confidence/conflict signals and names the top ranked cause in the root cause (per-domain fallback without topology). The optional Gemini call may re-rank causes and must cite rule-fired evidence ids (`[E3]`); an uncited root cause falls back to the deterministic one.
 
 **Contract**: every domain agent must emit `AgentFinding` (`models/schemas.py`) — this is the shared currency between agents, orchestrator, and synthesizer. Agent Cards (served at `/.well-known/agent.json`) advertise `analyze-<domain>` and `respond-to-peer` skills plus `schemaContract.outputSchema=AgentFinding`; `AgentRegistry` (`communication/agent_registry.py`) fails registration if these are missing. See `docs/agent-authoring-guide.md` for the full 6-step per-agent decision pipeline and `docs/decision-policy.md` for how findings become one RCA conclusion.
 

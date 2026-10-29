@@ -83,6 +83,32 @@ locals {
       }
     },
     {
+      # Latency of the HTTP flows (successes only) and loss of the iperf flow: a
+      # degraded path without a single failed request still pages.
+      for f in local.http_flows : "flow-${f}-latency" => {
+        description = "Synthetic flow ${f} average latency is above 100 ms."
+        namespace   = local.traffic_namespace
+        metric      = "LatencyMs"
+        dimensions  = { Flow = f }
+        statistic   = "Average"
+        comparison  = "GreaterThanThreshold"
+        threshold   = 100
+        missing     = "missing"
+      }
+    },
+    {
+      "flow-${local.iperf_flow}-loss" = {
+        description = "Synthetic flow ${local.iperf_flow} loses more than 2% of packets."
+        namespace   = local.traffic_namespace
+        metric      = "LossPercent"
+        dimensions  = { Flow = local.iperf_flow }
+        statistic   = "Average"
+        comparison  = "GreaterThanThreshold"
+        threshold   = 2
+        missing     = "missing"
+      }
+    },
+    {
       # Missing data breaches: with inspection on, a silent firewall is a dead one.
       for az in(var.enable_inspection ? ["a", "b"] : []) : "fw-${az}-silent" => {
         description = "Firewall fw-${az} stopped reporting (instance down or telemetry broken)."

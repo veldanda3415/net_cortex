@@ -40,10 +40,11 @@ data "aws_iam_policy_document" "workload_metrics" {
     actions   = ["cloudwatch:PutMetricData"]
     resources = ["*"]
 
+    # The traffic agent's namespace, and CWAgent for the CloudWatch agent's memory/swap.
     condition {
       test     = "StringEquals"
       variable = "cloudwatch:namespace"
-      values   = [local.traffic_namespace]
+      values   = [local.traffic_namespace, "CWAgent"]
     }
   }
 }

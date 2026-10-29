@@ -117,11 +117,11 @@
       "type": "object"
     }
   },
-  "$id": "https://netcortex.dev/contract/2.0/topology_response.json",
+  "$id": "https://netcortex.dev/contract/2.1/topology_response.json",
   "additionalProperties": false,
   "properties": {
     "contract_version": {
-      "default": "2.0",
+      "default": "2.1",
       "title": "Contract Version",
       "type": "string"
     },
@@ -156,5 +156,5 @@
   ],
   "title": "TopologyResponse",
   "type": "object",
-  "x-contract-version": "2.0"
+  "x-contract-version": "2.1"
 }

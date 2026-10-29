@@ -42,10 +42,20 @@
   },
   "relationships": {
     "member_of": {"description": "Tunnel belongs to a VPN connection", "source": ["tunnel"], "target": ["vpn_connection"]},
-    "attached_via": {"description": "Resource attaches to a TGW through an attachment", "source": ["vpn_connection", "vpc"], "target": ["tgw_attachment"]},
-    "associated_with": {"description": "Association (attachment->TGW route table, subnet->route table)", "source": ["tgw_attachment", "subnet"], "target": ["tgw_route_table", "route_table"]},
-    "applies_to": {"description": "Security group applies to an ENI", "source": ["security_group"], "target": ["eni"]},
-    "attached_to": {"description": "ENI attached to an instance", "source": ["eni"], "target": ["instance"]},
-    "peers": {"description": "VPC peering endpoints", "source": ["vpc", "vpc_peering"], "target": ["vpc_peering", "vpc"]}
+    "attached_via": {"description": "Resource attaches to a TGW through an attachment", "source": ["vpn_connection", "vpc"], "target": ["tgw_attachment"], "dependent": "source"},
+    "associated_with": {"description": "Association (attachment->TGW route table, subnet->route table)", "source": ["tgw_attachment", "subnet"], "target": ["tgw_route_table", "route_table"], "dependent": "source"},
+    "propagates_to": {"description": "Attachment propagates its routes into a TGW route table", "source": ["tgw_attachment"], "target": ["tgw_route_table"], "dependent": "target"},
+    "belongs_to": {"description": "TGW route table or attachment belongs to a Transit Gateway", "source": ["tgw_route_table", "tgw_attachment"], "target": ["transit_gateway"]},
+    "in_vpc": {"description": "Resource lives in a VPC", "source": ["subnet", "route_table", "security_group", "instance", "nat_gateway", "load_balancer"], "target": ["vpc"]},
+    "routes_via": {"description": "A route table entry points at a next hop", "source": ["route_table"], "target": ["nat_gateway", "vpc_peering", "transit_gateway", "instance", "eni"], "dependent": "target"},
+    "protects": {"description": "Network ACL is associated with a subnet", "source": ["network_acl"], "target": ["subnet"], "dependent": "target"},
+    "applies_to": {"description": "Security group applies to an ENI", "source": ["security_group"], "target": ["eni"], "dependent": "target"},
+    "attached_to": {"description": "ENI attached to an instance", "source": ["eni"], "target": ["instance"], "dependent": "target"},
+    "peers": {"description": "VPC peering endpoints", "source": ["vpc", "vpc_peering"], "target": ["vpc_peering", "vpc"]},
+    "runs_over": {"description": "A BGP session or IKE connection on a customer-gateway router runs over a VPN tunnel", "source": ["bgp_neighbor", "ike_connection"], "target": ["tunnel"]},
+    "registered_in": {"description": "Instance is a target of a load balancer target group", "source": ["instance"], "target": ["target_group"], "dependent": "target"},
+    "serves": {"description": "Target group behind a load balancer", "source": ["target_group"], "target": ["load_balancer"], "dependent": "target"},
+    "resolves": {"description": "Hosted zone answers for a DNS name", "source": ["hosted_zone"], "target": ["dns_name"], "dependent": "target"},
+    "probes": {"description": "Synthetic flow probes a service endpoint", "source": ["flow"], "target": ["instance", "load_balancer", "vpc", "dns_name", "tunnel"], "dependent": "source"}
   }
 }

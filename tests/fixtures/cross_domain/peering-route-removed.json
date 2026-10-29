@@ -1,0 +1,6276 @@
+{
+ "contract_version": "2.1",
+ "description": "peering-route-removed: A deleted peering route (config) explains a failing flow (metrics) across the VPC peering.",
+ "region": "us-east-1",
+ "scenario_id": 2005,
+ "recorded_window": {
+  "start": "2026-10-28T05:17:00Z",
+  "end": "2026-10-28T05:32:00Z"
+ },
+ "alarm_at": "2026-10-28T05:32:00Z",
+ "signals": [
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:17:00Z",
+   "observed_at": "2026-10-28T05:18:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:17:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:18:00Z",
+   "observed_at": "2026-10-28T05:19:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:18:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:19:00Z",
+   "observed_at": "2026-10-28T05:20:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:19:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:20:00Z",
+   "observed_at": "2026-10-28T05:21:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:20:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:21:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:21:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:22:30Z",
+   "entity": {
+    "type": "route_table",
+    "id": "rtb-0a7c3e5d9f1b2a4c6"
+   },
+   "name": "DescribeRouteTables",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "username": "veldanda3415@gmail.com",
+    "read_only": true,
+    "request": "{}",
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudtrail:bg-0001"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:22:00Z",
+   "observed_at": "2026-10-28T05:23:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:22:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:23:00Z",
+   "observed_at": "2026-10-28T05:24:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:23:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:24:00Z",
+   "observed_at": "2026-10-28T05:25:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:24:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:25:00Z",
+   "observed_at": "2026-10-28T05:26:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:25:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:26:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:26:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:27:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449"
+   },
+   "name": "DescribeTransitGatewayAttachments",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "username": "veldanda3415@gmail.com",
+    "read_only": true,
+    "request": "{}",
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudtrail:bg-0002"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:27:00Z",
+   "observed_at": "2026-10-28T05:28:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:27:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:28:00Z",
+   "observed_at": "2026-10-28T05:29:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:28:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:29:00Z",
+   "observed_at": "2026-10-28T05:30:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:29:00Z"
+  },
+  {
+   "signal_type": "event",
+   "timestamp": "2026-10-28T05:29:30Z",
+   "observed_at": "2026-10-28T05:30:00Z",
+   "entity": {
+    "type": "route_table",
+    "id": "rtb-0a7c3e5d9f1b2a4c6"
+   },
+   "name": "DeleteRoute",
+   "severity": "info",
+   "domain": "config",
+   "source": "cloudtrail",
+   "attributes": {
+    "event_source": "ec2.amazonaws.com",
+    "username": "veldanda3415@gmail.com",
+    "read_only": false,
+    "request": "{\"routeTableId\": \"rtb-0a7c3e5d9f1b2a4c6\", \"destinationCidrBlock\": \"10.30.0.0/16\"}",
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudtrail:7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 40.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:30:00Z",
+   "observed_at": "2026-10-28T05:31:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:30:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 0.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:31:00Z",
+   "observed_at": "2026-10-28T05:32:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:31:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.1@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "BgpPeerState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/BgpPeerState/Neighbor=169.254.100.5@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449",
+    "labels": {
+     "TransitGateway": "tgw-0033dc03a06637449"
+    }
+   },
+   "name": "PacketDropCountNoRoute",
+   "value": 0.0,
+   "unit": "Count",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/TransitGateway",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/TransitGateway/PacketDropCountNoRoute/TransitGateway=tgw-0033dc03a06637449@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1",
+    "labels": {
+     "Neighbor": "169.254.100.1"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.1@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5",
+    "labels": {
+     "Neighbor": "169.254.100.5"
+    }
+   },
+   "name": "PrefixesSent",
+   "value": 3.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Router",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Router/PrefixesSent/Neighbor=169.254.100.5@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "app-to-partner",
+    "labels": {
+     "Flow": "app-to-partner"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 0.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=app-to-partner@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-iperf-app-a",
+    "labels": {
+     "Flow": "onprem-iperf-app-a"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-iperf-app-a@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb",
+    "labels": {
+     "Flow": "onprem-to-nlb"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "onprem-to-nlb-large",
+    "labels": {
+     "Flow": "onprem-to-nlb-large"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=onprem-to-nlb-large@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "flow",
+    "id": "svc-to-app",
+    "labels": {
+     "Flow": "svc-to-app"
+    }
+   },
+   "name": "SuccessRate",
+   "value": 100.0,
+   "unit": "Percent",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "NetCortexLab/Traffic",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:NetCortexLab/Traffic/SuccessRate/Flow=svc-to-app@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 2600000.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=3.86.174.132@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelDataIn",
+   "value": 950.0,
+   "unit": "Bytes",
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Sum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelDataIn/TunnelIpAddress=34.224.247.80@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "3.86.174.132",
+    "labels": {
+     "TunnelIpAddress": "3.86.174.132"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=3.86.174.132@2026-10-28T05:32:00Z"
+  },
+  {
+   "signal_type": "metric",
+   "timestamp": "2026-10-28T05:32:00Z",
+   "observed_at": "2026-10-28T05:33:30Z",
+   "entity": {
+    "type": "tunnel",
+    "id": "34.224.247.80",
+    "labels": {
+     "TunnelIpAddress": "34.224.247.80"
+    }
+   },
+   "name": "TunnelState",
+   "value": 1.0,
+   "severity": "info",
+   "domain": "metrics",
+   "source": "cloudwatch",
+   "attributes": {
+    "namespace": "AWS/VPN",
+    "statistic": "Minimum",
+    "period": 60,
+    "region": "us-east-1"
+   },
+   "evidence_ref": "cloudwatch:AWS/VPN/TunnelState/TunnelIpAddress=34.224.247.80@2026-10-28T05:32:00Z"
+  }
+ ],
+ "topology": {
+  "entities": [
+   {
+    "type": "tunnel",
+    "id": "vpn-02d7b1a3f6189fd11-tunnel-1",
+    "labels": {
+     "outside_ip": "3.86.174.132",
+     "capacity_bps": "1250000000"
+    }
+   },
+   {
+    "type": "tunnel",
+    "id": "vpn-02d7b1a3f6189fd11-tunnel-2",
+    "labels": {
+     "outside_ip": "34.224.247.80",
+     "capacity_bps": "1250000000"
+    }
+   },
+   {
+    "type": "vpn_connection",
+    "id": "vpn-02d7b1a3f6189fd11"
+   },
+   {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.1"
+   },
+   {
+    "type": "bgp_neighbor",
+    "id": "169.254.100.5"
+   },
+   {
+    "type": "transit_gateway",
+    "id": "tgw-0033dc03a06637449"
+   },
+   {
+    "type": "tgw_attachment",
+    "id": "tgw-attach-0c6d7d687f67cd1a4",
+    "labels": {
+     "resource_type": "vpn"
+    }
+   },
+   {
+    "type": "tgw_attachment",
+    "id": "tgw-attach-0a11e0c1a2b3c4d5e",
+    "labels": {
+     "resource_type": "vpc"
+    }
+   },
+   {
+    "type": "tgw_attachment",
+    "id": "tgw-attach-0b22f1d2b3c4d5e6f",
+    "labels": {
+     "resource_type": "vpc"
+    }
+   },
+   {
+    "type": "tgw_route_table",
+    "id": "tgw-rtb-055e9770910116036"
+   },
+   {
+    "type": "tgw_route_table",
+    "id": "tgw-rtb-01bdbcd48a7201538"
+   },
+   {
+    "type": "tgw_route_table",
+    "id": "tgw-rtb-0282c8ef737eff348"
+   },
+   {
+    "type": "vpc",
+    "id": "vpc-0bb7177a66c8f91a9"
+   },
+   {
+    "type": "vpc",
+    "id": "vpc-056cfdd14ca88fcf6"
+   },
+   {
+    "type": "route_table",
+    "id": "rtb-0a7c3e5d9f1b2a4c6"
+   },
+   {
+    "type": "vpc_peering",
+    "id": "pcx-0d4e6f8a1b3c5e7f9"
+   },
+   {
+    "type": "security_group",
+    "id": "sg-0d47d22a6a536ef01"
+   },
+   {
+    "type": "eni",
+    "id": "eni-021773242b7444556"
+   },
+   {
+    "type": "eni",
+    "id": "eni-0fe0c208ffeffcb1f"
+   },
+   {
+    "type": "instance",
+    "id": "i-0aa11bb22cc33dd44"
+   },
+   {
+    "type": "instance",
+    "id": "i-0ee55ff66aa77bb88"
+   },
+   {
+    "type": "target_group",
+    "id": "arn:aws:elasticloadbalancing:us-east-1:785629662183:targetgroup/netcortex-lab-app/3f1c2e4d5a6b7c8d",
+    "labels": {
+     "dimension": "targetgroup/netcortex-lab-app/3f1c2e4d5a6b7c8d"
+    }
+   },
+   {
+    "type": "load_balancer",
+    "id": "arn:aws:elasticloadbalancing:us-east-1:785629662183:loadbalancer/net/netcortex-lab-app/75c34984f6628712",
+    "labels": {
+     "dimension": "net/netcortex-lab-app/75c34984f6628712"
+    }
+   },
+   {
+    "type": "hosted_zone",
+    "id": "Z1030605VHK1NFO24118"
+   },
+   {
+    "type": "dns_name",
+    "id": "app.lab.internal."
+   },
+   {
+    "type": "flow",
+    "id": "onprem-to-nlb"
+   },
+   {
+    "type": "flow",
+    "id": "onprem-to-nlb-large"
+   },
+   {
+    "type": "flow",
+    "id": "onprem-iperf-app-a"
+   },
+   {
+    "type": "flow",
+    "id": "svc-to-app"
+   },
+   {
+    "type": "flow",
+    "id": "app-to-partner"
+   }
+  ],
+  "relationships": [
+   {
+    "type": "member_of",
+    "source": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-1",
+     "labels": {
+      "outside_ip": "3.86.174.132",
+      "capacity_bps": "1250000000"
+     }
+    },
+    "target": {
+     "type": "vpn_connection",
+     "id": "vpn-02d7b1a3f6189fd11"
+    }
+   },
+   {
+    "type": "member_of",
+    "source": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-2",
+     "labels": {
+      "outside_ip": "34.224.247.80",
+      "capacity_bps": "1250000000"
+     }
+    },
+    "target": {
+     "type": "vpn_connection",
+     "id": "vpn-02d7b1a3f6189fd11"
+    }
+   },
+   {
+    "type": "runs_over",
+    "source": {
+     "type": "bgp_neighbor",
+     "id": "169.254.100.1"
+    },
+    "target": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-1",
+     "labels": {
+      "outside_ip": "3.86.174.132",
+      "capacity_bps": "1250000000"
+     }
+    }
+   },
+   {
+    "type": "runs_over",
+    "source": {
+     "type": "bgp_neighbor",
+     "id": "169.254.100.5"
+    },
+    "target": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-2",
+     "labels": {
+      "outside_ip": "34.224.247.80",
+      "capacity_bps": "1250000000"
+     }
+    }
+   },
+   {
+    "type": "attached_via",
+    "source": {
+     "type": "vpn_connection",
+     "id": "vpn-02d7b1a3f6189fd11"
+    },
+    "target": {
+     "type": "tgw_attachment",
+     "id": "tgw-attach-0c6d7d687f67cd1a4",
+     "labels": {
+      "resource_type": "vpn"
+     }
+    }
+   },
+   {
+    "type": "attached_via",
+    "source": {
+     "type": "vpc",
+     "id": "vpc-0bb7177a66c8f91a9"
+    },
+    "target": {
+     "type": "tgw_attachment",
+     "id": "tgw-attach-0a11e0c1a2b3c4d5e",
+     "labels": {
+      "resource_type": "vpc"
+     }
+    }
+   },
+   {
+    "type": "attached_via",
+    "source": {
+     "type": "vpc",
+     "id": "vpc-056cfdd14ca88fcf6"
+    },
+    "target": {
+     "type": "tgw_attachment",
+     "id": "tgw-attach-0b22f1d2b3c4d5e6f",
+     "labels": {
+      "resource_type": "vpc"
+     }
+    }
+   },
+   {
+    "type": "associated_with",
+    "source": {
+     "type": "tgw_attachment",
+     "id": "tgw-attach-0a11e0c1a2b3c4d5e",
+     "labels": {
+      "resource_type": "vpc"
+     }
+    },
+    "target": {
+     "type": "tgw_route_table",
+     "id": "tgw-rtb-055e9770910116036"
+    }
+   },
+   {
+    "type": "associated_with",
+    "source": {
+     "type": "tgw_attachment",
+     "id": "tgw-attach-0b22f1d2b3c4d5e6f",
+     "labels": {
+      "resource_type": "vpc"
+     }
+    },
+    "target": {
+     "type": "tgw_route_table",
+     "id": "tgw-rtb-055e9770910116036"
+    }
+   },
+   {
+    "type": "associated_with",
+    "source": {
+     "type": "tgw_attachment",
+     "id": "tgw-attach-0c6d7d687f67cd1a4",
+     "labels": {
+      "resource_type": "vpn"
+     }
+    },
+    "target": {
+     "type": "tgw_route_table",
+     "id": "tgw-rtb-01bdbcd48a7201538"
+    }
+   },
+   {
+    "type": "propagates_to",
+    "source": {
+     "type": "tgw_attachment",
+     "id": "tgw-attach-0c6d7d687f67cd1a4",
+     "labels": {
+      "resource_type": "vpn"
+     }
+    },
+    "target": {
+     "type": "tgw_route_table",
+     "id": "tgw-rtb-055e9770910116036"
+    }
+   },
+   {
+    "type": "propagates_to",
+    "source": {
+     "type": "tgw_attachment",
+     "id": "tgw-attach-0a11e0c1a2b3c4d5e",
+     "labels": {
+      "resource_type": "vpc"
+     }
+    },
+    "target": {
+     "type": "tgw_route_table",
+     "id": "tgw-rtb-01bdbcd48a7201538"
+    }
+   },
+   {
+    "type": "belongs_to",
+    "source": {
+     "type": "tgw_route_table",
+     "id": "tgw-rtb-055e9770910116036"
+    },
+    "target": {
+     "type": "transit_gateway",
+     "id": "tgw-0033dc03a06637449"
+    }
+   },
+   {
+    "type": "belongs_to",
+    "source": {
+     "type": "tgw_route_table",
+     "id": "tgw-rtb-01bdbcd48a7201538"
+    },
+    "target": {
+     "type": "transit_gateway",
+     "id": "tgw-0033dc03a06637449"
+    }
+   },
+   {
+    "type": "belongs_to",
+    "source": {
+     "type": "tgw_route_table",
+     "id": "tgw-rtb-0282c8ef737eff348"
+    },
+    "target": {
+     "type": "transit_gateway",
+     "id": "tgw-0033dc03a06637449"
+    }
+   },
+   {
+    "type": "in_vpc",
+    "source": {
+     "type": "route_table",
+     "id": "rtb-0a7c3e5d9f1b2a4c6"
+    },
+    "target": {
+     "type": "vpc",
+     "id": "vpc-0bb7177a66c8f91a9"
+    }
+   },
+   {
+    "type": "routes_via",
+    "source": {
+     "type": "route_table",
+     "id": "rtb-0a7c3e5d9f1b2a4c6"
+    },
+    "target": {
+     "type": "vpc_peering",
+     "id": "pcx-0d4e6f8a1b3c5e7f9"
+    }
+   },
+   {
+    "type": "peers",
+    "source": {
+     "type": "vpc",
+     "id": "vpc-0bb7177a66c8f91a9"
+    },
+    "target": {
+     "type": "vpc_peering",
+     "id": "pcx-0d4e6f8a1b3c5e7f9"
+    }
+   },
+   {
+    "type": "peers",
+    "source": {
+     "type": "vpc_peering",
+     "id": "pcx-0d4e6f8a1b3c5e7f9"
+    },
+    "target": {
+     "type": "vpc",
+     "id": "vpc-056cfdd14ca88fcf6"
+    }
+   },
+   {
+    "type": "in_vpc",
+    "source": {
+     "type": "security_group",
+     "id": "sg-0d47d22a6a536ef01"
+    },
+    "target": {
+     "type": "vpc",
+     "id": "vpc-0bb7177a66c8f91a9"
+    }
+   },
+   {
+    "type": "applies_to",
+    "source": {
+     "type": "security_group",
+     "id": "sg-0d47d22a6a536ef01"
+    },
+    "target": {
+     "type": "eni",
+     "id": "eni-021773242b7444556"
+    }
+   },
+   {
+    "type": "applies_to",
+    "source": {
+     "type": "security_group",
+     "id": "sg-0d47d22a6a536ef01"
+    },
+    "target": {
+     "type": "eni",
+     "id": "eni-0fe0c208ffeffcb1f"
+    }
+   },
+   {
+    "type": "attached_to",
+    "source": {
+     "type": "eni",
+     "id": "eni-021773242b7444556"
+    },
+    "target": {
+     "type": "instance",
+     "id": "i-0aa11bb22cc33dd44"
+    }
+   },
+   {
+    "type": "attached_to",
+    "source": {
+     "type": "eni",
+     "id": "eni-0fe0c208ffeffcb1f"
+    },
+    "target": {
+     "type": "instance",
+     "id": "i-0ee55ff66aa77bb88"
+    }
+   },
+   {
+    "type": "in_vpc",
+    "source": {
+     "type": "instance",
+     "id": "i-0aa11bb22cc33dd44"
+    },
+    "target": {
+     "type": "vpc",
+     "id": "vpc-0bb7177a66c8f91a9"
+    }
+   },
+   {
+    "type": "in_vpc",
+    "source": {
+     "type": "instance",
+     "id": "i-0ee55ff66aa77bb88"
+    },
+    "target": {
+     "type": "vpc",
+     "id": "vpc-0bb7177a66c8f91a9"
+    }
+   },
+   {
+    "type": "registered_in",
+    "source": {
+     "type": "instance",
+     "id": "i-0aa11bb22cc33dd44"
+    },
+    "target": {
+     "type": "target_group",
+     "id": "arn:aws:elasticloadbalancing:us-east-1:785629662183:targetgroup/netcortex-lab-app/3f1c2e4d5a6b7c8d",
+     "labels": {
+      "dimension": "targetgroup/netcortex-lab-app/3f1c2e4d5a6b7c8d"
+     }
+    }
+   },
+   {
+    "type": "registered_in",
+    "source": {
+     "type": "instance",
+     "id": "i-0ee55ff66aa77bb88"
+    },
+    "target": {
+     "type": "target_group",
+     "id": "arn:aws:elasticloadbalancing:us-east-1:785629662183:targetgroup/netcortex-lab-app/3f1c2e4d5a6b7c8d",
+     "labels": {
+      "dimension": "targetgroup/netcortex-lab-app/3f1c2e4d5a6b7c8d"
+     }
+    }
+   },
+   {
+    "type": "serves",
+    "source": {
+     "type": "target_group",
+     "id": "arn:aws:elasticloadbalancing:us-east-1:785629662183:targetgroup/netcortex-lab-app/3f1c2e4d5a6b7c8d",
+     "labels": {
+      "dimension": "targetgroup/netcortex-lab-app/3f1c2e4d5a6b7c8d"
+     }
+    },
+    "target": {
+     "type": "load_balancer",
+     "id": "arn:aws:elasticloadbalancing:us-east-1:785629662183:loadbalancer/net/netcortex-lab-app/75c34984f6628712",
+     "labels": {
+      "dimension": "net/netcortex-lab-app/75c34984f6628712"
+     }
+    }
+   },
+   {
+    "type": "resolves",
+    "source": {
+     "type": "hosted_zone",
+     "id": "Z1030605VHK1NFO24118"
+    },
+    "target": {
+     "type": "dns_name",
+     "id": "app.lab.internal."
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "onprem-to-nlb"
+    },
+    "target": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-1",
+     "labels": {
+      "outside_ip": "3.86.174.132",
+      "capacity_bps": "1250000000"
+     }
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "onprem-to-nlb-large"
+    },
+    "target": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-1",
+     "labels": {
+      "outside_ip": "3.86.174.132",
+      "capacity_bps": "1250000000"
+     }
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "onprem-iperf-app-a"
+    },
+    "target": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-1",
+     "labels": {
+      "outside_ip": "3.86.174.132",
+      "capacity_bps": "1250000000"
+     }
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "onprem-to-nlb"
+    },
+    "target": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-2",
+     "labels": {
+      "outside_ip": "34.224.247.80",
+      "capacity_bps": "1250000000"
+     }
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "onprem-to-nlb-large"
+    },
+    "target": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-2",
+     "labels": {
+      "outside_ip": "34.224.247.80",
+      "capacity_bps": "1250000000"
+     }
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "onprem-iperf-app-a"
+    },
+    "target": {
+     "type": "tunnel",
+     "id": "vpn-02d7b1a3f6189fd11-tunnel-2",
+     "labels": {
+      "outside_ip": "34.224.247.80",
+      "capacity_bps": "1250000000"
+     }
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "onprem-to-nlb"
+    },
+    "target": {
+     "type": "load_balancer",
+     "id": "arn:aws:elasticloadbalancing:us-east-1:785629662183:loadbalancer/net/netcortex-lab-app/75c34984f6628712",
+     "labels": {
+      "dimension": "net/netcortex-lab-app/75c34984f6628712"
+     }
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "onprem-to-nlb-large"
+    },
+    "target": {
+     "type": "load_balancer",
+     "id": "arn:aws:elasticloadbalancing:us-east-1:785629662183:loadbalancer/net/netcortex-lab-app/75c34984f6628712",
+     "labels": {
+      "dimension": "net/netcortex-lab-app/75c34984f6628712"
+     }
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "onprem-iperf-app-a"
+    },
+    "target": {
+     "type": "instance",
+     "id": "i-0aa11bb22cc33dd44"
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "svc-to-app"
+    },
+    "target": {
+     "type": "dns_name",
+     "id": "app.lab.internal."
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "svc-to-app"
+    },
+    "target": {
+     "type": "load_balancer",
+     "id": "arn:aws:elasticloadbalancing:us-east-1:785629662183:loadbalancer/net/netcortex-lab-app/75c34984f6628712",
+     "labels": {
+      "dimension": "net/netcortex-lab-app/75c34984f6628712"
+     }
+    }
+   },
+   {
+    "type": "probes",
+    "source": {
+     "type": "flow",
+     "id": "app-to-partner"
+    },
+    "target": {
+     "type": "vpc",
+     "id": "vpc-056cfdd14ca88fcf6"
+    }
+   }
+  ]
+ }
+}

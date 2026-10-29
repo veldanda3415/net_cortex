@@ -14,7 +14,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-CONTRACT_VERSION = "2.0"
+CONTRACT_VERSION = "2.1"
 CONTRACT_MAJOR = 2
 
 # Accepts both datacenter-style ("us-east") and AWS-style ("us-east-1",
@@ -133,11 +133,16 @@ class TelemetryQuery(_Model):
     entity_filters: list[EntityFilter] | None = None
     include_baseline: bool = False
     scenario_id: int | None = Field(default=None, description="Simulation only; ignored by every other source.")
+    anchor_time: datetime | None = Field(
+        default=None,
+        description="The alarm instant this query belongs to (added in 2.1). Live sources ignore it; the replay "
+        "source aligns a recording's alarm_at to it, so queries after the alarm line up with the recording.",
+    )
 
-    @field_validator("start_time", "end_time")
+    @field_validator("start_time", "end_time", "anchor_time")
     @classmethod
-    def _utc(cls, value: datetime) -> datetime:
-        return _as_utc(value)
+    def _utc(cls, value: datetime | None) -> datetime | None:
+        return None if value is None else _as_utc(value)
 
     @model_validator(mode="after")
     def _ordered(self) -> "TelemetryQuery":

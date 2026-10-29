@@ -1,0 +1,23 @@
+{
+  "name": "phz-record-deleted",
+  "scenario_id": 2004,
+  "fixture": "tests/fixtures/cross_domain/phz-record-deleted.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "phz-record-deleted",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-svc-to-app-degraded",
+  "alarm_entities": [
+    {
+      "type": "flow",
+      "id": "svc-to-app"
+    }
+  ],
+  "culprit": {
+    "type": "hosted_zone",
+    "ids": [
+      "Z1030605VHK1NFO24118"
+    ],
+    "domain": "config"
+  },
+  "why": "The cause predates the analysis window (DNS TTL); only a peer's targeted question with a lookback finds it."
+}

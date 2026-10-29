@@ -7,16 +7,21 @@ and synthesizes both machine-structured and human-readable RCA output.
 ## Highlights
 
 - Multi-agent RCA workflow built on LangGraph.
+- Agents investigate together: after the first analysis, each agent walks the network topology from its anomalies (and the alarm), asks the domains that can see what those depend on targeted, scoped questions, and peers answer with their own detection rules. Causes are ranked by evidence, topology position, time and role, so a route-table change can explain a failing flow four hops away.
+- Live state: an RCA says whether the incident is ongoing, recovered or flapping.
 - FastAPI-based domain agents exposing ADK-compatible A2A agent cards and task messaging.
 - Deterministic confidence scoring plus Gemini LLM-based incident classification and narrative synthesis.
 - Baseline-aware z-score anomaly detection in metrics and config agents (configurable thresholds, simulation and Prometheus baseline providers).
 - Config agent prioritises incident-relevant config changes over raw change counts, using keyword-overlap and network-symptom heuristics.
 - Simulation scenarios for reproducible local development and demos.
-- Replay/eval mode to run bundled scenarios and score expected RCA keyword coverage.
+- Replay/eval mode to run bundled scenarios and score expected RCA keyword coverage, plus cross-domain replay cases (`eval --cases evals/cases`) scored on whether the culprit is ranked first and named.
+- Telemetry from simulation, replay, AWS (CloudWatch, CloudWatch Logs, CloudTrail, TGW routes, topology) and Prometheus/Mimir, all as MCP source plugins; live sessions can be recorded as replay fixtures.
 - Console progress logging so users can track execution stages in real time.
 - Safe A2A peer-collaboration: session cleanup after each incident, validated fallback domain literals, no dead in-memory caches.
 
 ## Documentation
+
+**Adopting NetCortex in your own network? Start with [project_docs/adopt.md](project_docs/adopt.md):** six steps, from an offline try-out to collaborating agents on your telemetry.
 
 For contributors and production-oriented extensions, use these guides:
 
@@ -39,7 +44,9 @@ Recommended reading order for contributors:
 - `ingestion/`: webhook API intake and normalization.
 - `providers/simulation/`: scenario-backed provider implementations.
 - `providers/simulation/baseline_sim.py`: per-entity, per-metric baseline tables used by z-score detection.
-- `providers/adapters/`: stubs for real-system integrations (Prometheus, ELK, Splunk, MCP, baseline).
+- `providers/adapters/mcp_adapter.py`: the MCP client every telemetry read goes through; `providers/recorder.py` records responses as replay fixtures.
+- `detection/`: catalog-driven rules (`analyze.py`) and collaboration reasoning over topology (`investigate.py`).
+- `evals/`: cross-domain replay cases, their fixture builder and scoring (shared with `infra/faults/score.py`).
 - `providers/base.py`: abstract provider interfaces including `BaselineProvider`.
 - `providers/baseline_utils.py`: `compute_z_score` and `is_anomalous` utilities.
 - `config/config.yaml`: runtime behavior and timeouts.
@@ -148,6 +155,12 @@ Evaluate a single scenario:
 
 ```powershell
 python app/main.py eval --scenario 10
+```
+
+Cross-domain replay cases: lab faults rebuilt from the live campaign (`python -m evals.build_fixtures`), where the cause usually sits in a different domain or entity than the alarm. Each case is scored on the drill verdict, whether the culprit is ranked first, whether the root-cause sentence names it, and the incident status:
+
+```powershell
+python app/main.py eval --cases evals/cases --fail-on-miss
 ```
 
 LLM strict mode is optional. Enable it explicitly when you want fail-fast behavior if LLM is unavailable:

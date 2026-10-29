@@ -11,7 +11,7 @@ The RCA pod only speaks MCP. Cloud credentials and IAM live only in telemetry po
 
 ## Versioning
 
-`contract_version` is `"<major>.<minor>"` and is currently `"2.0"`.
+`contract_version` is `"<major>.<minor>"` and is currently `"2.1"`. 2.1 added the optional `TelemetryQuery.anchor_time`, which the RCA side always sends: upgrade telemetry servers before the RCA pod, since a 2.0 server does not know the argument.
 
 - **Minor** bumps are additive: they add new optional fields only. Peers accept any minor version of their own major.
 - **Major** bumps are breaking. A telemetry server rejects a request whose major version differs from its own, with a tool error such as `Unsupported contract_version '1.0': this peer speaks major version 2 (2.0)…`. The RCA client applies the same check to every response it receives. Either way, the mismatch shows up as a `failed` coverage entry for that endpoint, so the finding is marked degraded instead of silently empty.
@@ -42,7 +42,8 @@ The server also exposes two HTTP routes:
 | `start_time`, `end_time` | ISO-8601 datetime | Inclusive on both ends. Naive times are treated as UTC. `start_time <= end_time`. |
 | `entity_filters` | list of `{type?, id?, labels?}` | Optional. A signal is kept if its entity matches **any** filter, where all fields set on a filter must match. |
 | `include_baseline` | bool | Asks the server to also return baseline-window data (see `baseline_window`). |
-| `scenario_id` | int | Used by the simulation plugin only. Every other source ignores it. |
+| `scenario_id` | int | Used by the simulation plugin, and by replay fixtures that declare one (a fixture with `scenario_id` answers only that scenario). Every other source ignores it. |
+| `anchor_time` | ISO-8601 datetime | Optional (2.1). The alarm instant the query belongs to. Live sources ignore it. Replay aligns a recording's `alarm_at` to it, so queries for the minutes after the alarm line up with the recording. |
 
 **Window anchoring.** The orchestrator always queries `end = incident.reported_at` and `start = end − simulation.window_minutes`. `reported_at` is the alarm time:
 
@@ -51,6 +52,10 @@ The server also exposes two HTTP routes:
 - If no alarm time is supplied, ingest time is used.
 
 This way, a webhook that arrives late still queries the window around the alarm.
+
+Two more queries hang off the same anchor:
+- **Is it still happening?** When the alarm is at least a minute old, each agent also reads `[reported_at, reported_at + 15 min]`, capped at now. That only decides whether hit entities are still firing; it never creates findings.
+- **Peer questions.** A `validation_request` is scoped to one entity (`entity_filters` with the topology's aliases for it) and starts `walk.lookback_minutes` before the window or the first symptom, whichever is earlier.
 
 ## Response: `ToolResponse`
 
@@ -129,14 +134,14 @@ Degradation is computed **per request** from that request's coverage. Nothing is
 
 `{contract_version, region, entities: [Entity], relationships: [{type, source: Entity, target: Entity, attributes}], coverage}`
 
-The documented relationship chains are:
+`entities.json` lists every relationship type; collaboration walks them (see "How Peer Collaboration Actually Works" in `project_docs/agent-authoring-guide.md`). Entities match by id or by any label value, so a tunnel named by its outside IP in CloudWatch is the same node as `vpn-…-tunnel-1` in the topology. The original relationship chains are:
 
 - tunnel → vpn_connection → tgw_attachment → tgw_route_table
 - security_group → eni → instance
 - subnet → route_table
 - vpc → vpc_peering → vpc
 
-The simulation plugin returns a small static topology that covers all of them.
+The simulation plugin returns a small static topology that covers all of them. Its entities are not the simulation scenarios' entities, so simulation runs have nothing to walk. `aws_topology` reads the real one from describe calls, and replay fixtures carry their own.
 
 ## Detection catalog
 
@@ -144,11 +149,12 @@ The catalog decides what the envelope's signals mean: which signals exist, how e
 
 | File | Holds | Read by |
 |---|---|---|
-| `entities.json` | `entity_types`, and `relationships` with their allowed source and target types | validation, topology consumers |
+| `entities.json` | `entity_types`, and `relationships` with their allowed source and target types and which end depends on the other (`dependent`: `source`, `target` or `both`) | validation, collaboration (topology walk, ranking) |
 | `signals.json` | One entry per signal: `signal_type`, `unit`, `domain`, a one-line `description` (passed to the LLM synthesizer), optional `match_names` (other raw names it covers, e.g. CloudTrail event names), and one detection `rule` | domain agents |
 | `domains.json` | Per domain: `telemetry_domain`, the MCP `tool` that feeds it, its agent card (name, port, skill), observation grouping, summary templates, confidence, `metrics_affected`, an optional relevance filter, and derived counts. Also the `degradation_map` (degradation type → active domains) | orchestrator, supervisor, agents, synthesizer |
 | `correlation.json` | Cross-domain rules: when a finding is corroborated or contradicted by its peers, and the confidence adjustment and note to apply | orchestrator collaboration phase |
 | `sources.json` | Mappings from raw source record fields to signals (entity, value, severity, attributes) | telemetry source plugins (simulation today) |
+| `investigation.json` | How collaboration investigates: `probes` (entity type → domains that can be asked about it), `signal_roles` (cause or symptom), `lead_patterns` (regex → entity type, for ids named in evidence), `walk` (`max_hops`, `lookback_minutes`, `max_requests_per_round`) and `rank_weights` | domain agents (questions), orchestrator (ranking) |
 
 ### Loading and validation
 
@@ -166,13 +172,13 @@ Each signal has at most one `rule`. There is no expression language, and nothing
 
 | `type` | Fires when | Notes |
 |---|---|---|
-| `threshold` | `op` `gt` / `lt` / `between` (`min`..`max`) holds for `field` | `field` is `value` (default) or `attributes.<name>` |
+| `threshold` | `op` `gt` / `lt` / `between` (`min`..`max`) holds for `field` | `field` is `value` (default) or `attributes.<name>`. Optional `scale` multiplies it, and `per` divides it by another field (`labels.capacity_bps` turns traffic into utilization; no divisor, no verdict) |
 | `state_equals` | `field` equals `value` | e.g. `TunnelState` = 0, or `attributes.state` = `blackhole` |
 | `zscore_baseline` | \|z\| > `threshold` | Uses `baseline_window` samples of the same series when there are at least `min_baseline_samples` of them; otherwise the baseline provider, trying `baseline_keys` in order (`switch=label:switch`, `region=region`, …); otherwise the optional threshold `fallback`, only if `baselines.legacy_fallback` is on |
-| `rate_change` | value ≥ reference × `factor` (`increase`), or ≤ reference ÷ `factor` (`decrease`) | The reference is the mean of baseline-window samples, or else of earlier samples of the same series in the window. Ignored when the reference is ≤ `min_reference` |
+| `rate_change` | value ≥ reference × `factor` (`increase`), or ≤ reference ÷ `factor` (`decrease`) | The reference is the mean (or, with `reference: median`, the median, which resists bursty series) of baseline-window samples, or else of earlier samples of the same series in the window. Ignored when the reference is ≤ `min_reference` |
 | `event_presence` | `name` is in the allow-list (`names`, defaulting to the signal name plus `match_names`) and severity ≥ `min_severity` | |
 
-A finding's `key_events` carry `rules_fired` (`signal`, `rule` id, `reason`, `evidence_ref`) and `evidence_refs`, so every claim traces back to a raw record.
+A finding's `key_events` carry `rules_fired` (`signal`, `rule` id, `reason`, `evidence_ref`) and `evidence_refs`, so every claim traces back to a raw record. Repeats of one line on one entity collapse into one key event with a `count` (numbers in the text are ignored when comparing), and cause-role signals come first, so a burst of generic lines cannot crowd out the decisive one. `AgentFinding.evidence` keeps every rule hit, deduplicated the same way (up to 50 rows), and is what collaboration, ranking, the LLM and the drill scorer read.
 
 **Unclassified evidence.** Signals whose name is not in the catalog are never an error. They are logged, kept in `AgentFinding.unclassified_evidence` and `RCAReport.unclassified_evidence`, and shown to the LLM synthesizer as unclassified evidence. No rule judges them.
 

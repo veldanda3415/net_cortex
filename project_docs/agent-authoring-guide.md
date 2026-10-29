@@ -25,7 +25,7 @@ At startup, the registry expects each agent endpoint to expose:
 
 If any of these are missing, registration fails (`AgentRegistry.register_from_card`).
 
-Note on `respond-to-peer`: the registry still requires every agent to advertise this skill, and the orchestrator's collaboration loop still calls it once per peer per round (see "How Peer Collaboration Actually Works" below) — but as of this revision, an agent's own `/a2a` handler for this skill does nothing but acknowledge the message. It is **not** where cross-agent reasoning happens. Don't build new logic behind `respond-to-peer` expecting it to feed back into that round's confidence — it won't; see the next section for where the real logic lives.
+Note on `respond-to-peer`: this skill carries the whole collaboration protocol (below). An agent that only acknowledges it still works: the orchestrator then revises that agent's finding itself from `correlation.json`, but the agent neither asks nor answers questions.
 
 ## Agent Decision Pipeline
 
@@ -160,22 +160,31 @@ Clamp to [0.05, 0.99].
 
 ## How Peer Collaboration Actually Works
 
-This is the part most likely to mislead a new agent author, so read it before changing correlation behavior.
+Collaboration follows the round model in `net_cortex_impl_v4.md` section 3: collect, then revise once. It runs for at most `a2a.max_iterations` rounds (2). Every message goes through `respond-to-peer`, keyed by `message_type`. The orchestrator routes the messages and holds the round barrier; the reasoning happens in the agents. The generic agent (`agents/domain_agent.py`) implements all of it with `detection/investigate.py`.
 
-> **Catalog-driven since the detection-catalog change.** The per-agent `reconsider_finding` functions were replaced by rules in `contract/catalog/correlation.json`, which `detection.reconsider` applies. The rules are tried in priority order, the first match wins, and a rule whose marker is already in the summary is skipped. The mechanics below are unchanged. Wherever this section says "`reconsider_finding`", read "your domain's correlation rules". To add or alter corroboration, edit JSON; see the Detection catalog section of `CONTRACT.md`.
+| message_type | Who sends it | What the receiving agent does | Reply |
+|---|---|---|---|
+| `finding_publish` | each agent's finding, to every peer | stores the peer's finding for the round; once every peer in `expect_peers` has published, plans its questions | `{"ack": true, "requests": [...]}` |
+| `validation_request` | an agent's question, routed to the domain it asks | re-runs its own detection on a query scoped to the entity (`entity_filters`, with the topology's aliases) and an earlier window | `validation_response`: `verdict` (supported, refuted or inconclusive), the scoped `finding`, `leads` |
+| `validation_response` | the answer, routed back to the asker | keeps the `leads` for its next round's questions | ack |
+| `finding_update` | end of the round, to every agent | revises its finding once: evidence from the questions it answered (`via: validation`), then `correlation.json` | the revised `AgentFinding` |
 
-There are two distinct things that both look like "peer collaboration" in this codebase, and only one of them does anything:
+**How an agent picks its questions** (`plan_requests`):
+1. **Anchors.** It starts from the entities of its own rule-fired evidence, the leads it was handed, and the alarm's entities when its domain can see their type.
+2. **Walk.** From each anchor it walks the topology (`get_topology`) up to `walk.max_hops`. It keeps only entities the anchor depends on, following each relationship's `dependent` end in `entities.json`.
+3. **Ask.** For each such entity it asks every other domain that `investigation.json` `probes` can see it with, unless that domain already has evidence on it or was asked already.
+4. **Window.** The question's window starts `walk.lookback_minutes` before the earlier of the window start and the first symptom. A cause older than the analysis window (a DNS record deleted before its TTL ran out) is still found.
 
-1. **`apply_local_reconsideration` (`core/orchestrator.py`, `collaboration_node`)** — the real mechanism. After each analysis round, the orchestrator calls your domain module's `reconsider_finding(finding, peer_findings)` function **directly, in-process**, passing it the peer findings it already collected in that round. This is what actually changes `confidence`, `revised`, `revision_count`, and `summary`. Implement your domain's corroboration/contradiction logic here.
+**Answers never bypass the rules.** A scoped answer is the same `analyze_domain` on less data. The only difference is `scoped=True`, which skips the incident-text relevance filter: the entity was asked about explicitly, so a change on it counts even when the alarm text doesn't mention it.
 
-2. **The `/a2a` `respond-to-peer` endpoint** — the orchestrator's `broadcast()` call *does* hit every agent's `respond-to-peer` skill once per peer per round, and it's real network traffic that gets logged to `a2a_messages.jsonl`. But as of this revision the built-in agents' handlers for it do nothing but return `{"ack": True}`. There used to be a `pending_peer_messages` queue / `session_findings` cache / `active_sessions` tracking set behind this endpoint that attempted to apply `reconsider_finding` from *within* the agent process on receipt of a live peer message — it was removed because it never actually fired in the orchestrated flow (the orchestrator's `analysis_node` already pops its own session context by the time a broadcast arrives, and the broadcast payload key didn't match what the handler read anyway). If you're replacing a built-in agent, you do **not** need to reimplement that queue — just answer `respond-to-peer` with an ack and put your real logic in `reconsider_finding`.
+**Agents keep a small per-incident session** (bounded, oldest dropped first): their own finding, the peers' findings per round, the answers they gave, and their leads. An agent that loses its session (restart) just acks, and the orchestrator falls back to revising it locally.
 
-Practical guidance for a new/replacement agent:
+Practical guidance for a replacement agent:
 
-- Publish finding summary + anomaly flag is handled for you by the orchestrator's `broadcast()` — you don't call this yourself.
-- Reply to `respond-to-peer` with a simple ack. Don't try to do anything stateful there.
-- Put all actual belief revision in `reconsider_finding(finding, peer_findings)`, called once per round by the orchestrator with that round's already-collected peer findings.
-- Make `reconsider_finding` **idempotent**: guard the whole confidence/revision_count/summary mutation behind a check for whatever marker string you append to `summary` (e.g. `"Peer corroboration:" not in revised.summary`), not just the summary append itself. The orchestrator's convergence check only compares summary text between rounds — if your confidence bump isn't gated the same way as the summary marker, it will keep climbing every round even after the loop considers itself converged.
+- **Minimum:** answer `respond-to-peer` with an ack. You get Phase 0 behavior: corroboration from `correlation.json`, no questions.
+- **Answering questions:** handle `validation_request` by scoping your query to `entity_filters` and the request's `start_time`/`end_time`. Reply with `request_id`, `verdict`, `finding` and `leads`. This alone lets other agents find causes in your domain.
+- **Asking questions:** reply to the last expected `finding_publish` with `requests` shaped like `plan_requests` output: `request_id`, `target`, `entity`, `entity_filters`, `start_time`, `end_time`, `question`, `sender`.
+- **Revising:** handle `finding_update` by returning your revised `AgentFinding`. Keep revision idempotent: guard it on the marker strings (`Peer corroboration:`, `Peer validation:`), because the convergence check compares summaries between rounds.
 
 ## Testing Checklist for New Agents
 

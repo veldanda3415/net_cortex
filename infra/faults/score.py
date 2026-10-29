@@ -14,20 +14,20 @@ Verdicts:
   clean / false_positive   for a negative control: no anomaly is correct
   stale     the RCA's window ended before the fault was injected
 
-Only key events are inspected (up to 3-5 per domain), so a signal that fired
-but was crowded out of the key events counts as not fired.
+Rule hits are read from the key events and from each finding's full
+`evidence` list, so a cause crowded out of the key events still counts. The
+scoring rules live in evals/scoring.py, shared with `app/main.py eval --cases`.
 """
 
 from __future__ import annotations
 
 import json
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
 
-EXPECT = Path(__file__).resolve().parent / "expect.json"
-DETERMINISTIC_ROOT = re.compile(r"^(\w+ domain( anomaly)?:|No anomaly detected|RCA inconclusive)")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from evals.scoring import headline_names_culprit, llm_used, load_expect, verdict  # noqa: E402
 
 
 def ts(value: str) -> datetime:
@@ -35,7 +35,7 @@ def ts(value: str) -> datetime:
 
 
 def main(fault: str, truth_path: str, record_path: str, trigger: str = "alarm") -> dict:
-    expect = json.loads(EXPECT.read_text())[fault]
+    expect = load_expect()[fault]
     events = [json.loads(line) for line in Path(truth_path).read_text().splitlines() if line.strip()]
     injected = [e for e in events if e.get("fault") == fault and e.get("result") == "injected"]
     if not injected:
@@ -46,52 +46,35 @@ def main(fault: str, truth_path: str, record_path: str, trigger: str = "alarm") 
     record = json.loads(Path(record_path).read_text())
     report, incident = record["report"], record["incident"]
     findings = report.get("agent_findings", [])
-    fired = sorted({r["signal"] for f in findings for e in f.get("key_events", []) for r in e.get("rules_fired", [])})
     anomalous = [f for f in findings if f.get("anomaly_detected")]
     top = max(anomalous, key=lambda f: f.get("confidence", 0), default=None)
 
-    cause = sorted(set(fired) & set(expect.get("cause", [])))
-    symptoms = sorted(set(fired) & set(expect.get("symptoms", [])))
+    result_verdict, cause, symptoms = verdict(expect, report)
     if ts(incident["reported_at"]) < ts(truth["at"]):
-        verdict = "stale"
-    elif expect.get("negative"):
-        verdict = "false_positive" if anomalous else "clean"
-    elif cause:
-        verdict = "cause"
-    elif symptoms:
-        verdict = "symptom"
-    else:
-        verdict = "miss"
+        result_verdict = "stale"
+    fired = {s for f in findings for e in f.get("key_events", []) for r in e.get("rules_fired", []) for s in [r["signal"]]}
+    fired |= {s for f in findings for row in f.get("evidence", []) for s in row.get("signals", [])}
 
     result = {
-        "verdict": verdict,
+        "verdict": result_verdict,
         "trigger": trigger,
         "incident_id": report.get("incident_id"),
         "truth": {"fault": fault, "injected_at": truth["at"], "reverted_at": reverted["at"] if reverted else None},
         "rca_seconds": round((ts(report["generated_at"]) - ts(truth["at"])).total_seconds()),
         "cause_fired": cause,
         "symptoms_fired": symptoms,
-        "other_fired": sorted(set(fired) - set(cause) - set(symptoms)),
+        "other_fired": sorted(fired - set(cause) - set(symptoms)),
         "top_domain": top["domain"] if top else None,
+        "top_cause": (lambda c: f"{c['entity_type']}:{c['entity_id']}" if c else None)((report.get("ranked_causes") or [None])[0]),
+        "incident_status": report.get("incident_status"),
         "confidence": report.get("confidence_score"),
         "degraded_domains": sorted(f["domain"] for f in findings if f.get("data_degraded")),
         "root_cause": (report.get("root_cause") or "")[:300],
     }
     if expect.get("no_config_culprit"):
         result["blamed_config"] = any(f["domain"] == "config" for f in anomalous)
-
-    # Does the root-cause sentence itself name the culprit: a cause signal, or the
-    # entity a cause signal fired on? (The evidence can hold the cause while the
-    # headline still leads with a symptom.)
-    root = result["root_cause"].lower()
-    cause_entities = {
-        str(e.get("entity_id", "")).lower()
-        for f in findings for e in f.get("key_events", [])
-        if {r["signal"] for r in e.get("rules_fired", [])} & set(expect.get("cause", []))
-    } - {""}
-    result["headline_cause"] = bool(cause) and any(n.lower() in root for n in [*cause, *cause_entities])
-    # The deterministic synthesizer's root causes have fixed shapes; anything else came from the LLM.
-    result["llm_used"] = not DETERMINISTIC_ROOT.match(report.get("root_cause") or "")
+    result["headline_cause"] = headline_names_culprit(expect, report, cause)
+    result["llm_used"] = llm_used(report)
     return result
 
 

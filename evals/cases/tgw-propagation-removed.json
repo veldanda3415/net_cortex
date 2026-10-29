@@ -1,0 +1,27 @@
+{
+  "name": "tgw-propagation-removed",
+  "scenario_id": 2001,
+  "fixture": "tests/fixtures/cross_domain/tgw-propagation-removed.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "tgw-propagation-removed",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-onprem-iperf-app-a-degraded; netcortex-lab-flow-onprem-to-nlb-degraded",
+  "alarm_entities": [
+    {
+      "type": "flow",
+      "id": "onprem-iperf-app-a"
+    },
+    {
+      "type": "flow",
+      "id": "onprem-to-nlb"
+    }
+  ],
+  "culprit": {
+    "type": "tgw_route_table",
+    "ids": [
+      "tgw-rtb-055e9770910116036"
+    ],
+    "domain": "config"
+  },
+  "why": "A route-table change (config) explains flow loss (metrics) four topology hops away."
+}

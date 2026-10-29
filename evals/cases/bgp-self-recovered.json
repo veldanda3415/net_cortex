@@ -1,0 +1,25 @@
+{
+  "name": "bgp-self-recovered",
+  "scenario_id": 2009,
+  "fixture": "tests/fixtures/cross_domain/bgp-self-recovered.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "bgp-neighbor-shutdown",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-bgp-169.254.100.5-down",
+  "alarm_entities": [
+    {
+      "type": "bgp_neighbor",
+      "id": "169.254.100.5"
+    }
+  ],
+  "culprit": {
+    "type": "bgp_neighbor",
+    "ids": [
+      "169.254.100.5"
+    ],
+    "domain": "metrics"
+  },
+  "minutes_since_alarm": 10,
+  "expect_status": "recovered",
+  "why": "The BGP session dropped and came back on its own within a minute of the alarm: recovered, not an outage."
+}

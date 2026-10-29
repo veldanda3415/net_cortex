@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 from datetime import datetime, timezone
 
 from contract.catalog_loader import Catalog, get_catalog
-from models.schemas import A2AMessage, AgentFinding, RCAReport
+from models.schemas import A2AMessage, AgentFinding, RankedCause, RCAReport
 
 
 logger = logging.getLogger("net_cortex.synthesizer")
@@ -37,9 +38,37 @@ def _unclassified_text(findings: list[AgentFinding]) -> str:
     return "\n".join(rows[:30]) or "none"
 
 
+def _evidence_index(findings: list[AgentFinding]) -> dict[str, str]:
+    """Citable evidence: E<n> -> one rule-fired evidence row. The LLM may only
+    cite these ids, so every claim it makes traces to a rule that fired."""
+    index: dict[str, str] = {}
+    for f in findings:
+        for row in f.evidence:
+            rules = "; ".join(str(r.get("reason", "")) for r in row.get("rules_fired", [])[:2])
+            index[f"E{len(index) + 1}"] = (
+                f"[{f.domain}] {', '.join(row.get('signals', []))} on {row.get('entity_type')}:{row.get('entity_id')} "
+                f"first {row.get('first_seen')} x{row.get('count', 1)} ({rules})"
+                + (" [found by peer validation]" if row.get("via") == "validation" else "")
+            )
+    return index
+
+
+def _ranked_text(ranked: list[RankedCause]) -> str:
+    rows = []
+    for c in ranked[:8]:
+        rows.append(
+            f"  {c.id}: {', '.join(c.signals)} on {c.entity_type}:{c.entity_id} ({c.domain}) first {c.first_seen.isoformat()} "
+            f"score={c.score} features={c.features}" + (f" chain={' -> '.join(c.chain)}" if c.chain else "")
+        )
+    return "\n".join(rows) or "none"
+
+
 def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], messages: list[A2AMessage],
-                      catalog: Catalog | None = None) -> str:
+                      catalog: Catalog | None = None, ranked: list[RankedCause] | None = None,
+                      evidence: dict[str, str] | None = None, status: str = "unknown") -> str:
     catalog = catalog or get_catalog()
+    ranked = ranked or []
+    evidence = evidence if evidence is not None else _evidence_index(findings)
     finding_blocks = []
     for f in findings:
         events_text = json.dumps(f.key_events, indent=2, default=str) if f.key_events else "none"
@@ -52,9 +81,11 @@ def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], m
         )
     a2a_highlights = []
     for m in messages:
-        if m.message_type == "finding_publish":
+        if m.message_type == "validation_request":
+            entity = m.payload.get("entity") or {}
+            verdict = (m.payload.get("response") or {}).get("verdict", "?")
             a2a_highlights.append(
-                f"  [{m.sender_agent} → {m.target_agent}] {m.payload.get('summary', '')}"
+                f"  [{m.sender_agent} asked {m.target_agent}] {entity.get('type')}:{entity.get('id')} -> {verdict}"
             )
     a2a_text = "\n".join(a2a_highlights) if a2a_highlights else "none"
     findings_text = "\n\n".join(finding_blocks)
@@ -63,12 +94,22 @@ def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], m
         "Given the following multi-domain agent findings, produce a structured JSON analysis.\n\n"
         f"Incident description: {incident_description}\n\n"
         f"Domain agent findings:\n{findings_text}\n\n"
-        f"A2A collaboration highlights:\n{a2a_text}\n\n"
+        f"Questions the agents asked each other (topology-scoped) and the answers:\n{a2a_text}\n\n"
+        f"Citable evidence (every item is a rule that fired):\n"
+        + ("\n".join(f"  {k}: {v}" for k, v in evidence.items()) or "  none") + "\n\n"
+        f"Candidate causes ranked by code (evidence, topology position relative to the alarm, time precedence, "
+        f"signal role):\n{_ranked_text(ranked)}\n\n"
+        f"Incident status from the latest samples: {status}\n\n"
         f"Signal glossary (what each fired signal means):\n{_signal_glossary(findings, catalog)}\n\n"
         "Unclassified evidence (signals outside the detection catalog; no rule judged them, "
         f"weigh them cautiously):\n{_unclassified_text(findings)}\n\n"
+        "Rules: base every claim on the citable evidence and cite it inline as [E<n>]. Do not cite anything else. "
+        "A cause upstream of the alarm in the topology that fired first usually explains the downstream symptoms. "
+        "If the incident status is recovered or flapping, say so in root_cause.\n\n"
         "Return ONLY valid JSON with exactly these keys:\n"
-        "  root_cause: one concise sentence naming the specific root cause (include component name, what changed, and magnitude if known)\n"
+        + ("  ranked_cause_ids: the candidate cause ids in your order, most likely first. Only candidates scored within "
+           f"{RERANK_MARGIN} of the top can move above it.\n" if ranked else "")
+        + "  root_cause: one concise sentence naming the specific root cause (the top candidate's entity id and what changed, magnitude if known), with [E<n>] citations\n"
         "  contributing_factors: list of strings, each citing a specific domain finding with evidence detail\n"
         "  causal_chain: ordered list of strings showing the sequence of events from trigger to user impact\n"
         "  metrics_affected: list of metric names that were measurably impacted\n"
@@ -183,6 +224,65 @@ def _coerce_llm_field(llm_result: dict, key: str, expected_type: type, fallback)
     return value
 
 
+_CITATION = re.compile(r"\[(E\d+)\]")
+
+
+def _cited_ok(text: str, evidence: dict[str, str]) -> bool:
+    """A claim must cite only known evidence ids (uncited prose is allowed only
+    when there is no evidence to cite)."""
+    cited = _CITATION.findall(text)
+    if not evidence:
+        return True
+    return bool(cited) and all(c in evidence for c in cited)
+
+
+# The rules rank; the LLM may only break near-ties. A candidate whose rules
+# score is more than this below the top cannot be promoted over it.
+RERANK_MARGIN = 0.05
+
+
+def _rerank(ranked: list[RankedCause], llm_result: dict | None) -> list[RankedCause]:
+    """The LLM's order among the near-tied leaders (rules score within
+    RERANK_MARGIN of the top), if it names known ids; everything else keeps
+    the rules order."""
+    ids = llm_result.get("ranked_cause_ids") if llm_result else None
+    if not ranked or not isinstance(ids, list):
+        return ranked
+    tied = [c for c in ranked if c.score >= ranked[0].score - RERANK_MARGIN]
+    by_id = {c.id: c for c in tied}
+    chosen = [by_id[i] for i in dict.fromkeys(str(x) for x in ids) if i in by_id]
+    if not chosen:
+        if any(str(x) in {c.id for c in ranked} for x in ids):
+            logger.info("LLM ranked a cause first that the rules score well below the top; keeping the rules order")
+        return ranked
+    return chosen + [c for c in ranked if c not in chosen]
+
+
+def _names(text: str, cause: RankedCause) -> bool:
+    """Does the sentence name this cause: its entity (any alias) or one of its signals?"""
+    low = text.lower()
+    return any(n and n.lower() in low for n in [cause.entity_id, *cause.aliases, *cause.signals])
+
+
+def _status_note(status: str) -> str:
+    if status == "recovered":
+        return " The affected entities have since recovered (no longer firing)."
+    if status == "flapping":
+        return " The affected entities are flapping (repeated down/up), not a steady outage."
+    return ""
+
+
+def _deterministic_from_cause(top: RankedCause, findings: list[AgentFinding], alarm_entities: list[dict]) -> str:
+    alarm = ", ".join(f"{e.get('type')}:{e.get('id')}" for e in alarm_entities) if alarm_entities else ""
+    where = f" via {' -> '.join(top.chain)}" if top.chain else ""
+    upstream = f", upstream of the alarm on {alarm}{where}" if alarm and top.features.get("topology", 0) >= 1.0 else (
+        f", linked to the alarm{where}" if where else "")
+    found = " (found by peer validation)" if top.via_validation else ""
+    summary = next((f.summary for f in findings if f.domain == top.domain), "")
+    return (f"{top.domain.capitalize()} domain: {', '.join(top.signals)} on {top.entity_type} {top.entity_id} "
+            f"at {top.first_seen.strftime('%H:%Mz')}{found}{upstream} - {summary}")
+
+
 def synthesize_report(
     incident_id: str,
     findings: list[AgentFinding],
@@ -194,6 +294,9 @@ def synthesize_report(
     timed_out_agents: list[str] | None = None,
     errored_agents: list[str] | None = None,
     catalog: Catalog | None = None,
+    ranked_causes: list[RankedCause] | None = None,
+    alarm_entities: list[dict] | None = None,
+    status: str = "unknown",
 ) -> RCAReport:
     catalog = catalog or get_catalog()
     timed_out_agents = list(timed_out_agents or [])
@@ -235,6 +338,7 @@ def synthesize_report(
             det_summary = "All domain agents reported metrics within normal baseline. No root cause was identified."
     else:
         top = sorted(anomaly_findings, key=lambda f: f.confidence, reverse=True)[0]
+        ranked_causes = list(ranked_causes or [])
         # Build a richer deterministic root cause from the top finding's key_events
         first_event = top.key_events[0] if top.key_events else {}
         component = first_event.get("component", first_event.get("path_id", ""))
@@ -248,6 +352,9 @@ def synthesize_report(
             det_root = f"{top.domain.capitalize()} domain: {change_detail} - {top.summary}"
         else:
             det_root = f"{top.domain.capitalize()} domain anomaly: {top.summary}"
+        if ranked_causes:
+            det_root = _deterministic_from_cause(ranked_causes[0], findings, alarm_entities or [])
+        det_root += _status_note(status)
 
         det_contributing = [
             f"{f.domain} ({f.confidence:.0%} confidence): {f.summary}"
@@ -276,9 +383,23 @@ def synthesize_report(
 
     # --- LLM enrichment (optional, overwrites deterministic values if successful) ---
     llm_result: dict | None = None
+    ranked_causes = list(ranked_causes or [])
+    evidence = _evidence_index(findings)
     if incident_description and anomaly_findings:
-        prompt = _build_llm_prompt(incident_description, findings, messages, catalog)
+        prompt = _build_llm_prompt(incident_description, findings, messages, catalog, ranked_causes, evidence, status)
         llm_result = _call_gemini(prompt, llm_model)
+    if llm_result and ranked_causes:
+        ranked_causes = _rerank(ranked_causes, llm_result)
+        # The rules-only sentence names whatever ranks first after the LLM's
+        # reorder, so the report never names one cause and ranks another first.
+        det_root = _deterministic_from_cause(ranked_causes[0], findings, alarm_entities or []) + _status_note(status)
+    if llm_result and isinstance(llm_result.get("root_cause"), str) and not _cited_ok(llm_result["root_cause"], evidence):
+        logger.warning("LLM root_cause cites no known rule-fired evidence; using the deterministic root cause")
+        llm_result = {k: v for k, v in llm_result.items() if k != "root_cause"}
+    if llm_result and ranked_causes and isinstance(llm_result.get("root_cause"), str) \
+            and not _names(llm_result["root_cause"], ranked_causes[0]):
+        logger.warning("LLM root_cause does not name the top-ranked cause; using the deterministic root cause")
+        llm_result = {k: v for k, v in llm_result.items() if k != "root_cause"}
 
     if require_llm and anomaly_findings and llm_result is None:
         raise RuntimeError(
@@ -313,5 +434,8 @@ def synthesize_report(
         unclassified_evidence=[
             {"domain": f.domain, **u} for f in findings for u in f.unclassified_evidence
         ][:MAX_UNCLASSIFIED_IN_REPORT],
+        alarm_entities=list(alarm_entities or []),
+        ranked_causes=ranked_causes,
+        incident_status=status if status in ("ongoing", "recovered", "flapping") else "unknown",
         generated_at=datetime.now(timezone.utc),
     )

@@ -40,12 +40,12 @@
     "TunnelDataIn": {
       "signal_type": "metric", "domain": "metrics", "unit": "Bytes", "entity_types": ["tunnel"],
       "description": "AWS/VPN bytes received through the tunnel; a collapse vs its recent level indicates traffic loss.",
-      "rule": {"type": "rate_change", "direction": "decrease", "factor": 10, "min_reference": 1000}
+      "rule": {"type": "rate_change", "direction": "decrease", "factor": 10, "min_reference": 1000, "reference": "median"}
     },
     "TunnelDataOut": {
       "signal_type": "metric", "domain": "metrics", "unit": "Bytes", "entity_types": ["tunnel"],
       "description": "AWS/VPN bytes sent through the tunnel; a collapse vs its recent level indicates traffic loss.",
-      "rule": {"type": "rate_change", "direction": "decrease", "factor": 10, "min_reference": 1000}
+      "rule": {"type": "rate_change", "direction": "decrease", "factor": 10, "min_reference": 1000, "reference": "median"}
     },
     "BytesIn": {
       "signal_type": "metric", "domain": "metrics", "unit": "Bytes", "entity_types": ["tgw_attachment"],
@@ -96,6 +96,38 @@
       "description": "AWS/NATGateway packets dropped by the NAT gateway.",
       "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "NAT gateway dropping packets"}
     },
+    "LatencyMs": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Milliseconds", "entity_types": ["flow"],
+      "description": "Synthetic probe round-trip latency for one client-to-service flow.",
+      "rule": {
+        "type": "zscore_baseline", "threshold": 3.0, "baseline_keys": ["flow=entity_id"],
+        "fallback": {"type": "threshold", "op": "gt", "value": 100, "reason": "flow latency above 100 ms"}
+      }
+    },
+    "LossPercent": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Percent", "entity_types": ["flow"],
+      "description": "Synthetic probe packet loss for one client-to-service flow.",
+      "rule": {
+        "type": "zscore_baseline", "threshold": 3.0, "baseline_keys": ["flow=entity_id"],
+        "fallback": {"type": "threshold", "op": "gt", "value": 2, "reason": "flow packet loss above 2%"}
+      }
+    },
+    "mem_used_percent": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Percent", "entity_types": ["instance"],
+      "description": "CloudWatch agent (CWAgent) memory in use on an instance.",
+      "rule": {"type": "threshold", "op": "gt", "value": 90, "reason": "instance memory nearly exhausted (>90%)"}
+    },
+    "swap_used_percent": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Percent", "entity_types": ["instance"],
+      "description": "CloudWatch agent (CWAgent) swap in use on an instance; sustained swapping stalls packet processing.",
+      "rule": {"type": "threshold", "op": "gt", "value": 50, "reason": "instance swapping heavily (>50% swap used)"}
+    },
+    "link_out_bps": {
+      "signal_type": "metric", "domain": "metrics", "unit": "Bits/Second", "entity_types": ["tunnel", "interface"],
+      "match_names": ["link_in_bps"],
+      "description": "Traffic on a link in bits per second; judged against the link's capacity (labels.capacity_bps from topology or config).",
+      "rule": {"type": "threshold", "op": "gt", "value": 0.8, "per": "labels.capacity_bps", "reason": "link above 80% of capacity"}
+    },
 
     "log_message": {
       "signal_type": "event", "domain": "log",
@@ -118,6 +150,11 @@
       "description": "AWS Site-to-Site VPN tunnel activity log lines per minute reporting IKE phase 1 or phase 2 down.",
       "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "AWS VPN reports IKE down"}
     },
+    "vpn_bgp_prefix_limit": {
+      "signal_type": "event", "domain": "log", "entity_types": ["tunnel"],
+      "description": "AWS Site-to-Site VPN BGP log: AWS dropped the session because the customer gateway advertised more prefixes than the limit (1,000 for a TGW VPN).",
+      "rule": {"type": "event_presence", "min_severity": "error"}
+    },
     "vpn_bgp_status_down": {
       "signal_type": "event", "domain": "log", "entity_types": ["tunnel"],
       "description": "AWS Site-to-Site VPN BGP log: the AWS-side BGP session went DOWN (details say why, e.g. hold timer or prefix limit).",
@@ -130,8 +167,8 @@
     },
     "dns_nxdomain": {
       "signal_type": "metric", "domain": "log", "unit": "Count", "entity_types": ["dns_name"],
-      "description": "Route 53 Resolver NXDOMAIN answers per minute for one query name.",
-      "rule": {"type": "threshold", "op": "gt", "value": 5, "reason": "NXDOMAIN spike (>5/min)"}
+      "description": "Route 53 Resolver NXDOMAIN answers per minute for one query name in a zone this network owns.",
+      "rule": {"type": "threshold", "op": "gt", "value": 0, "reason": "NXDOMAIN for a name in an owned zone (resolvers cache negative answers, so even one per minute matters)"}
     },
     "fw_invalid_drop": {
       "signal_type": "metric", "domain": "log", "unit": "Count", "entity_types": ["instance"],

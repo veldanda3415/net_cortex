@@ -22,6 +22,17 @@ telemetry:
     circuit_breaker:
       failure_threshold: 3
       reset_timeout_seconds: 30
+  # Opt in to z-scores against the lab's own history (baselines.provider telemetry):
+  # each analysis then also reads the 24 h before the window, up to 1440 points per
+  # series, which can overrun analysis_timeout_seconds. Off: rules use their fallback
+  # thresholds.
+  # include_baseline: [metrics]
+  # Save every response as a replay fixture (python -m evals.build_fixtures shows the format).
+  record_dir: output/recordings
+  # The topology read is many describe calls (cached 5 min server-side): a longer timeout.
+  topology:
+    endpoints:
+      - {name: aws-lab-topology, url: "http://127.0.0.1:9001/mcp", timeout_seconds: 60, required: false}
   domains:
     metrics:
       endpoints:
@@ -56,16 +67,17 @@ a2a:
   protocol_mode: adk
   max_iterations: 2
   analysis_timeout_seconds: 40
-  message_timeout_seconds: 10
-  round_timeout_seconds: 25
-  collaboration_timeout_seconds: 60
+  # A peer's question is a scoped AWS read (CloudTrail LookupEvents is the slow one).
+  message_timeout_seconds: 25
+  round_timeout_seconds: 60
+  collaboration_timeout_seconds: 120
 
 simulation:
   region: us-east-1
   window_minutes: 15      # drills run back to back; 30 would pull in the previous fault's revert
 
 baselines:
-  provider: simulation
+  provider: telemetry
   metrics_z_threshold: 3.0
   config_z_threshold: 2.5
   legacy_fallback: true

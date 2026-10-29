@@ -125,16 +125,20 @@ class ASGITestRouter:
                 ]),
             ),
         )
+        response = None
         try:
             resp = await self._post(target, req.model_dump())
             state = str(resp.get("result", {}).get("status", {}).get("state", "completed")).lower()
             status = "completed" if state in {"completed", "queued", "working", "submitted"} else "failed"
+            artifacts = resp.get("result", {}).get("artifacts") or []
+            if artifacts:
+                response = artifacts[0]["parts"][0].get("data")
         except Exception:
             status = "failed"
         return A2AMessage(
             sender_agent=sender, target_agent=target, message_type=message_type,
-            payload={"status": status, **payload}, round_number=round_number,
-            timestamp=datetime.now(timezone.utc),
+            payload={"status": status, **payload, **({"response": response} if response is not None else {})},
+            round_number=round_number, timestamp=datetime.now(timezone.utc),
         )
 
     async def broadcast(self, sender: str, message_type: str, payload: dict,

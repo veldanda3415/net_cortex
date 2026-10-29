@@ -32,9 +32,17 @@ sources:
       - {namespace: AWS/EC2, names: [CPUUtilization], stat: Maximum, dimensions: [InstanceId], entity: {type: instance, id: InstanceId}}
       - {namespace: NetCortexLab/Router, names: [BgpPeerState, PrefixesSent], stat: Minimum, dimensions: [Neighbor], entity: {type: bgp_neighbor, id: Neighbor}}
       - {namespace: NetCortexLab/Traffic, names: [SuccessRate], stat: Minimum, dimensions: [Flow], entity: {type: flow, id: Flow}}
+      - {namespace: NetCortexLab/Traffic, names: [LatencyMs, LossPercent], stat: Average, dimensions: [Flow], entity: {type: flow, id: Flow}}
+      - {namespace: CWAgent, names: [mem_used_percent, swap_used_percent], stat: Maximum, dimensions: [InstanceId], entity: {type: instance, id: InstanceId}}
+      # Link utilization: tunnel bytes per minute as bits/s, judged against the AWS VPN tunnel limit.
+      - {namespace: AWS/VPN, names: [TunnelDataOut], stat: Sum, dimensions: [TunnelIpAddress], entity: {type: tunnel, id: TunnelIpAddress},
+         emit_as: link_out_bps, scale: 8, per_second: true, labels: {capacity_bps: "1250000000"}}
 
   cloudwatch_logs:
     <<: *aws
+    # Eight log groups, two of them busy flow logs: 15 s timed out a quiet healthy check.
+    # Stays under the RCA side's 25 s endpoint timeout.
+    timeout_seconds: 22
     # The answer key for evals. The plugin refuses to start if a query names it, and
     # the IAM role denies it as well.
     deny_log_groups: [/netcortex-lab/faults]
@@ -73,6 +81,8 @@ sources:
         timestamp_field: timestamp
         entity: {type: tunnel, field: resource_id, pattern: '_(?P<id>[0-9.]+)$'}
         classify:
+          # The specific reason first: AWS drops BGP when the router exceeds its prefix limit.
+          - {name: vpn_bgp_prefix_limit, field: message.details, pattern: 'maximum prefix limit'}
           - {name: vpn_bgp_status_down, field: status, equals: DOWN}
         attributes: {details: message.details}
       - id: flow-app
@@ -125,9 +135,11 @@ sources:
         format: json
         timestamp_field: time
         entity: {type: tgw_route_table, field: detail.transitGatewayRouteTableArns.0, pattern: '(?P<id>tgw-rtb-[0-9a-f]+)'}
+        # changeType first: a withdrawal (TGW-ROUTE-UNINSTALLED) can carry routeState
+        # blackhole, and reading that first mislabeled withdrawals as blackholes.
         classify:
-          - {name: tgw_route_blackholed, field: detail.routes.0.routeState, equals: blackhole, severity: warning}
           - {name: tgw_route_uninstalled, field: detail.changeType, equals: TGW-ROUTE-UNINSTALLED, severity: warning}
+          - {name: tgw_route_blackholed, field: detail.routes.0.routeState, equals: blackhole, severity: warning}
           - {name: vpn_ipsec_down, field: detail.changeType, equals: VPN-CONNECTION-IPSEC-DOWN,
              entity: {type: tunnel, field: detail.outsideIpAddress}}
           - {name: vpn_bgp_down, field: detail.changeType, equals: VPN-CONNECTION-BGP-DOWN,
@@ -137,6 +149,19 @@ sources:
     <<: *aws
     event_sources: [ec2.amazonaws.com, elasticloadbalancing.amazonaws.com, route53.amazonaws.com]
     max_events: 500
+
+  # Topology for collaboration: which entity depends on which. Flows are synthetic
+  # probes, so this file says what each one tests (Name tags, the zone's record).
+  aws_topology:
+    <<: *aws
+    required: false
+    timeout_seconds: 45
+    flows:
+      - {id: onprem-to-nlb, probes: [{type: load_balancer, match: netcortex-lab-app}, {type: tunnel, all: true}]}
+      - {id: onprem-to-nlb-large, probes: [{type: load_balancer, match: netcortex-lab-app}, {type: tunnel, all: true}]}
+      - {id: onprem-iperf-app-a, probes: [{type: instance, match: netcortex-lab-app-a}, {type: tunnel, all: true}]}
+      - {id: svc-to-app, probes: [{type: dns_name, id: app.lab.internal.}, {type: load_balancer, match: netcortex-lab-app}]}
+      - {id: app-to-partner, probes: [{type: instance, match: netcortex-lab-partner}]}
 
   tgw_routes:
     <<: *aws

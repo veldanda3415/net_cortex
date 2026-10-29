@@ -1,0 +1,27 @@
+{
+  "name": "sg-rule-removed",
+  "scenario_id": 2003,
+  "fixture": "tests/fixtures/cross_domain/sg-rule-removed.json",
+  "region": "us-east-1",
+  "severity": "high",
+  "fault": "sg-rule-removed",
+  "description": "CloudWatch alarms went into ALARM: netcortex-lab-flow-onprem-to-nlb-large-degraded; netcortex-lab-flow-onprem-to-nlb-degraded",
+  "alarm_entities": [
+    {
+      "type": "flow",
+      "id": "onprem-to-nlb"
+    },
+    {
+      "type": "flow",
+      "id": "onprem-to-nlb-large"
+    }
+  ],
+  "culprit": {
+    "type": "security_group",
+    "ids": [
+      "sg-0d47d22a6a536ef01"
+    ],
+    "domain": "config"
+  },
+  "why": "A security-group change (config) behind the NLB explains flow loss (metrics) and REJECTs on the ENIs (log)."
+}

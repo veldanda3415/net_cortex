@@ -9,27 +9,31 @@ JSON file:
       "contract_version": "2.0",
       "description": "TGW VPN tunnel down, recorded 2026-09-14",
       "region": "us-east-1",                     # optional; omitted = any region
+      "scenario_id": 2001,                       # optional; set = only queries with this scenario_id
       "recorded_window": {"start": "...", "end": "..."},
+      "alarm_at": "...",                         # optional; defaults to recorded_window.end
       "signals": [ <contract v2 Signal>, ... ],
       "topology": {"entities": [...], "relationships": [...]}   # optional
     }
 
-Rebasing shifts every timestamp by ``query.end_time - recorded_window.end``,
-so the incident's alarm instant lines up with the end of the recording and
-relative spacing between signals is preserved exactly.
+Rebasing shifts every timestamp so the recording's alarm instant (``alarm_at``,
+default ``recorded_window.end``) lands on the query's ``anchor_time`` (default
+``end_time``). Relative spacing between signals is preserved exactly, and a
+query for the minutes after the alarm (is it still happening?) gets the
+recording's post-alarm signals.
 """
 
 from __future__ import annotations
 
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from contract import Coverage, Entity, Signal, TelemetryQuery, TimeWindow, TopologyEdge, check_contract_version
-from mcp_telemetry_server.plugins.base import SourcePlugin, register_plugin
+from mcp_telemetry_server.plugins.base import BASELINE_LOOKBACK, SourcePlugin, register_plugin
 
 
 class _RecordedTopology(BaseModel):
@@ -43,7 +47,9 @@ class ReplayFixture(BaseModel):
     contract_version: str
     description: str = ""
     region: str | None = None
+    scenario_id: int | None = None
     recorded_window: TimeWindow
+    alarm_at: datetime | None = None
     signals: list[Signal] = Field(default_factory=list)
     topology: _RecordedTopology | None = None
 
@@ -77,25 +83,30 @@ class ReplayPlugin(SourcePlugin):
             check_contract_version(fixture.contract_version)
             self._fixtures.append((path.name, fixture))
 
-    def _matching(self, region: str) -> list[tuple[str, ReplayFixture]]:
-        return [(n, f) for n, f in self._fixtures if f.region is None or f.region == region]
+    def _matching(self, region: str, scenario_id: int | None) -> list[tuple[str, ReplayFixture]]:
+        return [
+            (n, f) for n, f in self._fixtures
+            if (f.region is None or f.region == region) and (f.scenario_id is None or f.scenario_id == scenario_id)
+        ]
 
     async def fetch(self, query: TelemetryQuery, *, domain: str) -> tuple[list[Signal], Coverage]:
         signals: list[Signal] = []
-        for fixture_name, fixture in self._matching(query.region):
-            offset = query.end_time - fixture.recorded_window.end
+        lower = query.start_time - BASELINE_LOOKBACK if query.include_baseline else query.start_time
+        for fixture_name, fixture in self._matching(query.region, query.scenario_id):
+            alarm_at = fixture.alarm_at or fixture.recorded_window.end
+            offset = (query.anchor_time or query.end_time) - alarm_at
             for signal in fixture.signals:
                 if signal.domain != domain:
                     continue
                 rebased = rebase_signal(signal, offset, fixture_name)
-                if query.start_time <= rebased.timestamp <= query.end_time:
+                if lower <= rebased.timestamp <= query.end_time:
                     signals.append(rebased)
         return signals, self.coverage(lag_seconds=0.0)
 
     async def topology(self, region: str, scenario_id: int | None) -> tuple[list[Entity], list[TopologyEdge], Coverage]:
         entities: list[Entity] = []
         edges: list[TopologyEdge] = []
-        for _, fixture in self._matching(region):
+        for _, fixture in self._matching(region, scenario_id):
             if fixture.topology is not None:
                 entities.extend(fixture.topology.entities)
                 edges.extend(fixture.topology.relationships)

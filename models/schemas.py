@@ -16,6 +16,11 @@ class IncidentRequest(BaseModel):
     severity: Literal["low", "medium", "high", "critical"]
     source_system: str | None = None
     external_incident_id: str | None = None
+    alarm_entities: list[dict] = Field(
+        default_factory=list,
+        description="Entities the alarm fired on, as {type, id} (e.g. from CloudWatch alarm dimensions). "
+        "Collaboration starts its topology walk here; empty means start from the agents' own hits.",
+    )
 
 
 class MetricSnapshot(BaseModel):
@@ -84,6 +89,15 @@ class AgentFinding(BaseModel):
         description="Signals the telemetry returned that are not in the detection catalog. Never "
         "used for detection; passed to the synthesizer as unclassified evidence.",
     )
+    evidence: list[dict] = Field(
+        default_factory=list,
+        description="Every rule hit, one row per (signals, entity), not limited like key_events. Rows from "
+        "a peer's validation_response carry via='validation'.",
+    )
+    entity_status: list[dict] = Field(
+        default_factory=list,
+        description="Per hit entity: current_state (firing|cleared|unknown) and transitions in the window.",
+    )
 
 
 class A2AMessage(BaseModel):
@@ -101,6 +115,21 @@ class A2AMessage(BaseModel):
     payload: dict
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     round_number: int
+
+
+class RankedCause(BaseModel):
+    id: str
+    entity_type: str
+    entity_id: str
+    domain: str
+    signals: list[str]
+    evidence_refs: list[str]
+    first_seen: datetime
+    score: float
+    features: dict[str, float]
+    chain: list[str] = Field(default_factory=list, description="Topology path cause -> ... -> alarm entity")
+    aliases: list[str] = Field(default_factory=list, description="Other names of the entity (labels), e.g. a tunnel's outside IP")
+    via_validation: bool = False
 
 
 class RCAReport(BaseModel):
@@ -129,6 +158,12 @@ class RCAReport(BaseModel):
         default_factory=list,
         description="Signals not in the detection catalog, collected across domains (capped).",
     )
+    alarm_entities: list[dict] = Field(default_factory=list)
+    ranked_causes: list[RankedCause] = Field(
+        default_factory=list,
+        description="Candidate causes ranked by evidence, topology position, time precedence and signal role.",
+    )
+    incident_status: Literal["ongoing", "recovered", "flapping", "unknown"] = "unknown"
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
