@@ -90,8 +90,10 @@ router() { ssm "$(t .router_instance_id)" "$1"; }
 # tf_reconcile: let Terraform put back what a fault deleted and the API can't restore
 # under the same ID (a NAT gateway, a route table association). Afterwards state and
 # the lab agree again, and the fault targets are re-read, since IDs may have changed.
+# TF_ARGS carries the lab's toggles, as for `make plan` (e.g. -var enable_peering=false).
 tf_reconcile() {
-  terraform -chdir="$LAB_DIR" apply -input=false -auto-approve -lock-timeout=5m >&2
+  # shellcheck disable=SC2086
+  terraform -chdir="$LAB_DIR" apply -input=false -auto-approve -lock-timeout=5m ${TF_ARGS:-} >&2
   TARGETS=$(terraform -chdir="$LAB_DIR" output -json fault_targets)
   [ -z "${FAULT_TARGETS_FILE:-}" ] || echo "$TARGETS" >"$FAULT_TARGETS_FILE"
 }
