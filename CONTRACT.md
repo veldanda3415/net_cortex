@@ -158,7 +158,7 @@ The catalog decides what the envelope's signals mean: which signals exist, how e
 
 ### Loading and validation
 
-- **Override directory.** `$NETCORTEX_CATALOG_DIR` names an override directory. Each file there is merged onto the default **by key**: an override entry replaces the default entry with the same key as a whole (one signal, domain or rule at a time), and entries it doesn't mention are kept. In Kubernetes the override is the `netcortex-catalog-override` ConfigMap, mounted into both pods.
+- **Override directory.** `$NETCORTEX_CATALOG_DIR` names an override directory. Each file there is merged onto the default **by key**: an override entry replaces the default entry with the same key as a whole (one signal, domain or rule at a time), and entries it doesn't mention are kept. An override entry set to `null` deletes the default entry (`evals/ablation.py` uses this to remove a cause signal). In Kubernetes the override is the `netcortex-catalog-override` ConfigMap, mounted into both pods.
 - **Three validation passes.** Validation runs at startup in the RCA process and in the telemetry server:
   1. JSON Schema, per file.
   2. The typed models.
@@ -326,11 +326,26 @@ How the rule fields behave:
 - **Marker.** The `note` must start with `Peer corroboration:` (or `Peer contradiction:` for `kind: contradiction`). The marker stops the rule from applying twice across collaboration rounds.
 - **Fields a `key_event` condition can test:** anything a key event carries, which means the signal's metric value under its name, its attributes (such as `message` and `change_type`), `entity_type` and `entity_id`.
 
+### Hypotheses: rules the LLM proposes and code checks
+
+With the LLM on (`llm.hypotheses`, default true, plus Gemini credentials), each domain agent shows the evidence no rule judged (its `unclassified_evidence`, with the line text) to the LLM in its collaboration `plan()`. The LLM may answer with hypotheses: a raw signal on one entity, the evidence refs it cites, and a temporary rule from the closed set above (`zscore_baseline` excluded; it needs a baseline store). Each hypothesis is a `validation_request` with a `hypothesis` field, sent to the agent that owns the data, which runs four checks in code (`detection/hypotheses.py`) on fresh, scoped reads:
+
+| Check | Passes when |
+|---|---|
+| grounded | every cited `evidence_ref` is in what the agent fetched for that entity |
+| fires | the temporary rule fires on that read |
+| new | it does not fire in an equal window that ends a lookback before this one |
+| placed | the entity is on the alarm (or, without one, on a symptom) or upstream of it in the topology |
+
+A supported hypothesis joins the finding as an evidence row with `via: "hypothesis"`, rule id `llm:<hash>` and role `null`. In ranking, role `null` scores 0.5: above a symptom and below a catalog cause. Every hypothesis, supported or not, is listed with its checks in the report's `hypotheses` section; only supported ones are evidence, so an unverified one can never reach `root_cause`. Supported rules are also written as draft `signals.json` entries to `output/<incident>/proposed_signals.json` for a human to approve. A suggested source-side `classify_pattern` is kept only if it matches the cited lines.
+
+The LLM needs text to read, so the `cloudwatch_logs` plugin can pass unmatched lines through (`unmatched`, opt-in per query, quiet groups only) under a neutral name such as `frr_unmatched`. No rule fires on those names.
+
 ### What still requires code
 
 - **A new data source.** A telemetry source plugin, plus its credentials and IAM. The AWS plugins in `mcp_telemetry_server/plugins/aws/` are the worked example; an Azure, GCP or on-prem backend is a sibling package. New log formats or error classes on an existing log group are config (`cloudwatch_logs` queries), not code.
 - **A new rule type.** Add it to `contract/catalog_models.py` and `detection/rules.py`. This is deliberate: the set stays closed and reviewable.
 - **A new MCP tool.** Today these are `get_metrics`, `get_logs`, `get_routing_events`, `get_config_changes`, `get_signals` and `get_topology`. New domains use `get_signals`, so they don't need one.
-- **Detecting on log message text.** Rules match a signal's `name` and severity, never its free text, so there is no substring or regex detection. The workaround is to name the error at the source (see the recipes above). A `message_match` option on `event_presence` would be a new rule capability.
+- **Detecting on log message text.** Rules match a signal's `name` and severity, never its free text, so there is no substring or regex detection. The workaround is to name the error at the source (see the recipes above); a verified hypothesis's draft entry suggests the classify pattern. A `message_match` option on `event_presence` would be a new rule capability.
 - **Conditions over several signals within one domain.** "A and B together", "A before B" and "the ratio of A to B" can't be detected. Each rule judges one signal; a derived per-entity count (`domains.json` `derived`) is the only aggregation. Across domains, `correlation.json` can combine evidence, but only to adjust confidence.
 - **New agent reasoning.** Anything the generic pipeline can't express: new correlation condition types, summary placeholders, relevance filter types, or LLM prompting. The default catalog's `incident_text` relevance filter is an example of reasoning that lives in code but is configured by data.
