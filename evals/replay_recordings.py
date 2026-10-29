@@ -7,8 +7,9 @@ telemetry was recorded by the RCA side (telemetry.record_dir) as
 <record_dir>/<region>_<reported_at>.json. The replay starts the domain agents
 in-process (no ports), serves that recording through a replay source, and
 runs the same incident again: same description, alarm entities and alarm
-time relative to the run. Run it with the LLM off to get the rules-only answer
-to the same evidence the live run saw:
+time relative to the run. It reads config/.env like app/main.py, so the LLM
+is on when that file configures it. Run it with the LLM off to get the
+rules-only answer to the same evidence the live run saw:
 
     GEMINI_API_KEY= GOOGLE_CLOUD_PROJECT= python -m evals.replay_recordings ...
 
@@ -98,6 +99,9 @@ async def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", default="-")
     args = parser.parse_args(argv)
 
+    from app.main import load_env_file
+
+    load_env_file()  # as `app/main.py` does: an empty GEMINI_API_KEY= in the environment still wins
     base = yaml.safe_load(Path(args.config).read_text())
     truth: dict[str, dict[str, Any]] = {}
     if args.truth:
@@ -124,13 +128,22 @@ async def main(argv: list[str] | None = None) -> int:
                                    "top_cause": (lambda c: f"{c['entity_type']}:{c['entity_id']} ({c['domain']})" if c else None)(
                                        (report.get("ranked_causes") or [None])[0]),
                                    "questions": sum(1 for m in report["a2a_message_log"] if m["message_type"] == "validation_request"),
-                                   "llm_used": llm_used(report)}
+                                   "llm_used": llm_used(report),
+                                   "hypotheses": [{"signal": h.get("signal"), "entity": h.get("entity"),
+                                                   "verdict": h.get("verdict"),
+                                                   "failed": sorted(c for c, ok in (h.get("checks") or {}).items() if not ok)}
+                                                  for h in report.get("hypotheses") or []]}
             live = truth.get(record["report"]["incident_id"])
             if live is not None and live["fault"] in expect:
                 fault_expect = expect[live["fault"]]
                 v, cause, symptoms = verdict(fault_expect, report)
+                verified = [h for h in report.get("hypotheses") or [] if h.get("verdict") == "supported"]
+                anomalous = [f for f in report["agent_findings"] if f.get("anomaly_detected")]
                 row.update(fault=live["fault"], verdict=v, cause_fired=cause, symptoms_fired=symptoms,
-                           headline_cause=headline_names_culprit(fault_expect, report, cause))
+                           headline_cause=headline_names_culprit(fault_expect, report, cause),
+                           cause_by_hypothesis=any(h.get("signal") in fault_expect.get("cause", []) for h in verified),
+                           blamed_config=any(f["domain"] == "config" for f in anomalous),
+                           verified_hypotheses=len(verified))
             print(json.dumps(row), file=out, flush=True)
     finally:
         await close_all_sessions()
