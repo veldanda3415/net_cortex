@@ -309,14 +309,18 @@ def absorb(finding: AgentFinding, answers: list[tuple[dict[str, Any], dict[str, 
             continue
         for row in new_rows:
             known.add((row["entity_type"], row["entity_id"], tuple(row.get("signals", []))))
-            revised.evidence.append({**row, "via": "validation", "requested_by": request.get("sender"),
+            revised.evidence.append({"via": "validation", **row, "requested_by": request.get("sender"),
                                      "request_id": request["request_id"]})
         for event in scoped.key_events:
             if event.get("rules_fired") and not set(event.get("evidence_refs", [])) & known_refs:
                 revised.key_events.append(event)
                 known_refs.update(event.get("evidence_refs", []))
-        notes.append(f"{request.get('sender')} asked about {node_key((request['entity']['type'], request['entity']['id']))}: "
-                     f"{', '.join(sorted({s for r in new_rows for s in r.get('signals', [])}))}")
+        what = ', '.join(sorted({s for r in new_rows for s in r.get('signals', [])}))
+        where = node_key((request['entity']['type'], request['entity']['id']))
+        if request.get("hypothesis"):
+            notes.append(f"verified hypothesis {request['hypothesis']['rule_id']} on {where}: {what}")
+        else:
+            notes.append(f"{request.get('sender')} asked about {where}: {what}")
         if not revised.anomaly_detected:
             revised.anomaly_detected = True
             revised.confidence = scoped.confidence
@@ -450,6 +454,7 @@ def rank_causes(findings: list[AgentFinding], topology: TopologyResponse | dict 
             id=f"C{len(ranked) + 1}", entity_type=node[0], entity_id=node[1], domain=domain, signals=signals,
             evidence_refs=list(dict.fromkeys(refs))[:10], first_seen=first_seen, score=round(score, 3),
             features=features, chain=chain, via_validation=any(r.get("via") == "validation" for r in rows),
+            via_hypothesis=any(r.get("via") == "hypothesis" for r in rows),
             aliases=graph.aliases(node)[1:],
         ))
     ranked.sort(key=lambda c: (-c.score, c.first_seen, c.entity_type, c.entity_id))

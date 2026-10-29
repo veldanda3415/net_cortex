@@ -74,7 +74,13 @@ a2a:
 
 simulation:
   region: us-east-1
-  window_minutes: 15      # drills run back to back; 30 would pull in the previous fault's revert
+  # Drills run back to back. What an RCA reads reaches back window + lookback before the
+  # alarm: 8 minutes here plus the 2-minute question lookback in config/catalog.aws-lab
+  # (NETCORTEX_CATALOG_DIR). 8 covers the slowest alarm (the NLB's, ~6 min after the
+  # fault) with 2 minutes to spare. The next fault starts 10 - 2 = 8 minutes after the
+  # previous one is confirmed recovered (2 min: no alarm fires sooner), so the previous
+  # fault and its revert are never inside the next RCA's reads.
+  window_minutes: 8
 
 baselines:
   provider: telemetry

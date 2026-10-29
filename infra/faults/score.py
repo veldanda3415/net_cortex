@@ -14,6 +14,10 @@ Verdicts:
   clean / false_positive   for a negative control: no anomaly is correct
   stale     the RCA's window ended before the fault was injected
 
+For an uncovered fault (no catalog rule for its cause) a cause signal can only fire
+as a verified LLM hypothesis; `hypotheses` lists every one with the checks it failed,
+and `no_cause_verified` scores mtu-blackhole, where blaming nothing is correct.
+
 Rule hits are read from the key events and from each finding's full
 `evidence` list, so a cause crowded out of the key events still counts. The
 scoring rules live in evals/scoring.py, shared with `app/main.py eval --cases`.
@@ -75,6 +79,15 @@ def main(fault: str, truth_path: str, record_path: str, trigger: str = "alarm") 
         result["blamed_config"] = any(f["domain"] == "config" for f in anomalous)
     result["headline_cause"] = headline_names_culprit(expect, report, cause)
     result["llm_used"] = llm_used(report)
+    hyps = report.get("hypotheses") or []
+    result["hypotheses"] = [
+        {"signal": h.get("signal"), "entity": f"{h['entity']['type']}:{h['entity']['id']}", "verdict": h.get("verdict"),
+         "failed": sorted(c for c, ok in (h.get("checks") or {}).items() if not ok)} for h in hyps]
+    verified = [h for h in hyps if h.get("verdict") == "supported"]
+    result["cause_by_hypothesis"] = any(h.get("signal") in expect.get("cause", []) for h in verified)
+    if expect.get("no_cause_expected"):
+        # Correct when nothing is blamed: no verified hypothesis and no config culprit.
+        result["no_cause_verified"] = not verified and not result.get("blamed_config", False)
     return result
 
 

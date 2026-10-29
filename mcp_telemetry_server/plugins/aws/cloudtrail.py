@@ -48,6 +48,7 @@ _ENTITY_KEYS: list[tuple[str, str]] = [
     ("networkAclId", "network_acl"),
     ("routeTableId", "route_table"),
     ("vpcPeeringConnectionId", "vpc_peering"),
+    ("natGatewayId", "nat_gateway"),
     ("networkInterfaceId", "eni"),
     ("instanceId", "instance"),
     ("hostedZoneId", "hosted_zone"),

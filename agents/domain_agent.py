@@ -20,10 +20,17 @@ Collaboration (`respond-to-peer`, one round = collect, then revise once):
                       leads seed the next round's questions.
   finding_update      end of round: revise this agent's finding once, with
                       the evidence its answers turned up and correlation.json.
+
+With the LLM on (agents/triage.py), an agent holding unclassified evidence
+it has not shown the LLM yet (its own, or what its scoped answers turned up)
+also asks the LLM, in plan(), for hypotheses: temporary rules over that evidence. Each one is a validation_request to this agent,
+and answer() accepts it only if the code checks in detection/hypotheses.py
+pass; a supported one joins the finding as evidence via="hypothesis".
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -32,10 +39,12 @@ from typing import Any
 
 from fastapi import FastAPI
 
+from agents import triage
 from agents.a2a_protocol import build_task_result, extract_request_context
 from contract import TelemetryQuery
 from contract.catalog_loader import Catalog, get_catalog
 from detection import analyze_domain, reconsider
+from detection import hypotheses
 from detection.investigate import absorb, find_leads, plan_requests, verdict
 from models.schemas import AgentFinding
 from providers.adapters.prometheus_baseline_adapter import PrometheusBaselineProvider
@@ -106,6 +115,10 @@ class _Session:
     answers: dict[int, list[tuple[dict[str, Any], dict[str, Any]]]] = field(default_factory=dict)
     leads: list[dict[str, Any]] = field(default_factory=list)
     planned: set[int] = field(default_factory=set)
+    # Unclassified rows the LLM triage has not read yet: this agent's own, then
+    # what its scoped answers to peers turned up (possibly older than the window).
+    material: list[dict[str, Any]] = field(default_factory=list)
+    triaged: set[str] = field(default_factory=set)
 
 
 class _Sessions:
@@ -192,10 +205,89 @@ def build_domain_app(domain_id: str, cfg: dict | None = None, catalog: Catalog |
             r["sender"] = domain_id
             logger.info("Asking %s about %s:%s round=%s (%s)", r["target"], r["entity"]["type"], r["entity"]["id"],
                         round_number, r["question"])
-        return requests
+        return await triage_requests(session, peers, topology) + requests
+
+    async def triage_requests(session: _Session, peers: list[AgentFinding], topology: Any) -> list[dict[str, Any]]:
+        """The LLM's hypotheses over the unclassified rows it has not read yet."""
+        own = session.own
+        if own is None or not triage.llm_enabled(cfg):
+            return []
+        fresh = []
+        for row in [*own.unclassified_evidence, *session.material]:
+            key = row.get("evidence_ref") or ""
+            if key and key not in session.triaged:
+                session.triaged.add(key)
+                fresh.append(row)
+        session.material = []
+        if not fresh:
+            return []
+        view = own.model_copy(update={"unclassified_evidence": fresh})
+        prompt = triage.build_prompt(domain_id, view, peers, session.context)
+        raw = await asyncio.to_thread(triage._call, prompt, str(cfg.get("llm", {}).get("model", "gemini-2.5-flash")))
+        out = triage.to_requests(raw, domain_id, view, session.context, topology, catalog)
+        for r in out:
+            logger.info("Hypothesis %s: %s", r["hypothesis"]["rule_id"], r["question"])
+        return out
+
+    async def check_hypothesis(request: dict[str, Any], session: _Session) -> dict[str, Any]:
+        """The four code checks (detection/hypotheses.py) on fresh, scoped reads."""
+        ctx = session.context
+        h = request["hypothesis"]
+        rule = hypotheses.parse_rule(h["rule"])
+        aliases = {(f["type"], f["id"]) for f in request["entity_filters"]}
+        start, end = _parse_time(request["start_time"]), _parse_time(request["end_time"])
+
+        async def read(a: datetime, b: datetime):
+            query = query_from_request({
+                "region": ctx["region"], "start_time": a.isoformat(), "end_time": b.isoformat(),
+                "entity_filters": request["entity_filters"], "scenario_id": ctx.get("scenario_id"),
+                "anchor_time": ctx.get("anchor_time"), "include_baseline": False,
+            })
+            return await telemetry.fetch(domain.telemetry_domain, query)
+
+        now = await read(start, end)
+        hits = hypotheses.fire(rule, h["rule_id"], h["signal"], now.signals, aliases, ctx["region"])
+        refs = {s.evidence_ref for s in now.signals if s.name == h["signal"] and (s.entity.type, s.entity.id) in aliases}
+        checks = {"grounded": bool(h["evidence_refs"]) and set(h["evidence_refs"]) <= refs, "fires": bool(hits)}
+        before = hypotheses.window_before(start, end, catalog.investigation.walk.lookback_minutes)
+        earlier = await read(*before)
+        checks["new"] = not hypotheses.fire(rule, h["rule_id"], h["signal"], earlier.signals, aliases, ctx["region"])
+        try:
+            topology = await telemetry.topology(ctx["region"], ctx.get("scenario_id"))
+        except Exception:
+            logger.exception("Topology unavailable; hypothesis %s cannot be placed", h["rule_id"])
+            topology = None
+        findings = [f for f in [session.own, *session.peers.get(max(session.peers, default=0), {}).values()] if f]
+        checks["placed"] = hypotheses.placed(h["entity"], topology, catalog, ctx.get("alarm_entities") or [], findings)
+        degraded = now.degraded or earlier.degraded
+        ok = all(checks.values())
+        result_verdict = "supported" if ok else ("inconclusive" if degraded else "refuted")
+        failed = [c for c in hypotheses.CHECKS if not checks[c]]
+        summary = (f"hypothesis {h['rule_id']} on {h['entity']['type']}:{h['entity']['id']}: "
+                   + ("all checks passed" if ok else f"failed {', '.join(failed)}"))
+        finding = None
+        if ok:
+            h["example_text"] = h.get("example_text") or [t for t in (hypotheses.signal_text(s) for s, _ in hits[:3]) if t]
+            h["classify_pattern"] = hypotheses.verify_pattern(h.get("classify_pattern"), h["example_text"])
+            assert session.own is not None
+            finding = session.own.model_copy(update={
+                "anomaly_detected": True, "summary": f"{domain_id}: verified hypothesis {h['rule_id']}: {h['why']}",
+                "key_events": [hypotheses.key_event(h, hits)], "evidence": [hypotheses.evidence_row(h, hits)],
+                "start_time": min(s.timestamp for s, _ in hits), "end_time": max(s.timestamp for s, _ in hits),
+                "confidence": max(domain.confidence.anomaly.base, 0.5),
+            }).model_dump(mode="json")
+        logger.info("Checked %s: %s %s", h["rule_id"], result_verdict, checks)
+        return {"request_id": request["request_id"], "verdict": result_verdict, "entity": request["entity"],
+                "summary": summary, "checks": checks, "hypothesis": h, "leads": [],
+                **({"finding": finding} if finding else {})}
 
     async def answer(request: dict[str, Any], session: _Session, round_number: int) -> dict[str, Any]:
         ctx = session.context
+        if isinstance(request.get("hypothesis"), dict):
+            result = await check_hypothesis(request, session)
+            if result["verdict"] == "supported":
+                session.answers.setdefault(round_number, []).append((request, result))
+            return result
         query = query_from_request({
             "region": ctx["region"], "start_time": request["start_time"], "end_time": request["end_time"],
             "entity_filters": request["entity_filters"], "scenario_id": ctx.get("scenario_id"),
@@ -203,6 +295,8 @@ def build_domain_app(domain_id: str, cfg: dict | None = None, catalog: Catalog |
             "include_baseline": include_baseline,
         })
         scoped = await analyze(query, ctx, scoped=True)
+        if triage.llm_enabled(cfg):
+            session.material.extend(scoped.unclassified_evidence)
         asked = {(f["type"], f["id"]) for f in request["entity_filters"]}
         result = {
             "request_id": request["request_id"],

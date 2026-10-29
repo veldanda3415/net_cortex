@@ -8,6 +8,7 @@ from langgraph.graph import END, StateGraph
 
 from agents.rca_synthesizer import synthesize_report
 from agents.supervisor import classify_degradation, select_active_agents
+from agents.triage import llm_enabled
 from communication.router_base import RouterBase
 from contract.catalog_loader import Catalog, get_catalog
 from detection import reconsider
@@ -36,6 +37,19 @@ def merge_findings(existing: list[AgentFinding], new: list[AgentFinding]) -> lis
 def merge_a2a_messages(existing: list[A2AMessage], new: list[A2AMessage]) -> list[A2AMessage]:
     existing_ids = {m.message_id for m in existing}
     return existing + [m for m in new if m.message_id not in existing_ids]
+
+
+def collect_hypotheses(messages: list[A2AMessage]) -> list[dict[str, Any]]:
+    """Every hypothesis an agent's LLM proposed, with the code checks' verdict."""
+    out: dict[str, dict[str, Any]] = {}
+    for m in messages:
+        if m.message_type != "validation_request" or not isinstance(m.payload.get("hypothesis"), dict):
+            continue
+        response = m.payload.get("response") or {}
+        h = {**m.payload["hypothesis"], **(response.get("hypothesis") or {})}
+        out[h["rule_id"]] = {**h, "proposed_by": m.sender_agent, "checked_by": m.target_agent,
+                             "verdict": response.get("verdict", "unanswered"), "checks": response.get("checks", {})}
+    return list(out.values())
 
 
 class NetCortexState(TypedDict):
@@ -150,7 +164,12 @@ class NetCortexEngine:
         return query_window(incident.reported_at, int(self.cfg["simulation"]["window_minutes"]))
 
     @staticmethod
-    def should_short_circuit(findings: list[AgentFinding]) -> bool:
+    def should_short_circuit(findings: list[AgentFinding], llm_on: bool = False, alarm: bool = False) -> bool:
+        """Skip collaboration when every agent is clean. With the LLM on, an
+        alarm or unclassified evidence is still worth a round: the agents'
+        triage may find a cause no rule knows."""
+        if llm_on and (alarm or any(f.unclassified_evidence for f in findings)):
+            return False
         return len(findings) > 0 and all(not f.anomaly_detected for f in findings)
 
     def _build_graph(self) -> StateGraph:
@@ -292,7 +311,7 @@ class NetCortexEngine:
                 max_iterations,
             )
 
-            if self.should_short_circuit(findings):
+            if self.should_short_circuit(findings, llm_on=llm_enabled(self.cfg), alarm=bool(incident.alarm_entities)):
                 logger.info(
                     "Collaboration short-circuited incident=%s reason=no_anomalies",
                     incident.incident_id,
@@ -475,6 +494,7 @@ class NetCortexEngine:
                 ranked_causes=ranked,
                 alarm_entities=incident.alarm_entities,
                 status=incident_status(findings),
+                hypotheses=collect_hypotheses(state["a2a_messages"]),
             )
             logger.info(
                 "Synthesizer finished incident=%s confidence=%.2f",

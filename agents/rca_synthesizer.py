@@ -32,7 +32,7 @@ def _signal_glossary(findings: list[AgentFinding], catalog: Catalog) -> str:
 def _unclassified_text(findings: list[AgentFinding]) -> str:
     rows = [
         f"  [{f.domain}] {u.get('name')} {u.get('entity')} value={u.get('value')} severity={u.get('severity')} "
-        f"source={u.get('source')} ref={u.get('evidence_ref')}"
+        f"source={u.get('source')} ref={u.get('evidence_ref')}" + (f' text="{u["text"]}"' if u.get("text") else "")
         for f in findings for u in f.unclassified_evidence
     ]
     return "\n".join(rows[:30]) or "none"
@@ -49,6 +49,7 @@ def _evidence_index(findings: list[AgentFinding]) -> dict[str, str]:
                 f"[{f.domain}] {', '.join(row.get('signals', []))} on {row.get('entity_type')}:{row.get('entity_id')} "
                 f"first {row.get('first_seen')} x{row.get('count', 1)} ({rules})"
                 + (" [found by peer validation]" if row.get("via") == "validation" else "")
+                + (f" [LLM hypothesis verified by code: {row.get('hypothesis_why', '')}]" if row.get("via") == "hypothesis" else "")
             )
     return index
 
@@ -154,7 +155,14 @@ def _call_gemini(prompt: str, model_name: str) -> dict | None:
                     response_mime_type="application/json",
                 ),
             )
-            return json.loads(response.text)
+            parsed = json.loads(response.text)
+            # Asked for an object; a model sometimes wraps it in a one-item list.
+            if isinstance(parsed, list) and len(parsed) == 1:
+                parsed = parsed[0]
+            if not isinstance(parsed, dict):
+                logger.warning("LLM returned %s, not a JSON object; using deterministic fallback", type(parsed).__name__)
+                return None
+            return parsed
         except errors.APIError as exc:
             if exc.code in _RETRYABLE_STATUS_CODES and attempt < _MAX_ATTEMPTS:
                 logger.warning(
@@ -277,7 +285,8 @@ def _deterministic_from_cause(top: RankedCause, findings: list[AgentFinding], al
     where = f" via {' -> '.join(top.chain)}" if top.chain else ""
     upstream = f", upstream of the alarm on {alarm}{where}" if alarm and top.features.get("topology", 0) >= 1.0 else (
         f", linked to the alarm{where}" if where else "")
-    found = " (found by peer validation)" if top.via_validation else ""
+    found = (" (an LLM hypothesis the agents verified)" if top.via_hypothesis
+             else " (found by peer validation)" if top.via_validation else "")
     summary = next((f.summary for f in findings if f.domain == top.domain), "")
     return (f"{top.domain.capitalize()} domain: {', '.join(top.signals)} on {top.entity_type} {top.entity_id} "
             f"at {top.first_seen.strftime('%H:%Mz')}{found}{upstream} - {summary}")
@@ -297,6 +306,7 @@ def synthesize_report(
     ranked_causes: list[RankedCause] | None = None,
     alarm_entities: list[dict] | None = None,
     status: str = "unknown",
+    hypotheses: list[dict] | None = None,
 ) -> RCAReport:
     catalog = catalog or get_catalog()
     timed_out_agents = list(timed_out_agents or [])
@@ -437,5 +447,6 @@ def synthesize_report(
         alarm_entities=list(alarm_entities or []),
         ranked_causes=ranked_causes,
         incident_status=status if status in ("ongoing", "recovered", "flapping") else "unknown",
+        hypotheses=list(hypotheses or []),
         generated_at=datetime.now(timezone.utc),
     )

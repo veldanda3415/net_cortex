@@ -18,5 +18,10 @@
   "phz-record-deleted":      {"cause": ["ChangeResourceRecordSets"], "symptoms": ["dns_nxdomain", "SuccessRate"]},
   "appliance-mode-off":      {"cause": ["ModifyTransitGatewayVpcAttachment"], "symptoms": ["fw_invalid_drop", "SuccessRate"]},
   "firewall-stopped":        {"cause": ["StopInstances"], "symptoms": ["SuccessRate"]},
-  "app-cpu-overload":        {"cause": ["CPUUtilization"], "symptoms": ["SuccessRate"]}
+  "app-cpu-overload":        {"cause": ["CPUUtilization"], "symptoms": ["SuccessRate"]},
+  "_uncovered": "Faults the catalog has no rule for. Their cause signals can only fire as a verified LLM hypothesis (via=hypothesis); rules-only can at best see the symptoms. mtu-blackhole leaves no cause signal anywhere, so `no cause verified` is the correct answer.",
+  "subnet-route-table-swapped": {"cause": ["DisassociateRouteTable", "AssociateRouteTable"], "symptoms": ["SuccessRate", "flow_rejects", "UnHealthyHostCount"], "uncovered": true},
+  "nat-gateway-deleted":     {"cause": ["DeleteNatGateway"], "symptoms": ["PacketDropCountNoRoute", "SuccessRate"], "uncovered": true},
+  "frr-max-prefix":          {"cause": ["frr_unmatched"], "symptoms": ["bgp_neighbor_down", "BgpPeerState", "vpn_bgp_down", "vpn_bgp_status_down", "SuccessRate"], "uncovered": true},
+  "mtu-blackhole":           {"cause": [], "symptoms": ["SuccessRate", "LatencyMs", "LossPercent"], "no_config_culprit": true, "no_cause_expected": true, "uncovered": true}
 }

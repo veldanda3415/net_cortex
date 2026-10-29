@@ -40,6 +40,12 @@ faults/drill.sh tgw-blackhole
 | `appliance-mode-off` | Appliance mode off on the security attachment | inspection |
 | `firewall-stopped` | fw-a stopped | inspection |
 | `app-cpu-overload` | `stress-ng` on every vCPU of app-a; stops itself after 30 min (`DURATION`) | |
+| `subnet-route-table-swapped` | App private-a moved from its route table to the VPC's main table (local route only). Uncovered: `DisassociateRouteTable`/`AssociateRouteTable` aren't in the catalog | |
+| `nat-gateway-deleted` | The security VPC's NAT gateway deleted. Like `nat-route-removed`, but the cause (`DeleteNatGateway`) is uncovered and the gateway leaves the topology | inspection off |
+| `frr-max-prefix` | Router accepts at most 1 prefix (`MAX_PREFIX`) from tunnel 2's peer; FRR logs `%MAXPFX` and a Cease 6/1, lines no classify rule knows | BGP |
+| `mtu-blackhole` | Router silently drops packets of 1200+ bytes (`LEN`) on the tunnels, no ICMP. No config change and no log line: "no cause verified" is the right answer | |
+
+**Uncovered faults** (the last four) have no catalog rule for their cause. Only the LLM triage can name them, and only once the agents verify its hypothesis with code (see `detection/hypotheses.py`). `subnet-route-table-swapped` and `nat-gateway-deleted` can't be reverted under the same IDs (an association or a NAT gateway comes back with a new one), so their revert runs `terraform apply` (`tf_reconcile` in `lib.sh`); state and lab agree afterwards, and `make plan` shows no changes.
 
 The expected evidence for each fault is in the comment at the top of its `inject.sh`.
 
@@ -74,13 +80,14 @@ faults/drill.sh tgw-blackhole     # the output line gains a `netcortex` key
   - `miss`: it saw neither.
   - `clean` or `false_positive`: for the negative control, `mss-clamp-removed`.
   - `stale`: the RCA's window ended before the injection.
-- **No alarm.** If no alarm fires (`loss-latency`, `app-cpu-overload`, `mss-clamp-removed`), the drill files a manual incident that says nothing about the fault, so those are scored too.
+- **No alarm.** If no alarm fires within `max_wait_seconds` (`loss-latency`, `app-cpu-overload`, `mss-clamp-removed`, both NAT faults), the drill files a manual incident that says nothing about the fault, so those are scored too. The wait (default 300 s) must stay under `window_minutes`, or the manual RCA's window starts after the injection.
 - **Without NetCortex.** If NetCortex isn't reachable, the drill works as before: alarms only, `netcortex: null`.
-- **Gaps between drills.** RCA windows are 30 minutes, so leave a gap between drills. Otherwise the previous fault's CloudTrail revert calls show up as config changes.
+- **Pacing.** With NetCortex running, the drill reverts as soon as the RCA report is in, then confirms recovery with `lab_health.py` (no lab alarm in ALARM; flows, BGP peers and tunnels clean in two fresh datapoints) instead of a fixed cooldown.
+- **Gaps between drills.** An RCA reads back `window_minutes` plus the question lookback before its alarm (8 + 2 in the lab config). Start the next fault no sooner than that, minus the fastest alarm (2 minutes), after `recovered_at`: 8 minutes in the lab. Otherwise the previous fault's revert calls show up as config changes.
 
 ## Notes
 
 - The faults change Terraform-managed resources in place and revert them to the same values and IDs, so a reverted lab plans clean. Revert, or `make down`, before the next `make plan`.
 - One fault at a time. Two overlapping faults make the answer key ambiguous.
-- `drill.sh` keeps watching for 3 minutes after the revert (`COOLDOWN`), because some metrics, the NLB's especially, land minutes late. An alarm that fires then still belongs to that fault.
+- Some metrics, the NLB's especially, land minutes late, so an alarm can fire after the revert. `lab_health.py` waits it out, and it still belongs to that fault.
 - `drill.sh` measures the lab's CloudWatch alarms, which evaluate two of three one-minute periods. That makes about 2.5 minutes the floor for detection from metrics. Logs and CloudTrail evidence can show up sooner or later than that.

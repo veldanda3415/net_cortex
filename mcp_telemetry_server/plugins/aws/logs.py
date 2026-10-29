@@ -20,6 +20,10 @@ matched by a `classify` rule. The rule's name becomes the signal name:
             severity: error
         aggregate: none                          # or count_per_minute: one metric per name/entity/minute
         optional: false                          # true: a missing log group is skipped silently
+        unmatched:                               # opt-in; low-volume groups only (not flow logs)
+          name: frr_unmatched                    # every line no classify rule kept, under this name
+          entity: {type: bgp_neighbor, field: '@message', pattern: 'neighbor (?P<id>[0-9.]+)'}
+          max_events: 200
 
 A classify rule tests `field` (a dotted path into the parsed record; default
 `@message`, the raw line; `@stream` is the log stream) with `equals` and/or
@@ -27,6 +31,15 @@ A classify rule tests `field` (a dotted path into the parsed record; default
 `entity`, whose `field` and `pattern` work the same way. These patterns are
 source-side parsing, not detection: whether a named event is anomalous is
 still decided by its rule in signals.json.
+
+`unmatched` passes through the lines the query would otherwise drop, so an
+LLM triage can read text no rule knows yet (detection/hypotheses.py). The
+classified signals stay exactly what they were: they still come from the
+filtered read, and a second, unfiltered read of the group supplies the
+rest, under the neutral `name`, with the line in `message`. No catalog rule
+fires on these names; they reach the RCA as unclassified evidence. The
+entity comes from `unmatched.entity` when its pattern matches the line,
+else the query's entity.
 
 Reads: logs:FilterLogEvents.
 """
@@ -77,6 +90,13 @@ class _Classify(_M):
         return self
 
 
+class _Unmatched(_M):
+    name: str
+    severity: Severity = "info"
+    entity: _EntitySpec | None = None
+    max_events: int = Field(default=200, ge=1)
+
+
 class _Query(_M):
     id: str
     log_group: str
@@ -90,11 +110,14 @@ class _Query(_M):
     classify: list[_Classify] = Field(min_length=1)
     aggregate: Literal["none", "count_per_minute"] = "none"
     attributes: dict[str, str] = Field(default_factory=dict, description="attribute name -> record field")
+    unmatched: _Unmatched | None = Field(default=None, description="Pass through lines no classify rule keeps")
 
     @model_validator(mode="after")
     def _fields_format(self) -> "_Query":
         if self.format == "fields" and not self.fields:
             raise ValueError(f"query '{self.id}' has format: fields but no `fields`")
+        if self.unmatched is not None and self.aggregate != "none":
+            raise ValueError(f"query '{self.id}': unmatched needs aggregate: none")
         return self
 
 
@@ -204,21 +227,26 @@ class CloudWatchLogsPlugin(AwsPlugin):
             return rule, match
         return None
 
-    async def _run(self, query: _Query, q: TelemetryQuery, region: str) -> tuple[list[Signal], bool]:
+    async def _read(self, query: _Query, q: TelemetryQuery, region: str, filtered: bool) -> tuple[list[dict], bool]:
         params: dict[str, Any] = {
             "logGroupName": query.log_group,
             "startTime": int(q.start_time.timestamp() * 1000),
             "endTime": int(q.end_time.timestamp() * 1000),
         }
-        if query.filter_pattern:
+        if filtered and query.filter_pattern:
             params["filterPattern"] = query.filter_pattern
         pages, more = await self.paginate("logs", region, "filter_log_events", max_pages=100, **params)
         events = [e for page in pages for e in page.get("events", [])]
+        return events, more
+
+    async def _run(self, query: _Query, q: TelemetryQuery, region: str) -> tuple[list[Signal], bool]:
+        events, more = await self._read(query, q, region, filtered=True)
         truncated = more or len(events) > self._cfg.max_events
         events = events[: self._cfg.max_events]
         observed = now_utc()
 
         signals: list[Signal] = []
+        kept: set[str] = set()
         counts: dict[tuple[str, str, str, datetime], tuple[Signal, int]] = {}
         for event in events:
             record = _parse(query, event)
@@ -228,6 +256,7 @@ class CloudWatchLogsPlugin(AwsPlugin):
             if found is None:
                 continue
             rule, match = found
+            kept.add(str(event.get("eventId", "")))
             spec = rule.entity or query.entity
             entity = Entity(type=spec.type, id=_entity_id(spec, record, match))
             ts = _timestamp(query, record, event)
@@ -254,7 +283,40 @@ class CloudWatchLogsPlugin(AwsPlugin):
             ))
         for first, n in counts.values():
             signals.append(first.model_copy(update={"value": float(n)}))
+        if query.unmatched is not None:
+            signals.extend(await self._unmatched(query, q, region, events if not query.filter_pattern else None,
+                                                 kept, observed))
         return signals, truncated
+
+    async def _unmatched(self, query: _Query, q: TelemetryQuery, region: str, events: list[dict] | None,
+                         kept: set[str], observed: datetime) -> list[Signal]:
+        """The lines the classified read did not keep. Without a filter_pattern the
+        events already read are reused; with one, the group is read again unfiltered."""
+        spec = query.unmatched
+        assert spec is not None
+        if events is None:
+            events, _ = await self._read(query, q, region, filtered=False)
+        out: list[Signal] = []
+        for event in events:
+            if str(event.get("eventId", "")) in kept:
+                continue
+            record = _parse(query, event) or {MESSAGE: event.get("message", ""), STREAM: event.get("logStreamName", "")}
+            entity_spec = query.entity
+            if spec.entity is not None:
+                value = _get(record, spec.entity.field)
+                if not spec.entity.pattern or re.search(spec.entity.pattern, "" if value is None else str(value)):
+                    entity_spec = spec.entity
+            entity = Entity(type=entity_spec.type, id=_entity_id(entity_spec, record, None))
+            attributes = {k: _get(record, f) for k, f in query.attributes.items() if _get(record, f) is not None}
+            attributes.update(log_group=query.log_group, message=str(record[MESSAGE])[:MAX_MESSAGE_CHARS], region=region)
+            out.append(Signal(
+                signal_type="event", timestamp=_timestamp(query, record, event), observed_at=observed, entity=entity,
+                name=spec.name, severity=spec.severity, domain=query.domain, source=self.name, attributes=attributes,
+                evidence_ref=f"cloudwatch_logs:{query.log_group}/{event.get('logStreamName', '')}/{event.get('eventId', '')}",
+            ))
+            if len(out) >= spec.max_events:
+                break
+        return out
 
     async def fetch(self, query: TelemetryQuery, *, domain: str) -> tuple[list[Signal], Coverage]:
         region = self.region_for(query)
