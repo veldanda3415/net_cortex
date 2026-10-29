@@ -160,7 +160,12 @@ def main(argv: list[str] | None = None) -> int:
             (here / "case" / f"{name}.json").write_text(json.dumps(ablated))
             for mode in modes:
                 for i in range(args.runs):
-                    report = run_once(here / "case" / f"{name}.json", catalog_dir, llm=(mode == "llm"))
+                    try:
+                        report = run_once(here / "case" / f"{name}.json", catalog_dir, llm=(mode == "llm"))
+                    except Exception as exc:  # one failed run is a result, not the end of the eval
+                        print(json.dumps({"mode": mode, "run": i + 1, "case": name, "error": str(exc)[-300:]}),
+                              file=out, flush=True)
+                        continue
                     row = {"mode": mode, "run": i + 1, **score_run(ablated, report, spec),
                            "report": report["_report_path"]}
                     print(json.dumps(row), file=out, flush=True)

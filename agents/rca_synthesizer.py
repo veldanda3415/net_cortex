@@ -155,7 +155,14 @@ def _call_gemini(prompt: str, model_name: str) -> dict | None:
                     response_mime_type="application/json",
                 ),
             )
-            return json.loads(response.text)
+            parsed = json.loads(response.text)
+            # Asked for an object; a model sometimes wraps it in a one-item list.
+            if isinstance(parsed, list) and len(parsed) == 1:
+                parsed = parsed[0]
+            if not isinstance(parsed, dict):
+                logger.warning("LLM returned %s, not a JSON object; using deterministic fallback", type(parsed).__name__)
+                return None
+            return parsed
         except errors.APIError as exc:
             if exc.code in _RETRYABLE_STATUS_CODES and attempt < _MAX_ATTEMPTS:
                 logger.warning(

@@ -332,3 +332,19 @@ def test_a_hypothesis_on_an_older_line_checks_from_that_line():
     raw = {"hypotheses": [{"evidence_refs": ["old"], "signal": "AssociateRouteTable", "rule": {"type": "event_presence"}}]}
     [r] = triage.to_requests(raw, "config", own, ctx, TOPOLOGY, CATALOG)
     assert r["start_time"] == (NOW - timedelta(minutes=19)).isoformat() and r["end_time"] == NOW.isoformat()
+
+
+@pytest.mark.parametrize("text,expected", [('[{"hypotheses": []}]', {"hypotheses": []}), ('[1, 2]', None), ('"x"', None)])
+def test_an_llm_reply_that_is_not_one_object_is_unwrapped_or_dropped(monkeypatch, text, expected):
+    import types
+
+    from agents import rca_synthesizer
+
+    class Models:
+        def generate_content(self, **kw):
+            return types.SimpleNamespace(text=text)
+
+    genai = pytest.importorskip("google.genai")
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setattr(genai, "Client", lambda **kw: types.SimpleNamespace(models=Models()))
+    assert rca_synthesizer._call_gemini("p", "m") == expected
