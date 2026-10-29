@@ -87,6 +87,15 @@ $script" '{commands: [$s], executionTimeout: ["600"]}')" \
 
 router() { ssm "$(t .router_instance_id)" "$1"; }
 
+# tf_reconcile: let Terraform put back what a fault deleted and the API can't restore
+# under the same ID (a NAT gateway, a route table association). Afterwards state and
+# the lab agree again, and the fault targets are re-read, since IDs may have changed.
+tf_reconcile() {
+  terraform -chdir="$LAB_DIR" apply -input=false -auto-approve -lock-timeout=5m >&2
+  TARGETS=$(terraform -chdir="$LAB_DIR" output -json fault_targets)
+  [ -z "${FAULT_TARGETS_FILE:-}" ] || echo "$TARGETS" >"$FAULT_TARGETS_FILE"
+}
+
 # report <changed|already> <detail>: log the outcome of this run. The first argument
 # is usually the last line a remote script printed.
 report() {

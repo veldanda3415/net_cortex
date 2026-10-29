@@ -3,9 +3,11 @@
 # CloudWatch alarms take to notice, revert it, and time the recovery. Prints one
 # JSON line. The alarm times are the floor for what NetCortex can detect from metrics.
 #
-#   SETTLE   seconds to keep watching for more alarms after the first (default 120)
-#   COOLDOWN seconds to keep watching after revert for late alarms (default 180)
-#   RECOVER  max seconds to wait for every alarm to clear after revert (default 900)
+#   SETTLE   seconds to keep watching for more alarms after the first (default 120;
+#            without NetCortex only: with it, the drill reverts once the RCA is in)
+#   RECOVER  max seconds to wait for recovery after revert (default 900). Recovery is
+#            confirmed, not assumed: no lab alarm in ALARM and the key signals clean
+#            in two fresh datapoints (lab_health.py). `recovered_at` is when.
 #
 # With NetCortex running (`serve` plus `alarm-bridge`, see infra/faults/README.md), the
 # drill also holds the fault until NetCortex's RCA arrives and scores it against the
@@ -78,8 +80,11 @@ if [ $rc -eq 2 ]; then jq -cn --arg f "$FAULT" '{fault: $f, result: "skipped"}';
 [ $rc -eq 0 ] || exit $rc
 injected=$(date +%s)
 
-# Watch for alarms that weren't already firing.
+# Watch for alarms that weren't already firing. With NetCortex, stop as soon as the
+# alarm-triggered RCA is in: the fault has done its job.
 seen=""
+record=""
+trigger=""
 watch() {
   local now
   now=$(comm -13 <(echo "$before") <(alarming) | grep -v '^$' || true)
@@ -89,6 +94,9 @@ deadline=$((injected + WAIT))
 while [ "$(date +%s)" -lt "$deadline" ]; do
   had=$seen
   watch
+  if [ "$SCORE" = 1 ] && [ -n "$seen" ]; then
+    record=$(find_record) && [ -n "$record" ] && trigger=alarm && break
+  fi
   [ -n "$had" ] || [ -z "$seen" ] || deadline=$(($(date +%s) + ${SETTLE:-120}))
   sleep 15
 done
@@ -96,10 +104,8 @@ done
 # NetCortex: wait for the RCA the alarm bridge triggers, or ask for one if no alarm
 # fired. Either way it runs while the fault is still in place, since some of its
 # evidence (the TGW route snapshot) is only current state.
-record=""
-trigger=""
 if [ "$SCORE" = 1 ]; then
-  if [ -n "$seen" ]; then
+  if [ -n "$seen" ] && [ -z "$record" ]; then
     echo "waiting up to ${RCA_WAIT:-420}s for NetCortex's RCA via the alarm bridge" >&2
     for _ in $(seq 1 $((${RCA_WAIT:-420} / 15))); do
       record=$(find_record) && [ -n "$record" ] && trigger=alarm && break
@@ -115,19 +121,18 @@ fi
 "$DIR/$FAULT/revert.sh" >&2
 reverted=$(date +%s)
 
-# still_alarming: true while any alarm this fault raised is in ALARM; records when.
-cleared=$(date +%s)
-still_alarming() {
-  [ -n "$seen" ] && [ -n "$(comm -12 <(echo "$seen") <(alarming))" ] && cleared=$(date +%s)
-}
-
-# Some metrics (the NLB's especially) land minutes late, so keep watching after the
-# revert; an alarm that fires then still belongs to this fault, not the next one.
-cooldown_end=$((reverted + ${COOLDOWN:-180}))
-while [ "$(date +%s)" -lt "$cooldown_end" ]; do
+# Recovery, confirmed rather than waited for: every lab alarm out of ALARM and the key
+# signals clean in fresh datapoints. An alarm that fires meanwhile (the NLB's metrics
+# land minutes late) still belongs to this fault, and keeps it unrecovered.
+recovered_at=null
+health='{}'
+for _ in $(seq 1 $((${RECOVER:-900} / 30))); do
   watch
-  still_alarming || true
-  sleep 15
+  if health=$("${PYTHON:-python3}" "$DIR/lab_health.py" --since "$reverted" --region "$AWS_REGION"); then
+    recovered_at=$(date +%s)
+    break
+  fi
+  sleep 30
 done
 
 # Alarm timestamps are exact; the polling above only decides how long to watch.
@@ -143,12 +148,8 @@ for name in $seen; do
 done
 
 recover=null
-if [ -n "$seen" ]; then
-  for _ in $(seq 1 $((${RECOVER:-900} / 15))); do
-    still_alarming || { recover=$((cleared - reverted)); break; }
-    sleep 15
-  done
-fi
+[ "$recovered_at" = null ] || recover=$((recovered_at - reverted))
+jq -e . <<<"$health" >/dev/null 2>&1 || health='{}'
 
 # Score the RCA against the faults log, the ground truth. The drill may read it;
 # NetCortex may not.
@@ -164,5 +165,8 @@ fi
 
 jq -cn --arg f "$FAULT" --arg at "$(date -u -d "@$injected" +%FT%TZ)" --argjson a "$alarms" \
   --argjson held "$((reverted - injected))" --argjson r "$recover" --argjson nc "$netcortex" \
+  --arg rv "$(date -u -d "@$reverted" +%FT%TZ)" --argjson ok "$recovered_at" --arg rec "$record" \
+  --argjson health "$health" \
   '{fault: $f, injected_at: $at, detect_seconds: ($a[0].seconds // null), alarms: $a,
-    held_seconds: $held, recover_seconds: $r, netcortex: $nc}'
+    held_seconds: $held, reverted_at: $rv, recover_seconds: $r,
+    recovered_at: (if $ok == null then null else ($ok | todate) end), health: $health, record: $rec, netcortex: $nc}'
