@@ -2,6 +2,9 @@
 # drill.sh <fault> [max_wait_seconds]: inject a fault, time how long the lab's own
 # CloudWatch alarms take to notice, revert it, and time the recovery. Prints one
 # JSON line. The alarm times are the floor for what NetCortex can detect from metrics.
+# max_wait_seconds (default $WAIT, else 300) is how long to watch for a first alarm
+# before filing a manual incident. Keep it under NetCortex's window_minutes, or the
+# manual RCA's window starts after the injection.
 #
 #   SETTLE   seconds to keep watching for more alarms after the first (default 120;
 #            without NetCortex only: with it, the drill reverts once the RCA is in)
@@ -20,7 +23,7 @@ set -euo pipefail
 export AWS_PROFILE=${AWS_PROFILE:-aws-veldanda-admin} AWS_PAGER=""
 DIR=$(cd "$(dirname "$0")" && pwd)
 FAULT=${1:?usage: drill.sh <fault> [max_wait_seconds]}
-WAIT=${2:-480}
+WAIT=${2:-${WAIT:-300}}
 [ -x "$DIR/$FAULT/inject.sh" ] || { echo "unknown fault: $FAULT" >&2; exit 1; }
 
 if [ -z "${FAULT_TARGETS_FILE:-}" ]; then

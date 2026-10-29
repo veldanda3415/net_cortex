@@ -80,7 +80,7 @@ faults/drill.sh tgw-blackhole     # the output line gains a `netcortex` key
   - `miss`: it saw neither.
   - `clean` or `false_positive`: for the negative control, `mss-clamp-removed`.
   - `stale`: the RCA's window ended before the injection.
-- **No alarm.** If no alarm fires (`loss-latency`, `app-cpu-overload`, `mss-clamp-removed`), the drill files a manual incident that says nothing about the fault, so those are scored too.
+- **No alarm.** If no alarm fires within `max_wait_seconds` (`loss-latency`, `app-cpu-overload`, `mss-clamp-removed`, both NAT faults), the drill files a manual incident that says nothing about the fault, so those are scored too. The wait (default 300 s) must stay under `window_minutes`, or the manual RCA's window starts after the injection.
 - **Without NetCortex.** If NetCortex isn't reachable, the drill works as before: alarms only, `netcortex: null`.
 - **Pacing.** With NetCortex running, the drill reverts as soon as the RCA report is in, then confirms recovery with `lab_health.py` (no lab alarm in ALARM; flows, BGP peers and tunnels clean in two fresh datapoints) instead of a fixed cooldown.
 - **Gaps between drills.** An RCA reads back `window_minutes` plus the question lookback before its alarm (8 + 2 in the lab config). Start the next fault no sooner than that, minus the fastest alarm (2 minutes), after `recovered_at`: 8 minutes in the lab. Otherwise the previous fault's revert calls show up as config changes.
@@ -89,5 +89,5 @@ faults/drill.sh tgw-blackhole     # the output line gains a `netcortex` key
 
 - The faults change Terraform-managed resources in place and revert them to the same values and IDs, so a reverted lab plans clean. Revert, or `make down`, before the next `make plan`.
 - One fault at a time. Two overlapping faults make the answer key ambiguous.
-- `drill.sh` keeps watching for 3 minutes after the revert (`COOLDOWN`), because some metrics, the NLB's especially, land minutes late. An alarm that fires then still belongs to that fault.
+- Some metrics, the NLB's especially, land minutes late, so an alarm can fire after the revert. `lab_health.py` waits it out, and it still belongs to that fault.
 - `drill.sh` measures the lab's CloudWatch alarms, which evaluate two of three one-minute periods. That makes about 2.5 minutes the floor for detection from metrics. Logs and CloudTrail evidence can show up sooner or later than that.
