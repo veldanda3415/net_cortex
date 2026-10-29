@@ -8,6 +8,7 @@ require_no_inspection
 NAT=$(t .nat_gateway_id)
 state=$(aws ec2 describe-nat-gateways --nat-gateway-ids "$NAT" --query 'NatGateways[0].State' --output text 2>/dev/null || echo deleted)
 case $state in deleted | deleting) report already "$NAT is $state"; exit 0 ;; esac
+# No waiting for "deleted": the drill's clock starts when this returns, and the
+# RCA window is measured from the call.
 aws ec2 delete-nat-gateway --nat-gateway-id "$NAT" >/dev/null
-aws ec2 wait nat-gateway-deleted --nat-gateway-ids "$NAT"
 report changed "deleted NAT gateway $NAT"
