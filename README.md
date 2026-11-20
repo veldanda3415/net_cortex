@@ -100,6 +100,11 @@ Supported LLM auth modes:
   - set `GOOGLE_CLOUD_PROJECT=...`
   - optional `GOOGLE_CLOUD_LOCATION=us-central1`
   - authenticate with `gcloud auth application-default login`
+- Amazon Bedrock mode (`llm.provider: bedrock` in `config/config.yaml`):
+  - `llm.model` is any model Converse accepts: a foundation model or inference profile
+    (`us.amazon.nova-micro-v1:0`), or the ARN of a model imported with Custom Model Import
+  - credentials come from the standard AWS chain (`AWS_PROFILE`, instance role); the
+    principal needs `bedrock:InvokeModel` on that model
 
 If no LLM auth is available and strict LLM mode is disabled, NetCortex falls back to deterministic synthesis.
 
@@ -292,7 +297,7 @@ Runtime behavior is controlled from `config/config.yaml`.
 
 Important settings:
 
-- `llm.model`: Gemini model name.
+- `llm.provider` / `llm.model`: `google` + a Gemini model name, or `bedrock` + a Bedrock model id or ARN (`agents/llm_client.py`).
 - `a2a.protocol_mode`: `adk` (SDK-native A2A client) or `custom` (fallback transport).
 - `a2a.analysis_timeout_seconds`: per-agent analysis timeout.
 - `a2a.max_iterations`: collaboration rounds cap.

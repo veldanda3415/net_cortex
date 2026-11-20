@@ -6,6 +6,7 @@ from typing import Annotated, Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
+from agents.llm_client import model_ref
 from agents.rca_synthesizer import synthesize_report
 from agents.supervisor import classify_degradation, select_active_agents
 from agents.triage import llm_enabled
@@ -177,7 +178,7 @@ class NetCortexEngine:
 
         async def supervisor_node(state: NetCortexState):
             incident = state["incident"]
-            llm_model = self.cfg.get("llm", {}).get("model", "gemini-2.5-flash")
+            llm_model = model_ref(self.cfg.get("llm"))
             llm_required = bool(self.cfg.get("llm", {}).get("require_success", False))
             # classify_degradation calls out to a synchronous Gemini client
             # (blocking network I/O, plus a blocking time.sleep on retry) —
@@ -462,7 +463,7 @@ class NetCortexEngine:
             }
 
         async def synthesizer_node(state: NetCortexState):
-            llm_model = self.cfg.get("llm", {}).get("model", "gemini-2.5-flash")
+            llm_model = model_ref(self.cfg.get("llm"))
             llm_required = bool(self.cfg.get("llm", {}).get("require_success", False))
             logger.info(
                 "Synthesizer started incident=%s llm_model=%s findings=%s",

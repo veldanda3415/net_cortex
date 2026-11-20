@@ -16,13 +16,12 @@ credentials are configured; with it off, nothing here runs.
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import logging
-import os
 from datetime import datetime
 from typing import Any
 
+from agents import llm_client
 from detection.hypotheses import MAX_PER_AGENT, parse_rule, rule_hash
 from detection.investigate import TopologyGraph
 from models.schemas import AgentFinding
@@ -36,12 +35,7 @@ def llm_enabled(cfg: dict[str, Any]) -> bool:
     llm = cfg.get("llm", {}) or {}
     if not llm.get("hypotheses", True):
         return False
-    if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_CLOUD_PROJECT")):
-        return False
-    try:
-        return importlib.util.find_spec("google.genai") is not None
-    except ModuleNotFoundError:
-        return False
+    return llm_client.available(llm_client.model_ref(llm))
 
 
 def _ts(value: Any) -> datetime:

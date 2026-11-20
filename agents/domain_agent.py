@@ -39,7 +39,7 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from agents import triage
+from agents import llm_client, triage
 from agents.a2a_protocol import build_task_result, extract_request_context
 from contract import TelemetryQuery
 from contract.catalog_loader import Catalog, get_catalog
@@ -223,7 +223,7 @@ def build_domain_app(domain_id: str, cfg: dict | None = None, catalog: Catalog |
             return []
         view = own.model_copy(update={"unclassified_evidence": fresh})
         prompt = triage.build_prompt(domain_id, view, peers, session.context)
-        raw = await asyncio.to_thread(triage._call, prompt, str(cfg.get("llm", {}).get("model", "gemini-2.5-flash")))
+        raw = await asyncio.to_thread(triage._call, prompt, llm_client.model_ref(cfg.get("llm")))
         out = triage.to_requests(raw, domain_id, view, session.context, topology, catalog)
         for r in out:
             logger.info("Hypothesis %s: %s", r["hypothesis"]["rule_id"], r["question"])

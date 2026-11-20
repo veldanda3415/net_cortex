@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
-import time
 from datetime import datetime, timezone
 
+from agents import llm_client
 from contract.catalog_loader import Catalog, get_catalog
 from models.schemas import A2AMessage, AgentFinding, RankedCause, RCAReport
 
@@ -118,65 +117,11 @@ def _build_llm_prompt(incident_description: str, findings: list[AgentFinding], m
     )
 
 
-_RETRYABLE_STATUS_CODES = {429, 503}
-_MAX_ATTEMPTS = 3
-_RETRY_BACKOFF_SECONDS = 2.0
-
-
 def _call_gemini(prompt: str, model_name: str) -> dict | None:
-    try:
-        from google import genai  # type: ignore
-        from google.genai import errors  # type: ignore
-        from google.genai import types  # type: ignore
-    except ImportError:
-        logger.info("LLM disabled: google-genai package not installed")
-        return None
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
-    gcp_location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-    if api_key:
-        # Explicit API key — uses Gemini Developer API directly.
-        logger.info("LLM auth mode=api_key model=%s", model_name)
-        client = genai.Client(api_key=api_key)
-    elif gcp_project:
-        # ADC via Vertex AI — requires GOOGLE_CLOUD_PROJECT env var.
-        logger.info("LLM auth mode=adc project=%s location=%s model=%s", gcp_project, gcp_location, model_name)
-        client = genai.Client(vertexai=True, project=gcp_project, location=gcp_location)
-    else:
-        logger.info("LLM disabled: no GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT configured")
-        return None
-
-    for attempt in range(1, _MAX_ATTEMPTS + 1):
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                ),
-            )
-            parsed = json.loads(response.text)
-            # Asked for an object; a model sometimes wraps it in a one-item list.
-            if isinstance(parsed, list) and len(parsed) == 1:
-                parsed = parsed[0]
-            if not isinstance(parsed, dict):
-                logger.warning("LLM returned %s, not a JSON object; using deterministic fallback", type(parsed).__name__)
-                return None
-            return parsed
-        except errors.APIError as exc:
-            if exc.code in _RETRYABLE_STATUS_CODES and attempt < _MAX_ATTEMPTS:
-                logger.warning(
-                    "LLM call attempt %d/%d failed with transient error, retrying: %s",
-                    attempt, _MAX_ATTEMPTS, exc,
-                )
-                time.sleep(_RETRY_BACKOFF_SECONDS * attempt)
-                continue
-            logger.warning("LLM call failed, using deterministic fallback: %s", exc)
-            return None
-        except Exception as exc:
-            logger.warning("LLM call failed, using deterministic fallback: %s", exc)
-            return None
-    return None
+    """The synthesis LLM call (name kept for existing patches/tests). Despite the name it
+    goes wherever the model reference points: Gemini, or Bedrock for "bedrock:<model>"
+    (agents/llm_client.py, selected by llm.provider)."""
+    return llm_client.generate_json(prompt, model_name)
 
 
 def compute_confidence(findings: list[AgentFinding], total_agents: int) -> tuple[float, int, bool]:

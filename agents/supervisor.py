@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
-import os
-
+from agents import llm_client
 from contract.catalog_loader import Catalog, get_catalog
 from models.schemas import IncidentRequest
 
@@ -19,39 +17,22 @@ def _heuristic_classify(incident: IncidentRequest) -> str:
 
 
 def _classify_with_llm(description: str, llm_model: str) -> str | None:
-    try:
-        from google import genai  # type: ignore
-        from google.genai import types  # type: ignore
-    except ImportError:
+    """LLM label for the incident, via agents/llm_client.py (Gemini or Bedrock per the
+    model reference). None when no LLM is configured or the call fails."""
+    if not llm_client.available(llm_model):
         return None
-
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
-    gcp_location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-    if not api_key and not gcp_project:
-        return None
-
     prompt = (
         "Classify incident degradation_type for orchestration.\n"
         f"Valid labels: {', '.join(get_catalog().domains.degradation_map)}.\n"
         "Return JSON only: {\"degradation_type\": \"<label>\"}.\n\n"
         f"Incident description: {description}"
     )
-    try:
-        if api_key:
-            client = genai.Client(api_key=api_key)
-        else:
-            client = genai.Client(vertexai=True, project=gcp_project, location=gcp_location)
-        response = client.models.generate_content(
-            model=llm_model,
-            contents=prompt,
-            config=types.GenerateContentConfig(response_mime_type="application/json"),
-        )
-        payload = json.loads(response.text)
-        value = str(payload.get("degradation_type", "")).strip().lower()
-        return value or None
-    except Exception:
+    payload = llm_client.generate_json(prompt, llm_model)
+    if not payload:
         return None
+    value = str(payload.get("degradation_type", "")).strip().lower()
+    return value or None
+
 
 def classify_degradation(incident: IncidentRequest, llm_model: str, require_llm: bool) -> str:
     fallback = _heuristic_classify(incident)
