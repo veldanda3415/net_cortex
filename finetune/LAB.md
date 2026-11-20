@@ -439,11 +439,10 @@ id isn't accepted for batch, use the foundation model id `amazon.nova-micro-v1:0
 
 Everything above scores the synthesis step in isolation. The final check is the whole pipeline
 (classification, agents, peer questions, hypothesis triage, synthesis) with your model as the LLM,
-replaying r2's recorded telemetry, so the lab doesn't have to be up. Needs the
-`bedrock-llm-provider` branch (or main once that PR is merged).
+replaying r2's recorded telemetry, so the lab doesn't have to be up. Uses the Bedrock LLM
+provider (`agents/llm_client.py`, merged in PR #15).
 
 ```bash
-git checkout bedrock-llm-provider       # or main after merge
 python - <<'EOF'
 import yaml
 c = yaml.safe_load(open("config/config.aws-lab.yaml"))
