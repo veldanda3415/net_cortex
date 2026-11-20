@@ -1,0 +1,7 @@
+# Training box only (GPU instance), not the NetCortex app.
+# Versions that worked on 2026-11-20 with the AWS DLAMI (PyTorch 2.12.1+cu130, Python 3.13, Ubuntu 24.04).
+transformers==5.23.0
+peft==0.22.0
+bitsandbytes==0.50.2
+datasets
+accelerate
