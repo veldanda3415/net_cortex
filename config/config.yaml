@@ -1,4 +1,11 @@
 llm:
+  # provider: google (Gemini API key or Vertex ADC) or bedrock (Amazon Bedrock Converse,
+  # standard AWS credential chain; agents/llm_client.py). For bedrock, model is any id or ARN
+  # Converse accepts, e.g.
+  #   provider: bedrock
+  #   model: us.amazon.nova-micro-v1:0                      # foundation model / inference profile
+  #   model: arn:aws:bedrock:us-east-1:<acct>:imported-model/<id>   # Custom Model Import
+  #   region: us-east-1                                     # optional; else AWS_REGION
   provider: google
   model: gemini-flash-lite-latest
   api_key_env: GEMINI_API_KEY

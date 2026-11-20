@@ -44,7 +44,7 @@ python deploy.py --status
 python deploy.py --teardown
 ```
 
-LLM strict mode (`llm.require_success` / `--require-llm`) makes classification and synthesis fail fast without valid `GEMINI_API_KEY` or ADC (`GOOGLE_CLOUD_PROJECT`); default is deterministic fallback. Config comes from `config/config.yaml` plus `config/.env` (gitignored, loaded via `load_env_file`).
+LLM strict mode (`llm.require_success` / `--require-llm`) makes classification and synthesis fail fast without valid `GEMINI_API_KEY` or ADC (`GOOGLE_CLOUD_PROJECT`); default is deterministic fallback. Every LLM call (classification, synthesis, hypothesis triage) goes through `agents/llm_client.py`: `llm.provider: google` (Gemini) or `bedrock` (Converse; `llm.model` may be a Nova id or an imported-model ARN). Call sites pass `model_ref(cfg["llm"])`, which folds the provider into the model string (`bedrock:<model>`). Config comes from `config/config.yaml` plus `config/.env` (gitignored, loaded via `load_env_file`).
 
 ## Architecture
 
