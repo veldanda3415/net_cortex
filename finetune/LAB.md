@@ -94,13 +94,18 @@ finetune/eval_round.sh output/campaign/campaign-r2.jsonl
 jq -r '.summary[] | [.model, .strict_json, .accepted, .headline_raw, .headline_final] | @tsv' output/finetune/eval/results.json
 ```
 
-Already known (r2, 63 samples = 21 drills x 3):
+Measured 2026-11-21 (r2, 63 samples = 21 drills x 3; API errors retried, not scored):
 
 | model | strict_json | accepted | headline_raw |
 |---|---|---|---|
 | nova-micro | 46/63 | 52/63 | 43/51 |
 | nova-micro-fewshot | 63/63 | 58/63 | 44/51 |
-| gemini-flash-lite | 37/63 | 21/63 | 30/51 |
+| nova-pro (teacher) | 0/63 | 59/63 | 50/51 |
+| gemini-flash-lite | 63/63 | 32/63 | 48/51 |
+
+Nova Pro's 0/63 strict JSON is a ```` ```json ```` fence around every answer, not bad JSON
+(62/63 parse after stripping it). Training targets are re-serialized with `json.dumps`, so the
+student learns plain JSON. The gate passed: the teacher names the culprit on 50/51 vs 44/51.
 
 If Nova Pro isn't clearly above few-shot Micro on `accepted` and `headline_raw`, stop here: the
 student can't learn what the teacher doesn't know, and that is a result worth writing up.
@@ -248,6 +253,61 @@ Answer in one sentence each:
 
 Limits to state: 20 training drills from one lab, one test round, 3 samples each; negative
 controls are one fault type each (`clean`, `miss`), so "doesn't invent a culprit" is weakly tested.
+
+### Results, 2026-11-21 (run 1)
+
+Tune: Nova Micro, 300 train / 40 val Nova Pro labels, 2 epochs, lr 1e-5. Job 2h50m wall
+(~2h queued for capacity), ~$4. Train loss 0.33 -> 0.17; val loss 0.186 (epoch 1), 0.184
+(epoch 2): flat, no overfit. Total spend for the experiment under $10.
+
+**r2 test round** (21 drills x 3, never trained on):
+
+| arm | strict_json | accepted | headline_raw | headline_final | input size |
+|---|---|---|---|---|---|
+| gemini-flash-lite (ref) | 63/63 | 32/63 | 48/51 | 51/51 | 1x |
+| nova-micro | 46/63 | 52/63 | 43/51 | 46/51 | 1x |
+| nova-micro-fewshot | 63/63 | 58/63 | 44/51 | 48/51 | ~2.9x |
+| nova-micro-fewshot + abstain line | 63/63 | 56/63 | 45/51 | 51/51 | ~2.9x |
+| nova-pro (teacher) | 0/63 (\`\`\`json fences) | 59/63 | 50/51 | 51/51 | 1x, ~20x Micro price |
+| **nova-micro-tuned** | **63/63** | **62/63** | **48/51** | 49/51 | 1x |
+
+Tuned misses: `phz-record-deleted` x2, `frr-max-prefix` x1 (few-shot missed those plus 5 other
+drills). On the negative control `mss-clamp-removed` it says "no clear root cause" 1/3 and blames
+the VPN 2/3.
+
+**False-alarm probe** (`false_alarms.py`: 5 r2 drills stripped to alarm-entity symptoms; 15 probes
+x 3 = 45 answers per arm; right answer is always "no specific root cause"):
+
+| arm | prompt | abstains | notes recovery | blames planted DNS change |
+|---|---|---|---|---|
+| nova-micro | original | 0/45 | 0/45 | 14/15 |
+| nova-micro-fewshot | original | 0/45 | 0/45 | 14/15 |
+| nova-pro | original | 0/45 | 0/45 | 15/15 |
+| nova-micro-tuned | original | 0/45 | 0/45 | 15/15 |
+| nova-micro | + abstain line | 0/45 | 11/45 | 14/15 |
+| nova-micro-fewshot | + abstain line | 15/45 | 24/45 | 3/15 |
+| nova-pro | + abstain line | 30/45 | 16/45 | 0/15 |
+| **nova-micro-tuned** | + abstain line | **0/45** | 1/45 | **14/15** |
+
+Answers:
+1. Tuning beats few-shot: accepted 62 vs 58 (4 answers), headline_raw 48 vs 44 (4 answers,
+   5 drills fewer with any miss), at a third of the input tokens.
+2. The student nearly matches the teacher on the task (48/51 vs 50/51 headline, better accepted
+   and strict JSON) at Micro price.
+3. Even at equal quality: ~2.9x shorter input than few-shot, no prompt examples to maintain.
+4. No model fixes false alarms under the original prompt: the instruction says "name the specific
+   root cause", the guard wants the top cause named, and every label was made under that prompt.
+   Even Nova Pro blames a harmless DNS TXT upsert 15/15.
+5. **The cost of tuning: it froze the behaviour.** One added sentence fixes Pro (0/15 herring) and
+   mostly fixes few-shot Micro (3/15), but the tuned model ignores it (14/15, 0 abstains). It
+   learned "always blame something" from labels built under the old prompt. Every prompt fix now
+   needs a relabel + retrain, so the label set and the prompt must be versioned together.
+
+Verdict: fine-tuning pays off for the narrow, stable task (format, citations, naming the culprit),
+and the verifier is what made the labels trustworthy. It is the wrong tool for a behaviour you're
+still changing. Product fix, in order: add the abstain sentence to the synthesizer's root_cause
+instruction, add negative-control and false-alarm labels that abstain, then retrain if tuning is
+kept. Future work: a live false-alarm campaign (transient blips, harmless changes) on the lab.
 
 ## 7. Cleanup
 
