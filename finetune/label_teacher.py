@@ -5,6 +5,10 @@ accept and that name the true culprit when the evidence holds it.
     python finetune/label_teacher.py output/campaign/campaign-r1.jsonl --out output/finetune/r1 \
         [--model gemini-flash-lite-latest] [--variants 4] [--samples 3] [--keep 6]
 
+    # the teacher used for the Nova Micro fine-tune: Nova Pro (25 requests/min cross-region)
+    python finetune/label_teacher.py output/campaign/campaign-r1.jsonl --out output/finetune/r1-nova-pro \
+        --provider bedrock --model us.amazon.nova-pro-v1:0 --rpm 20 --variants 8 --samples 3 --keep 20
+
 Writes <out>/train.jsonl ({"messages": [...], "meta": {...}}) and <out>/label_stats.json.
 Never pass the test round here.
 """

@@ -1,6 +1,6 @@
 # Concepts: LoRA, QLoRA, DoRA, and why each knob is set the way it is
 
-Read this before LAB.md part 4. Every number here is from *this* model and *this* data, so you
+Read this before LAB-qwen.md part 4 (the deferred QLoRA path; Nova's managed fine-tune hides these knobs). Every number here is from *this* model and *this* data, so you
 can check it on your own screen.
 
 ## 1. The problem
@@ -95,7 +95,7 @@ can't do. DoRA can, so it tends to get closer to full fine-tuning, especially at
 | loss | answer tokens only | we want it to learn to *write* the RCA, not to predict the prompt |
 | precision | bf16 compute | same range as fp32, half the memory; L4/L40S support it |
 
-## 6. Hands-on experiments (LAB.md part 4b)
+## 6. Hands-on experiments (LAB-qwen.md part 4b)
 
 Same data, change one knob, compare **validation loss** and the **test scorer**. Use a subset to
 keep each run short and cheap (`--limit 300 --no-merge`, roughly 20-40 min and ~$1 each on a
